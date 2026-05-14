@@ -143,7 +143,7 @@ export interface BeforeAfterPhoto {
   note?: string
 }
 
-export type TabId = 'dashboard' | 'food' | 'sport' | 'ai' | 'stats' | 'profile'
+export type TabId = 'home' | 'food' | 'sport' | 'stats' | 'ai' | 'profile'
 
 export interface WeeklyPlan {
   id: string

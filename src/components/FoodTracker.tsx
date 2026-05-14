@@ -1,357 +1,319 @@
 import { useState, useRef, useMemo } from 'react'
-import { Search, Camera, PlusCircle, Trash2, ChevronDown, ChevronUp, X } from 'lucide-react'
+import { Search, Camera, Trash2, ChevronRight, X, ScanLine, PenLine, Plus, ArrowLeft } from 'lucide-react'
 import { useStore } from '../store/useStore'
-import { FOOD_DATABASE, FOOD_CATEGORIES, searchFoods, calculateMacros } from '../data/foodDatabase'
+import { ALL_FOODS, FOOD_CATEGORIES, BRANDED_PRODUCTS, searchFoods, calculateMacros } from '../data/foodDatabase'
 import { formatDate, uid, imageToBase64 } from '../utils/calculations'
 import { fetchByBarcode, analyzePlate } from '../utils/api'
-import type { FoodItem, MealType, FoodLog } from '../types'
+import type { FoodItem, MealType } from '../types'
 import toast from 'react-hot-toast'
 
 const today = formatDate()
 
-const MEAL_LABELS: Record<MealType, string> = {
-  breakfast: '🌅 Frühstück',
-  lunch: '☀️ Mittagessen',
-  dinner: '🌙 Abendessen',
-  snack: '🍎 Snack',
-}
+const MEALS: { id: MealType; emoji: string; label: string }[] = [
+  { id: 'breakfast', emoji: '🌅', label: 'Frühstück' },
+  { id: 'lunch',     emoji: '☀️', label: 'Mittagessen' },
+  { id: 'dinner',    emoji: '🌙', label: 'Abendessen' },
+  { id: 'snack',     emoji: '🍎', label: 'Snack' },
+]
 
-function FoodCard({ log, onRemove }: { log: FoodLog; onRemove: () => void }) {
-  return (
-    <div className="flex items-center gap-3 py-2.5 border-b border-gray-50 last:border-0">
-      <div className="flex-1 min-w-0">
-        <div className="text-sm font-medium text-gray-800 truncate">{log.foodItem.name}</div>
-        <div className="text-xs text-gray-400">{log.amount}g{log.aiEstimated ? ' · KI-Schätzung' : ''}</div>
-      </div>
-      <div className="text-right mr-2">
-        <div className="text-sm font-bold text-gray-800">{log.macros.calories} kcal</div>
-        <div className="text-xs text-gray-400">E:{log.macros.protein}g K:{log.macros.carbs}g F:{log.macros.fat}g</div>
-      </div>
-      <button onClick={onRemove} className="text-gray-300 active:text-red-400 transition p-1">
-        <Trash2 size={16} />
-      </button>
-    </div>
-  )
-}
-
-function AddFoodModal({
-  onClose,
-  mealType,
-}: {
-  onClose: () => void
-  mealType: MealType
-}) {
-  const [tab, setTab] = useState<'search' | 'barcode' | 'manual' | 'photo' | 'category'>('search')
-  const [query, setQuery] = useState('')
-  const [results, setResults] = useState<FoodItem[]>([])
-  const [selected, setSelected] = useState<FoodItem | null>(null)
-  const [amount, setAmount] = useState('100')
-  const [manualName, setManualName] = useState('')
-  const [manualCal, setManualCal] = useState('')
-  const [manualP, setManualP] = useState('')
-  const [manualF, setManualF] = useState('')
-  const [manualC, setManualC] = useState('')
-  const [barcodeInput, setBarcodeInput] = useState('')
-  const [loading, setLoading] = useState(false)
-  const [activeCategory, setActiveCategory] = useState<string | null>(null)
+// ── Add Food Sheet ────────────────────────────────────────────────────────
+function AddSheet({ mealType, onClose }: { mealType: MealType; onClose: () => void }) {
+  const [view, setView]           = useState<'main'|'search'|'barcode'|'manual'|'photo'>('main')
+  const [query, setQuery]         = useState('')
+  const [results, setResults]     = useState<FoodItem[]>([])
+  const [selected, setSelected]   = useState<FoodItem | null>(null)
+  const [amount, setAmount]       = useState('100')
+  const [loading, setLoading]     = useState(false)
+  const [barcodeVal, setBarcodeVal] = useState('')
   const [photoResult, setPhotoResult] = useState<{ description: string; macros: { calories: number; protein: number; fat: number; carbs: number } } | null>(null)
+  const [manualForm, setManualForm] = useState({ name: '', cal: '', protein: '', fat: '', carbs: '' })
+  const [activeCategory, setActiveCategory] = useState('⭐ Markenartikel')
   const fileRef = useRef<HTMLInputElement>(null)
   const addFoodLog = useStore((s) => s.addFoodLog)
-  const apiKeys = useStore((s) => s.apiKeys)
+  const apiKeys    = useStore((s) => s.apiKeys)
 
-  const handleSearch = (q: string) => {
-    setQuery(q)
-    setResults(q.length >= 2 ? searchFoods(q) : [])
-  }
-
-  const handleBarcodeSearch = async () => {
-    if (!barcodeInput) return
-    setLoading(true)
-    const food = await fetchByBarcode(barcodeInput)
-    setLoading(false)
-    if (food) { setSelected(food); setAmount(String(food.serving ?? 100)) }
-    else toast.error('Produkt nicht gefunden')
-  }
-
-  const handlePhotoUpload = async (file: File) => {
-    if (!apiKeys.anthropic) { toast.error('Anthropic API Key fehlt – bitte unter Profil eintragen'); return }
-    setLoading(true)
-    try {
-      const b64 = await imageToBase64(file)
-      const result = await analyzePlate(b64, apiKeys.anthropic)
-      setPhotoResult({ description: result.description, macros: result.macros })
-    } catch (e) {
-      const msg = e instanceof Error ? e.message : 'Unbekannter Fehler'
-      console.error('[PlateAnalysis]', e)
-      toast.error(msg, { duration: 5000 })
-    }
-    setLoading(false)
-  }
-
-  const savePhotoResult = () => {
-    if (!photoResult) return
-    const log: FoodLog = {
-      id: uid(), date: today, mealType,
-      foodItem: { id: uid(), name: photoResult.description, category: 'KI-Schätzung', macros: { ...photoResult.macros, calories: photoResult.macros.calories } },
-      amount: 100, macros: photoResult.macros, timestamp: Date.now(), aiEstimated: true,
-    }
-    addFoodLog(log)
-    toast.success('Mahlzeit gespeichert!')
-    onClose()
-  }
+  const handleSearch = (q: string) => { setQuery(q); setResults(q.length >= 2 ? searchFoods(q) : []) }
+  const pick = (food: FoodItem) => { setSelected(food); setAmount(String(food.serving ?? 100)) }
+  const macro = selected ? calculateMacros(selected, parseFloat(amount) || 100) : null
 
   const addSelected = () => {
-    if (!selected) return
-    const amt = parseFloat(amount) || 100
-    const macros = calculateMacros(selected, amt)
-    addFoodLog({ id: uid(), date: today, mealType, foodItem: selected, amount: amt, macros, timestamp: Date.now() })
+    if (!selected || !macro) return
+    addFoodLog({ id: uid(), date: today, mealType, foodItem: selected, amount: parseFloat(amount)||100, macros: macro, timestamp: Date.now() })
     toast.success(`${selected.name} hinzugefügt!`)
     onClose()
   }
 
-  const addManual = () => {
-    if (!manualName || !manualCal) { toast.error('Name und Kalorien erforderlich'); return }
-    const macros = { calories: parseInt(manualCal), protein: parseFloat(manualP) || 0, fat: parseFloat(manualF) || 0, carbs: parseFloat(manualC) || 0 }
-    const food: FoodItem = { id: uid(), name: manualName, category: 'Manuell', macros }
-    addFoodLog({ id: uid(), date: today, mealType, foodItem: food, amount: 100, macros, timestamp: Date.now() })
-    toast.success('Eingetragen!')
-    onClose()
+  const handleBarcode = async () => {
+    if (!barcodeVal) return
+    setLoading(true)
+    const food = await fetchByBarcode(barcodeVal)
+    setLoading(false)
+    if (food) pick(food)
+    else toast.error('Produkt nicht gefunden')
   }
 
-  const addFromCategory = (food: FoodItem) => {
-    setSelected(food)
-    setAmount(String(food.serving ?? 100))
-    setTab('search')
+  const handlePhoto = async (file: File) => {
+    if (!apiKeys.anthropic) { toast.error('Anthropic API Key fehlt'); return }
+    setLoading(true)
+    try {
+      const result = await analyzePlate(await imageToBase64(file), apiKeys.anthropic)
+      setPhotoResult({ description: result.description, macros: result.macros })
+    } catch (e) { toast.error(e instanceof Error ? e.message : 'Fehler', { duration: 5000 }) }
+    setLoading(false)
   }
+
+  const savePhoto = () => {
+    if (!photoResult) return
+    addFoodLog({ id: uid(), date: today, mealType, foodItem: { id: uid(), name: photoResult.description, category: 'KI-Schätzung', macros: photoResult.macros }, amount: 100, macros: photoResult.macros, timestamp: Date.now(), aiEstimated: true })
+    toast.success('Mahlzeit gespeichert!'); onClose()
+  }
+
+  const saveManual = () => {
+    if (!manualForm.name || !manualForm.cal) { toast.error('Name und Kalorien erforderlich'); return }
+    const m = { calories: parseInt(manualForm.cal), protein: parseFloat(manualForm.protein)||0, fat: parseFloat(manualForm.fat)||0, carbs: parseFloat(manualForm.carbs)||0 }
+    addFoodLog({ id: uid(), date: today, mealType, foodItem: { id: uid(), name: manualForm.name, category: 'Manuell', macros: m }, amount: 100, macros: m, timestamp: Date.now() })
+    toast.success('Eingetragen!'); onClose()
+  }
+
+  const categoryFoods = ALL_FOODS.filter((f) => f.category === activeCategory)
 
   return (
-    <div className="fixed inset-0 bg-black/50 z-50 flex items-end" onClick={onClose}>
-      <div className="bg-white w-full rounded-t-3xl max-h-[90vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
-        <div className="sticky top-0 bg-white pt-4 px-4 pb-2 z-10">
-          <div className="w-10 h-1 bg-gray-200 rounded-full mx-auto mb-4" />
-          <div className="flex items-center justify-between mb-3">
-            <h2 className="text-lg font-bold text-gray-900">Essen hinzufügen</h2>
-            <button onClick={onClose}><X size={22} className="text-gray-400" /></button>
-          </div>
-          <div className="flex gap-1 bg-gray-100 rounded-2xl p-1 overflow-x-auto">
-            {(['search', 'category', 'barcode', 'manual', 'photo'] as const).map((t) => (
-              <button
-                key={t}
-                onClick={() => setTab(t)}
-                className={`flex-1 text-xs py-2 px-2 rounded-xl font-medium whitespace-nowrap transition ${tab === t ? 'bg-white text-blue-600 shadow-sm' : 'text-gray-500'}`}
-              >
-                {{ search: '🔍 Suchen', category: '📂 Kategorie', barcode: '📷 Barcode', manual: '✏️ Manuell', photo: '🍽️ KI-Foto' }[t]}
-              </button>
-            ))}
-          </div>
+    <div className="fixed inset-0 z-50 flex items-end" onClick={onClose}>
+      <div className="sheet-overlay absolute inset-0" />
+      <div className="relative bg-slate-50 w-full max-w-[430px] mx-auto rounded-t-[32px] max-h-[92dvh] overflow-hidden flex flex-col anim-up"
+        onClick={(e) => e.stopPropagation()}>
+        {/* Handle */}
+        <div className="flex justify-center pt-3 pb-1 flex-shrink-0">
+          <div className="sheet-handle" />
         </div>
 
-        <div className="px-4 pb-6 pt-2">
-          {/* Search */}
-          {tab === 'search' && (
-            <div>
-              <div className="relative mb-3">
-                <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
-                <input
-                  autoFocus
-                  className="w-full pl-9 pr-4 py-3 bg-gray-50 rounded-2xl text-sm outline-none focus:ring-2 focus:ring-blue-200"
-                  placeholder="Lebensmittel suchen…"
-                  value={query}
-                  onChange={(e) => handleSearch(e.target.value)}
-                />
-              </div>
-              {selected ? (
-                <div className="bg-blue-50 rounded-2xl p-4 mb-3">
-                  <div className="font-semibold text-gray-800 mb-1">{selected.name}</div>
-                  <div className="text-xs text-gray-500 mb-3">{selected.category}</div>
-                  <div className="flex items-center gap-2 mb-3">
-                    <label className="text-sm text-gray-600">Menge (g):</label>
-                    <input
-                      type="number" value={amount}
-                      onChange={(e) => setAmount(e.target.value)}
-                      className="w-20 text-center border border-blue-200 rounded-xl py-1.5 text-sm outline-none"
-                    />
+        {/* Header */}
+        <div className="flex items-center gap-3 px-5 pb-4 pt-1 flex-shrink-0">
+          {view !== 'main' && (
+            <button onClick={() => { setView('main'); setSelected(null); setPhotoResult(null) }}
+              className="w-9 h-9 bg-white rounded-2xl flex items-center justify-center shadow-sm flex-shrink-0">
+              <ArrowLeft size={18} className="text-slate-600" />
+            </button>
+          )}
+          <div className="flex-1">
+            <h2 className="text-lg font-black text-slate-900">
+              {{ main: 'Essen hinzufügen', search: 'Lebensmittel suchen', barcode: 'Barcode scannen', manual: 'Manuell eintragen', photo: '📸 KI-Teller-Analyse' }[view]}
+            </h2>
+          </div>
+          <button onClick={onClose} className="w-9 h-9 bg-white rounded-2xl flex items-center justify-center shadow-sm">
+            <X size={18} className="text-slate-600" />
+          </button>
+        </div>
+
+        <div className="flex-1 overflow-y-auto px-5 pb-8">
+          {/* Main */}
+          {view === 'main' && (
+            <div className="space-y-3">
+              {/* Quick option cards */}
+              {[
+                { icon: Search,   label: 'Lebensmittel suchen',     sub: '100+ Einträge + Markenprodukte', action: () => setView('search'),  color: 'bg-blue-500' },
+                { icon: ScanLine, label: 'Barcode scannen',          sub: 'Open Food Facts – 3 Mio. Produkte', action: () => setView('barcode'), color: 'bg-emerald-500' },
+                { icon: Camera,   label: 'KI-Teller-Foto',           sub: 'Claude AI analysiert dein Essen', action: () => setView('photo'),   color: 'bg-purple-500' },
+                { icon: PenLine,  label: 'Manuell eintragen',         sub: 'Eigene Kalorien & Makros',       action: () => setView('manual'),  color: 'bg-orange-500' },
+              ].map((opt) => (
+                <button key={opt.label} onClick={opt.action}
+                  className="w-full card card-press p-4 flex items-center gap-4 text-left">
+                  <div className={`w-12 h-12 ${opt.color} rounded-2xl flex items-center justify-center flex-shrink-0`}>
+                    <opt.icon size={22} className="text-white" />
                   </div>
-                  {(() => {
-                    const m = calculateMacros(selected, parseFloat(amount) || 100)
-                    return (
-                      <div className="grid grid-cols-4 gap-2 mb-3 text-center text-xs">
-                        {[['kcal', m.calories], ['Eiweiß', `${m.protein}g`], ['KH', `${m.carbs}g`], ['Fett', `${m.fat}g`]].map(([l, v]) => (
-                          <div key={String(l)} className="bg-white rounded-xl py-2">
-                            <div className="font-bold text-gray-800">{v}</div>
-                            <div className="text-gray-400">{l}</div>
-                          </div>
-                        ))}
-                      </div>
-                    )
-                  })()}
-                  <div className="flex gap-2">
-                    <button onClick={() => setSelected(null)} className="flex-1 py-2.5 border border-gray-200 rounded-xl text-sm text-gray-500">Zurück</button>
-                    <button onClick={addSelected} className="flex-1 py-2.5 gradient-blue rounded-xl text-sm text-white font-semibold">Hinzufügen</button>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-bold text-slate-800">{opt.label}</p>
+                    <p className="text-xs text-slate-400">{opt.sub}</p>
                   </div>
-                </div>
-              ) : (
+                  <ChevronRight size={16} className="text-slate-300 flex-shrink-0" />
+                </button>
+              ))}
+              {/* Markenartikel quick list */}
+              <div className="card p-4">
+                <p className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-3">⭐ Beliebte Markenartikel</p>
                 <div className="space-y-1">
-                  {results.map((f) => (
-                    <button key={f.id} onClick={() => { setSelected(f); setAmount(String(f.serving ?? 100)) }}
-                      className="w-full text-left flex items-center justify-between p-3 hover:bg-gray-50 rounded-xl transition">
+                  {BRANDED_PRODUCTS.slice(0, 6).map((f) => (
+                    <button key={f.id} onClick={() => { pick(f); setView('search') }}
+                      className="w-full flex items-center justify-between py-2.5 px-3 hover:bg-slate-50 rounded-2xl transition">
                       <div>
-                        <div className="text-sm font-medium text-gray-800">{f.name}</div>
-                        <div className="text-xs text-gray-400">{f.category}</div>
+                        <p className="text-sm font-medium text-slate-800">{f.name}</p>
+                        <p className="text-xs text-slate-400">{f.brand} · {f.serving}g</p>
                       </div>
-                      <div className="text-sm font-bold text-blue-600">{f.macros.calories} kcal</div>
+                      <span className="text-sm font-bold text-blue-600">{Math.round(f.macros.calories * (f.serving||100)/100)} kcal</span>
                     </button>
                   ))}
-                  {query.length >= 2 && results.length === 0 && (
-                    <p className="text-center text-sm text-gray-400 py-6">Keine Ergebnisse gefunden</p>
-                  )}
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Search */}
+          {view === 'search' && !selected && (
+            <div>
+              <div className="relative mb-4">
+                <Search size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" />
+                <input autoFocus value={query} onChange={(e) => handleSearch(e.target.value)}
+                  className="w-full pl-10 pr-4 py-3.5 bg-white rounded-2xl text-sm outline-none shadow-sm border-0 font-medium"
+                  placeholder="Lebensmittel oder Marke suchen…" />
+              </div>
+              {/* Categories */}
+              {!query && (
+                <>
+                  <div className="flex gap-2 overflow-x-auto pb-2 mb-3 -mx-1 px-1">
+                    {FOOD_CATEGORIES.map((cat) => (
+                      <button key={cat} onClick={() => setActiveCategory(cat)}
+                        className={`flex-shrink-0 px-3.5 py-2 rounded-2xl text-xs font-bold transition whitespace-nowrap ${activeCategory === cat ? 'bg-blue-500 text-white' : 'bg-white text-slate-600'}`}>
+                        {cat}
+                      </button>
+                    ))}
+                  </div>
+                  <div className="space-y-1">
+                    {categoryFoods.slice(0, 20).map((f) => (
+                      <button key={f.id} onClick={() => pick(f)}
+                        className="w-full flex items-center justify-between p-3.5 bg-white rounded-2xl active:bg-slate-50 transition">
+                        <div>
+                          <p className="text-sm font-semibold text-slate-800">{f.name}</p>
+                          <p className="text-xs text-slate-400">{f.brand ? `${f.brand} · ` : ''}pro 100g</p>
+                        </div>
+                        <span className="text-sm font-bold text-blue-600">{f.macros.calories} kcal</span>
+                      </button>
+                    ))}
+                  </div>
+                </>
+              )}
+              {query && (
+                <div className="space-y-1">
+                  {results.map((f) => (
+                    <button key={f.id} onClick={() => pick(f)}
+                      className="w-full flex items-center justify-between p-3.5 bg-white rounded-2xl active:bg-slate-50 transition">
+                      <div>
+                        <p className="text-sm font-semibold text-slate-800">{f.name}</p>
+                        <p className="text-xs text-slate-400">{f.brand ? `${f.brand} · ` : ''}{f.category} · pro 100g</p>
+                      </div>
+                      <span className="text-sm font-bold text-blue-600">{f.macros.calories} kcal</span>
+                    </button>
+                  ))}
+                  {results.length === 0 && <p className="text-center text-sm text-slate-400 py-8">Keine Ergebnisse</p>}
                 </div>
               )}
             </div>
           )}
 
-          {/* Category */}
-          {tab === 'category' && (
-            <div>
-              {!activeCategory ? (
-                <div className="grid grid-cols-2 gap-2">
-                  {FOOD_CATEGORIES.map((cat) => (
-                    <button key={cat} onClick={() => setActiveCategory(cat)}
-                      className="card p-3 text-left text-sm font-medium text-gray-700 card-pressed">
-                      {cat}
-                    </button>
+          {/* Selected food – amount picker */}
+          {view === 'search' && selected && macro && (
+            <div className="space-y-4">
+              <div className="card p-4 bg-blue-50">
+                <p className="font-black text-slate-900 text-base">{selected.name}</p>
+                {selected.brand && <p className="text-xs text-blue-600 font-semibold mt-0.5">{selected.brand}</p>}
+                <div className="grid grid-cols-4 gap-2 mt-3">
+                  {[['kcal', macro.calories], ['Eiweiß', `${macro.protein}g`], ['KH', `${macro.carbs}g`], ['Fett', `${macro.fat}g`]].map(([l, v]) => (
+                    <div key={String(l)} className="bg-white rounded-2xl py-2.5 text-center">
+                      <p className="text-sm font-black text-slate-800">{v}</p>
+                      <p className="text-[10px] text-slate-400">{l}</p>
+                    </div>
                   ))}
                 </div>
-              ) : (
-                <div>
-                  <button onClick={() => setActiveCategory(null)} className="text-blue-500 text-sm mb-3 flex items-center gap-1">
-                    ← {activeCategory}
-                  </button>
-                  <div className="space-y-1">
-                    {FOOD_DATABASE.filter((f) => f.category === activeCategory).map((f) => (
-                      <button key={f.id} onClick={() => addFromCategory(f)}
-                        className="w-full text-left flex items-center justify-between p-3 hover:bg-gray-50 rounded-xl">
-                        <div>
-                          <div className="text-sm font-medium">{f.name}</div>
-                          <div className="text-xs text-gray-400">pro 100g</div>
-                        </div>
-                        <div className="text-sm font-bold text-blue-600">{f.macros.calories} kcal</div>
-                      </button>
-                    ))}
-                  </div>
+              </div>
+              <div>
+                <p className="text-sm font-bold text-slate-700 mb-2">Menge</p>
+                <div className="flex gap-2 mb-2">
+                  {[50, 100, 150, 200, 250].map((g) => (
+                    <button key={g} onClick={() => setAmount(String(g))}
+                      className={`flex-1 py-2.5 rounded-2xl text-sm font-bold transition ${amount === String(g) ? 'bg-blue-500 text-white' : 'bg-white text-slate-600'}`}>{g}g</button>
+                  ))}
                 </div>
-              )}
+                <div className="flex items-center gap-2 bg-white rounded-2xl px-4 py-3">
+                  <input type="number" value={amount} onChange={(e) => setAmount(e.target.value)}
+                    className="flex-1 text-base font-bold text-slate-800 outline-none bg-transparent" />
+                  <span className="text-slate-400 font-medium">Gramm</span>
+                </div>
+              </div>
+              <button onClick={addSelected} className="w-full py-4 bg-blue-500 rounded-3xl text-white font-black text-base">
+                Hinzufügen
+              </button>
             </div>
           )}
 
           {/* Barcode */}
-          {tab === 'barcode' && (
-            <div>
-              <p className="text-sm text-gray-500 mb-4">Barcode manuell eingeben oder scannen (Open Food Facts – 3 Mio. Produkte)</p>
-              <input
-                className="w-full px-4 py-3 bg-gray-50 rounded-2xl text-sm outline-none focus:ring-2 focus:ring-blue-200 mb-3"
-                placeholder="Barcode eingeben z.B. 4000539000015"
-                value={barcodeInput}
-                onChange={(e) => setBarcodeInput(e.target.value)}
-                type="number"
-              />
-              <button onClick={handleBarcodeSearch} disabled={loading}
-                className="w-full py-3 gradient-blue rounded-2xl text-white font-semibold text-sm disabled:opacity-50">
-                {loading ? '⏳ Suche…' : '🔍 Produkt suchen'}
-              </button>
-              {selected && (
-                <div className="mt-4 bg-green-50 rounded-2xl p-4">
-                  <div className="font-semibold text-gray-800">{selected.name}</div>
-                  {selected.brand && <div className="text-xs text-gray-500">{selected.brand}</div>}
-                  <div className="grid grid-cols-4 gap-2 mt-3 text-center text-xs">
-                    {[['kcal', selected.macros.calories], ['E', `${selected.macros.protein}g`], ['KH', `${selected.macros.carbs}g`], ['F', `${selected.macros.fat}g`]].map(([l, v]) => (
-                      <div key={String(l)} className="bg-white rounded-xl py-2">
-                        <div className="font-bold text-gray-800">{v}</div>
-                        <div className="text-gray-400">{l}</div>
-                      </div>
-                    ))}
-                  </div>
+          {view === 'barcode' && (
+            <div className="space-y-3">
+              <p className="text-sm text-slate-500">Barcode-Nummer eingeben (vom Produkt abtippen) oder scannen:</p>
+              <div className="flex gap-2">
+                <input type="number" value={barcodeVal} onChange={(e) => setBarcodeVal(e.target.value)}
+                  className="flex-1 bg-white rounded-2xl px-4 py-3.5 text-sm font-medium outline-none"
+                  placeholder="z.B. 4000539000015" />
+                <button onClick={handleBarcode} disabled={loading || !barcodeVal}
+                  className="px-5 py-3 bg-blue-500 rounded-2xl text-white font-bold text-sm disabled:opacity-50">
+                  {loading ? '⏳' : 'Suchen'}
+                </button>
+              </div>
+              {selected && macro && (
+                <div className="card p-4">
+                  <p className="font-black text-slate-900">{selected.name}</p>
+                  {selected.brand && <p className="text-xs text-blue-600">{selected.brand}</p>}
                   <div className="flex items-center gap-2 mt-3">
-                    <label className="text-sm text-gray-600">Menge:</label>
                     <input type="number" value={amount} onChange={(e) => setAmount(e.target.value)}
-                      className="w-20 text-center border border-gray-200 rounded-xl py-1.5 text-sm outline-none" />
-                    <span className="text-sm text-gray-500">g</span>
+                      className="w-20 text-center bg-slate-100 rounded-xl py-2 text-sm font-bold outline-none" />
+                    <span className="text-sm text-slate-500">g</span>
+                    <span className="ml-auto text-base font-black text-blue-600">{macro.calories} kcal</span>
                   </div>
-                  <button onClick={addSelected} className="w-full mt-3 py-2.5 gradient-blue rounded-xl text-white font-semibold text-sm">
-                    Hinzufügen
-                  </button>
+                  <button onClick={addSelected} className="w-full mt-3 py-3 bg-blue-500 rounded-2xl text-white font-bold text-sm">Hinzufügen</button>
                 </div>
               )}
             </div>
           )}
 
           {/* Manual */}
-          {tab === 'manual' && (
+          {view === 'manual' && (
             <div className="space-y-3">
-              <input value={manualName} onChange={(e) => setManualName(e.target.value)}
-                className="w-full px-4 py-3 bg-gray-50 rounded-2xl text-sm outline-none" placeholder="Name des Lebensmittels" />
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="text-xs text-gray-500 mb-1 block">Kalorien *</label>
-                  <input type="number" value={manualCal} onChange={(e) => setManualCal(e.target.value)}
-                    className="w-full px-3 py-2.5 bg-gray-50 rounded-xl text-sm outline-none" placeholder="kcal" />
-                </div>
-                <div>
-                  <label className="text-xs text-gray-500 mb-1 block">Eiweiß (g)</label>
-                  <input type="number" value={manualP} onChange={(e) => setManualP(e.target.value)}
-                    className="w-full px-3 py-2.5 bg-gray-50 rounded-xl text-sm outline-none" placeholder="g" />
-                </div>
-                <div>
-                  <label className="text-xs text-gray-500 mb-1 block">Kohlenhydrate (g)</label>
-                  <input type="number" value={manualC} onChange={(e) => setManualC(e.target.value)}
-                    className="w-full px-3 py-2.5 bg-gray-50 rounded-xl text-sm outline-none" placeholder="g" />
-                </div>
-                <div>
-                  <label className="text-xs text-gray-500 mb-1 block">Fett (g)</label>
-                  <input type="number" value={manualF} onChange={(e) => setManualF(e.target.value)}
-                    className="w-full px-3 py-2.5 bg-gray-50 rounded-xl text-sm outline-none" placeholder="g" />
-                </div>
+              <input value={manualForm.name} onChange={(e) => setManualForm({ ...manualForm, name: e.target.value })}
+                className="w-full bg-white rounded-2xl px-4 py-3.5 text-sm font-medium outline-none"
+                placeholder="Name des Lebensmittels" />
+              <div className="grid grid-cols-2 gap-2">
+                {[['Kalorien (kcal) *', 'cal'], ['Eiweiß (g)', 'protein'], ['Kohlenhydrate (g)', 'carbs'], ['Fett (g)', 'fat']] .map(([label, key]) => (
+                  <div key={key}>
+                    <p className="text-xs text-slate-500 mb-1 pl-1">{label}</p>
+                    <input type="number" value={manualForm[key as keyof typeof manualForm]}
+                      onChange={(e) => setManualForm({ ...manualForm, [key]: e.target.value })}
+                      className="w-full bg-white rounded-2xl px-4 py-3 text-sm font-medium outline-none" />
+                  </div>
+                ))}
               </div>
-              <button onClick={addManual} className="w-full py-3 gradient-blue rounded-2xl text-white font-semibold">
-                Eintragen
-              </button>
+              <button onClick={saveManual} className="w-full py-4 bg-blue-500 rounded-3xl text-white font-black text-base">Eintragen</button>
             </div>
           )}
 
-          {/* AI Photo */}
-          {tab === 'photo' && (
-            <div>
-              <div className="bg-blue-50 rounded-2xl p-4 mb-4 text-sm text-blue-700">
-                📸 Fotografiere deinen Teller – die KI schätzt Kalorien & Makros automatisch.
-                <br /><span className="font-medium">Hinweis: KI-Schätzung ±15%</span>
+          {/* Photo */}
+          {view === 'photo' && (
+            <div className="space-y-4">
+              <div className="bg-blue-50 rounded-2xl p-4">
+                <p className="text-sm text-blue-800 font-medium">Fotografiere deinen Teller – Claude AI analysiert automatisch Kalorien & Makros.</p>
+                <p className="text-xs text-blue-600 mt-1">⚠️ Schätzung ±15% – Werte anpassbar</p>
               </div>
               {!photoResult ? (
                 <>
                   <input ref={fileRef} type="file" accept="image/*" capture="environment" className="hidden"
-                    onChange={(e) => e.target.files?.[0] && handlePhotoUpload(e.target.files[0])} />
+                    onChange={(e) => e.target.files?.[0] && handlePhoto(e.target.files[0])} />
                   <button onClick={() => fileRef.current?.click()} disabled={loading}
-                    className="w-full py-4 border-2 border-dashed border-blue-200 rounded-2xl text-blue-500 font-medium text-sm disabled:opacity-50 flex flex-col items-center gap-2">
-                    {loading ? <><span className="text-2xl">⏳</span>KI analysiert…</> : <><Camera size={28} />Foto aufnehmen oder auswählen</>}
+                    className="w-full py-8 border-2 border-dashed border-blue-200 rounded-3xl flex flex-col items-center gap-3 text-blue-500 font-semibold disabled:opacity-50">
+                    {loading ? <><span className="text-4xl anim-pulse">⏳</span><span>KI analysiert…</span></> : <><Camera size={36} /><span>Foto aufnehmen</span></>}
                   </button>
-                  {!apiKeys.anthropic && (
-                    <p className="text-center text-xs text-red-500 mt-2">⚠️ Anthropic API Key fehlt – bitte unter Profil eintragen</p>
-                  )}
+                  {!apiKeys.anthropic && <p className="text-center text-xs text-red-500">⚠️ Anthropic API Key fehlt → Profil → API Keys</p>}
                 </>
               ) : (
-                <div className="bg-green-50 rounded-2xl p-4">
-                  <div className="font-semibold text-gray-800 mb-2">🎯 {photoResult.description}</div>
-                  <div className="grid grid-cols-4 gap-2 mb-3 text-center text-xs">
-                    {[['kcal', photoResult.macros.calories], ['Eiweiß', `${photoResult.macros.protein}g`], ['KH', `${photoResult.macros.carbs}g`], ['Fett', `${photoResult.macros.fat}g`]].map(([l, v]) => (
-                      <div key={String(l)} className="bg-white rounded-xl py-2">
-                        <div className="font-bold text-gray-800">{v}</div>
-                        <div className="text-gray-400">{l}</div>
+                <div className="card p-4">
+                  <p className="font-black text-slate-900 mb-3">🎯 {photoResult.description}</p>
+                  <div className="grid grid-cols-4 gap-2 mb-4">
+                    {[['kcal', photoResult.macros.calories], ['E', `${photoResult.macros.protein}g`], ['KH', `${photoResult.macros.carbs}g`], ['F', `${photoResult.macros.fat}g`]].map(([l, v]) => (
+                      <div key={String(l)} className="bg-blue-50 rounded-2xl py-2.5 text-center">
+                        <p className="text-sm font-black text-slate-800">{v}</p>
+                        <p className="text-[10px] text-slate-400">{l}</p>
                       </div>
                     ))}
                   </div>
-                  <div className="text-xs text-gray-400 mb-3 text-center">⚠️ KI-Schätzung ±15% – Werte vor dem Speichern anpassbar</div>
                   <div className="flex gap-2">
-                    <button onClick={() => setPhotoResult(null)} className="flex-1 py-2.5 border border-gray-200 rounded-xl text-sm text-gray-500">Neu</button>
-                    <button onClick={savePhotoResult} className="flex-1 py-2.5 gradient-blue rounded-xl text-white font-semibold text-sm">Speichern</button>
+                    <button onClick={() => setPhotoResult(null)} className="flex-1 py-3 bg-slate-100 rounded-2xl text-sm font-bold text-slate-600">Neu</button>
+                    <button onClick={savePhoto} className="flex-1 py-3 bg-blue-500 rounded-2xl text-sm font-bold text-white">Speichern</button>
                   </div>
                 </div>
               )}
@@ -363,77 +325,89 @@ function AddFoodModal({
   )
 }
 
+// ── Main FoodTracker ───────────────────────────────────────────────────────
 export default function FoodTracker() {
-  const [addingMeal, setAddingMeal] = useState<MealType | null>(null)
-  const [expandedMeal, setExpandedMeal] = useState<MealType | null>('breakfast')
-  // Use raw array – never call store methods inside useStore selectors (causes infinite loop in React 19)
-  const allFoodLogs = useStore((s) => s.foodLogs)
+  const [addingMeal, setAddingMeal]   = useState<MealType | null>(null)
+  const [expandedMeal, setExpandedMeal] = useState<MealType>('breakfast')
+  const allFoodLogs  = useStore((s) => s.foodLogs)
   const removeFoodLog = useStore((s) => s.removeFoodLog)
 
   const foodLogs = useMemo(() => allFoodLogs.filter((l) => l.date === today), [allFoodLogs])
-
-  const mealLogs = (meal: MealType) => foodLogs.filter((l) => l.mealType === meal)
-  const mealCals = (meal: MealType) => mealLogs(meal).reduce((s, l) => s + l.macros.calories, 0)
-
-  const totalMacros = useMemo(() => foodLogs.reduce(
-    (acc, l) => ({ calories: acc.calories + l.macros.calories, protein: acc.protein + l.macros.protein, fat: acc.fat + l.macros.fat, carbs: acc.carbs + l.macros.carbs }),
-    { calories: 0, protein: 0, fat: 0, carbs: 0 }
-  ), [foodLogs])
+  const totalCals = useMemo(() => foodLogs.reduce((s, f) => s + (f.macros?.calories ?? 0), 0), [foodLogs])
+  const totalProt = useMemo(() => foodLogs.reduce((s, f) => s + (f.macros?.protein ?? 0), 0), [foodLogs])
+  const totalCarbs = useMemo(() => foodLogs.reduce((s, f) => s + (f.macros?.carbs ?? 0), 0), [foodLogs])
+  const totalFat   = useMemo(() => foodLogs.reduce((s, f) => s + (f.macros?.fat ?? 0), 0), [foodLogs])
 
   return (
-    <div className="pb-24 animate-fade-in">
+    <div className="pb-nav anim-fade">
       {/* Header */}
-      <div className="gradient-blue px-4 pt-12 pb-6 safe-top">
-        <h1 className="text-white text-2xl font-bold mb-1">Essen tracken</h1>
-        <p className="text-blue-100 text-sm">Heute: {Math.round(totalMacros.calories)} kcal</p>
-        <div className="flex gap-4 mt-3 text-white text-sm">
-          <span>E: {Math.round(totalMacros.protein)}g</span>
-          <span>KH: {Math.round(totalMacros.carbs)}g</span>
-          <span>F: {Math.round(totalMacros.fat)}g</span>
+      <div className="grad-blue px-5 pt-safe pb-6">
+        <div className="absolute -top-10 -right-10 w-48 h-48 rounded-full bg-white/5" />
+        <h1 className="text-white text-2xl font-black mb-1">Essen tracken</h1>
+        <p className="text-blue-200 text-sm mb-4">Heute: {Math.round(totalCals)} kcal</p>
+        <div className="flex gap-3">
+          {[{ l: 'Eiweiß', v: Math.round(totalProt), c: '#93c5fd' }, { l: 'Kohlenhydrate', v: Math.round(totalCarbs), c: '#fcd34d' }, { l: 'Fett', v: Math.round(totalFat), c: '#fca5a5' }].map((m) => (
+            <div key={m.l} className="flex-1 bg-white/10 rounded-2xl px-3 py-2 text-center">
+              <p className="font-black text-sm" style={{ color: m.c }}>{m.v}g</p>
+              <p className="text-[10px] text-blue-200">{m.l}</p>
+            </div>
+          ))}
         </div>
       </div>
 
       <div className="px-4 py-4 space-y-3">
-        {(Object.keys(MEAL_LABELS) as MealType[]).map((meal) => (
-          <div key={meal} className="card overflow-hidden">
-            <button
-              className="w-full flex items-center justify-between p-4"
-              onClick={() => setExpandedMeal(expandedMeal === meal ? null : meal)}
-            >
-              <div className="flex items-center gap-3">
-                <span className="text-lg">{MEAL_LABELS[meal].split(' ')[0]}</span>
-                <div className="text-left">
-                  <div className="text-sm font-semibold text-gray-800">{MEAL_LABELS[meal].split(' ').slice(1).join(' ')}</div>
-                  <div className="text-xs text-gray-400">{mealLogs(meal).length} Einträge · {Math.round(mealCals(meal))} kcal</div>
+        {MEALS.map((meal) => {
+          const logs = foodLogs.filter((l) => l.mealType === meal.id)
+          const cals = logs.reduce((s, l) => s + (l.macros?.calories ?? 0), 0)
+          const open = expandedMeal === meal.id
+          return (
+            <div key={meal.id} className="card overflow-hidden">
+              <button className="w-full flex items-center gap-3 p-4" onClick={() => setExpandedMeal(open ? ('breakfast' as MealType) : meal.id)}>
+                <span className="text-2xl">{meal.emoji}</span>
+                <div className="flex-1 text-left">
+                  <p className="text-sm font-black text-slate-800">{meal.label}</p>
+                  <p className="text-xs text-slate-400">{logs.length} Einträge · {Math.round(cals)} kcal</p>
                 </div>
-              </div>
-              <div className="flex items-center gap-2">
-                <button
-                  onClick={(e) => { e.stopPropagation(); setAddingMeal(meal) }}
-                  className="w-8 h-8 gradient-blue rounded-full flex items-center justify-center"
-                >
-                  <PlusCircle size={18} className="text-white" />
+                <button onClick={(e) => { e.stopPropagation(); setAddingMeal(meal.id) }}
+                  className="w-9 h-9 bg-blue-500 rounded-2xl flex items-center justify-center mr-2 flex-shrink-0">
+                  <Plus size={18} className="text-white" />
                 </button>
-                {expandedMeal === meal ? <ChevronUp size={18} className="text-gray-400" /> : <ChevronDown size={18} className="text-gray-400" />}
-              </div>
-            </button>
-            {expandedMeal === meal && mealLogs(meal).length > 0 && (
-              <div className="px-4 pb-3 border-t border-gray-50">
-                {mealLogs(meal).map((log) => (
-                  <FoodCard key={log.id} log={log} onRemove={() => removeFoodLog(log.id)} />
-                ))}
-              </div>
-            )}
-            {expandedMeal === meal && mealLogs(meal).length === 0 && (
-              <div className="px-4 pb-4 text-center text-sm text-gray-400 border-t border-gray-50 pt-3">
-                Noch nichts eingetragen
-              </div>
-            )}
-          </div>
-        ))}
+                <ChevronRight size={16} className={`text-slate-300 transition-transform duration-200 ${open ? 'rotate-90' : ''}`} />
+              </button>
+              {open && logs.length > 0 && (
+                <div className="border-t border-slate-50 px-4 pb-2 space-y-0">
+                  {logs.map((log) => (
+                    <div key={log.id} className="flex items-center gap-3 py-2.5 border-b border-slate-50 last:border-0">
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-semibold text-slate-800 truncate">{log.foodItem.name}</p>
+                        <p className="text-xs text-slate-400">{log.amount}g{log.aiEstimated ? ' · 🤖 KI' : ''}</p>
+                      </div>
+                      <div className="text-right mr-2">
+                        <p className="text-sm font-black text-slate-800">{log.macros.calories} kcal</p>
+                        <p className="text-[10px] text-slate-400">E:{log.macros.protein}g K:{log.macros.carbs}g F:{log.macros.fat}g</p>
+                      </div>
+                      <button onClick={() => removeFoodLog(log.id)} className="text-slate-200 active:text-red-400 p-1">
+                        <Trash2 size={15} />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
+              {open && logs.length === 0 && (
+                <div className="border-t border-slate-50 px-4 py-4 text-center">
+                  <p className="text-sm text-slate-400">Noch nichts eingetragen</p>
+                  <button onClick={() => setAddingMeal(meal.id)}
+                    className="mt-2 px-4 py-2 bg-blue-50 text-blue-600 text-sm font-bold rounded-2xl">
+                    Jetzt hinzufügen
+                  </button>
+                </div>
+              )}
+            </div>
+          )
+        })}
       </div>
 
-      {addingMeal && <AddFoodModal mealType={addingMeal} onClose={() => setAddingMeal(null)} />}
+      {addingMeal && <AddSheet mealType={addingMeal} onClose={() => setAddingMeal(null)} />}
     </div>
   )
 }

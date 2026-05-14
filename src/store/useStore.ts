@@ -90,7 +90,7 @@ const defaultApiKeys: ApiKeys = {
 export const useStore = create<AppState>()(
   persist(
     (set, get) => ({
-      activeTab: 'dashboard',
+      activeTab: 'home',
       setActiveTab: (tab) => set({ activeTab: tab }),
 
       profile: null,
@@ -219,6 +219,9 @@ export const useStore = create<AppState>()(
         const envOAI  = import.meta.env.VITE_OPENAI_KEY ?? ''
         if (envAnth && !state.apiKeys.anthropic) state.apiKeys.anthropic = envAnth
         if (envOAI  && !state.apiKeys.openai)    state.apiKeys.openai    = envOAI
+        // Migrate old 'dashboard' tab to 'home'
+        if ((state.activeTab as string) === 'dashboard') state.activeTab = 'home'
+        if ((state.activeTab as string) === 'fridge') state.activeTab = 'ai'
       },
       partialize: (state) => ({
         profile: state.profile,

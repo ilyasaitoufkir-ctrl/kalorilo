@@ -1,321 +1,309 @@
 import { useMemo } from 'react'
-import { Flame, Droplets, Target, Plus, ChevronRight, Zap } from 'lucide-react'
+import { Settings, Droplets, Plus, Zap, ChevronRight } from 'lucide-react'
 import { useStore } from '../store/useStore'
-import { formatDate, getProgressPercent, getMacroTargets, getTodayQuote, waterGoal, getBMI } from '../utils/calculations'
+import { formatDate, getMacroTargets, getTodayQuote, waterGoal, getBMI } from '../utils/calculations'
 
 const today = formatDate()
 
-function RingProgress({ value, max, color, size = 80 }: { value: number; max: number; color: string; size?: number }) {
-  const pct = max > 0 ? Math.min(1, value / max) : 0
-  const r = (size - 10) / 2
+function Ring({ pct, size = 180, stroke = 14, color = '#fff' }: { pct: number; size?: number; stroke?: number; color?: string }) {
+  const r = (size - stroke) / 2
   const circ = 2 * Math.PI * r
-  const dash = circ * pct
+  const dash = circ * Math.min(1, Math.max(0, pct))
   return (
-    <svg width={size} height={size} className="progress-ring">
-      <circle cx={size / 2} cy={size / 2} r={r} fill="none" stroke="#ffffff30" strokeWidth={8} />
-      <circle
-        cx={size / 2} cy={size / 2} r={r}
-        fill="none" stroke={color} strokeWidth={8}
-        strokeDasharray={`${dash} ${circ}`}
-        strokeLinecap="round"
-        style={{ transition: 'stroke-dasharray 0.6s ease' }}
-      />
+    <svg width={size} height={size} className="ring-base" style={{ filter: 'drop-shadow(0 0 12px rgba(255,255,255,.25))' }}>
+      <circle cx={size/2} cy={size/2} r={r} fill="none" stroke="rgba(255,255,255,.15)" strokeWidth={stroke} />
+      <circle cx={size/2} cy={size/2} r={r} fill="none" stroke={color} strokeWidth={stroke}
+        strokeDasharray={`${dash} ${circ}`} strokeLinecap="round"
+        style={{ transition: 'stroke-dasharray .8s cubic-bezier(.16,1,.3,1)' }} />
     </svg>
   )
 }
 
-function MacroBar({ label, value, max, color }: { label: string; value: number; max: number; color: string }) {
-  const pct = max > 0 ? Math.min(100, Math.round((value / max) * 100)) : 0
+function MacroChip({ label, value, max, color }: { label: string; value: number; max: number; color: string }) {
+  const pct = Math.min(100, max > 0 ? (value / max) * 100 : 0)
   return (
     <div className="flex-1">
-      <div className="flex justify-between text-xs mb-1">
-        <span className="text-gray-500">{label}</span>
-        <span className="font-semibold text-gray-700">{Math.round(value)}g</span>
+      <div className="flex justify-between text-xs mb-1.5">
+        <span className="font-semibold text-slate-700">{label}</span>
+        <span className="text-slate-500">{Math.round(value)}g</span>
       </div>
-      <div className="h-1.5 bg-gray-100 rounded-full overflow-hidden">
-        <div className="h-full rounded-full transition-all duration-500" style={{ width: `${pct}%`, background: color }} />
+      <div className="h-2 bg-slate-100 rounded-full overflow-hidden">
+        <div className="h-full rounded-full transition-all duration-700"
+          style={{ width: `${pct}%`, background: color }} />
       </div>
-      <div className="text-xs text-gray-400 mt-0.5">{max}g Ziel</div>
+      <div className="text-[10px] text-slate-400 mt-0.5">von {max}g</div>
     </div>
   )
 }
 
 export default function Dashboard() {
-  // Raw state – no computed functions in selectors
-  const profile = useStore((s) => s.profile)
-  const foodLogs = useStore((s) => s.foodLogs)
-  const activityLogs = useStore((s) => s.activityLogs)
-  const waterLogs = useStore((s) => s.waterLogs)
-  const cheatDays = useStore((s) => s.cheatDays)
-  const whoopData = useStore((s) => s.whoopData)
-  const setActiveTab = useStore((s) => s.setActiveTab)
-  const addWater = useStore((s) => s.addWater)
-  const addCheatDay = useStore((s) => s.addCheatDay)
-  const removeCheatDay = useStore((s) => s.removeCheatDay)
+  const profile       = useStore((s) => s.profile)
+  const foodLogs      = useStore((s) => s.foodLogs)
+  const activityLogs  = useStore((s) => s.activityLogs)
+  const waterLogs     = useStore((s) => s.waterLogs)
+  const whoopData     = useStore((s) => s.whoopData)
+  const cheatDays     = useStore((s) => s.cheatDays)
+  const addWater      = useStore((s) => s.addWater)
+  const addCheatDay   = useStore((s) => s.addCheatDay)
+  const removeCheatDay= useStore((s) => s.removeCheatDay)
+  const setActiveTab  = useStore((s) => s.setActiveTab)
 
-  // Compute everything locally with useMemo
-  const todayFoods = useMemo(() => foodLogs.filter((l) => l.date === today), [foodLogs])
-  const todayActivities = useMemo(() => activityLogs.filter((l) => l.date === today), [activityLogs])
-  const water = useMemo(() => waterLogs.find((w) => w.date === today)?.amount ?? 0, [waterLogs])
+  const todayFoods  = useMemo(() => foodLogs.filter((l) => l.date === today), [foodLogs])
+  const todayActs   = useMemo(() => activityLogs.filter((l) => l.date === today), [activityLogs])
+  const water       = useMemo(() => waterLogs.find((w) => w.date === today)?.amount ?? 0, [waterLogs])
 
-  const totalCalories = useMemo(() => todayFoods.reduce((s, f) => s + (f.macros?.calories ?? 0), 0), [todayFoods])
-  const totalProtein = useMemo(() => todayFoods.reduce((s, f) => s + (f.macros?.protein ?? 0), 0), [todayFoods])
-  const totalFat = useMemo(() => todayFoods.reduce((s, f) => s + (f.macros?.fat ?? 0), 0), [todayFoods])
-  const totalCarbs = useMemo(() => todayFoods.reduce((s, f) => s + (f.macros?.carbs ?? 0), 0), [todayFoods])
-  const caloriesBurned = useMemo(() => todayActivities.reduce((s, a) => s + a.caloriesBurned, 0), [todayActivities])
+  const calories  = useMemo(() => todayFoods.reduce((s, f) => s + (f.macros?.calories ?? 0), 0), [todayFoods])
+  const protein   = useMemo(() => todayFoods.reduce((s, f) => s + (f.macros?.protein ?? 0), 0), [todayFoods])
+  const fat       = useMemo(() => todayFoods.reduce((s, f) => s + (f.macros?.fat ?? 0), 0), [todayFoods])
+  const carbs     = useMemo(() => todayFoods.reduce((s, f) => s + (f.macros?.carbs ?? 0), 0), [todayFoods])
+  const burned    = useMemo(() => todayActs.reduce((s, a) => s + a.caloriesBurned, 0), [todayActs])
 
   const target = useMemo(() => {
     if (!profile) return 2000
-    const { age, weight, height, gender, activityLevel, goal, targetWeight, targetWeeks } = profile
-    const safeAge = Number(age) || 25
-    const safeWeight = Number(weight) || 75
-    const safeHeight = Number(height) || 175
-    const bmr = gender === 'male'
-      ? 10 * safeWeight + 6.25 * safeHeight - 5 * safeAge + 5
-      : 10 * safeWeight + 6.25 * safeHeight - 5 * safeAge - 161
-    const multipliers: Record<string, number> = { sedentary: 1.2, light: 1.375, moderate: 1.55, active: 1.725, very_active: 1.9 }
-    const tdee = bmr * (multipliers[activityLevel] ?? 1.55)
-    const weeks = Number(targetWeeks) || 12
-    const weeklyDelta = (safeWeight - (Number(targetWeight) || safeWeight)) * 7700 / weeks
-    if (goal === 'lose') return Math.max(1200, Math.round(tdee - weeklyDelta / 7))
-    if (goal === 'gain') return Math.round(tdee + Math.abs(weeklyDelta) / 7)
+    const w = Number(profile.weight) || 75, h = Number(profile.height) || 175, a = Number(profile.age) || 25
+    const bmr = profile.gender === 'male' ? 10*w+6.25*h-5*a+5 : 10*w+6.25*h-5*a-161
+    const m: Record<string,number> = { sedentary:1.2, light:1.375, moderate:1.55, active:1.725, very_active:1.9 }
+    const tdee = bmr * (m[profile.activityLevel] ?? 1.55)
+    const wks = Number(profile.targetWeeks) || 12
+    const delta = (w - (Number(profile.targetWeight) || w)) * 7700 / wks
+    if (profile.goal === 'lose') return Math.max(1200, Math.round(tdee - delta/7))
+    if (profile.goal === 'gain') return Math.round(tdee + Math.abs(delta)/7)
     return Math.round(tdee)
   }, [profile])
 
-  const macroTargets = useMemo(() => getMacroTargets(target), [target])
-  const netCalories = totalCalories - caloriesBurned
-  const remaining = target - netCalories
-  const isCheatDay = cheatDays.some((c) => c.date === today)
-
+  const macroT  = useMemo(() => getMacroTargets(target), [target])
+  const net     = calories - burned
+  const remain  = target - net
+  const ringPct = net / target
   const streak = useMemo(() => {
     let count = 0
     const d = new Date()
     for (let i = 0; i < 365; i++) {
-      const dateStr = d.toISOString().split('T')[0]
-      const foods = foodLogs.filter((l) => l.date === dateStr)
-      const cals = foods.reduce((s, f) => s + (f.macros?.calories ?? 0), 0)
-      const burned = activityLogs.filter((l) => l.date === dateStr).reduce((s, a) => s + a.caloriesBurned, 0)
-      const goalMet = foods.length > 0 && Math.abs((cals - burned) - target) <= 200
-      if (goalMet) count++
+      const ds = d.toISOString().split('T')[0]
+      const cals = foodLogs.filter((l) => l.date === ds).reduce((s, f) => s + (f.macros?.calories ?? 0), 0)
+      const brnd = activityLogs.filter((l) => l.date === ds).reduce((s, a) => s + a.caloriesBurned, 0)
+      if (cals > 0 && Math.abs((cals - brnd) - target) <= 200) count++
       else if (i > 0) break
       d.setDate(d.getDate() - 1)
     }
     return count
   }, [foodLogs, activityLogs, target])
 
-  const bmi = useMemo(() => profile ? getBMI(Number(profile.weight) || 0, Number(profile.height) || 1) : null, [profile])
+  const isCheatDay = cheatDays.some((c) => c.date === today)
+  const bmi = profile ? getBMI(Number(profile.weight)||0, Number(profile.height)||1) : null
+
+  const dateLabel = new Date().toLocaleDateString('de-DE', { weekday: 'long', day: 'numeric', month: 'long' })
 
   return (
-    <div className="pb-24 animate-fade-in">
-      {/* Header */}
-      <div className="gradient-blue px-4 pt-12 pb-6 safe-top">
-        <div className="flex items-center justify-between mb-4">
+    <div className="pb-nav anim-fade">
+      {/* ── Blue Header ── */}
+      <div className="grad-blue px-5 pt-safe pb-8 relative overflow-hidden">
+        {/* decorative circles */}
+        <div className="absolute -top-16 -right-16 w-56 h-56 rounded-full bg-white/5" />
+        <div className="absolute -bottom-8 -left-8 w-40 h-40 rounded-full bg-white/5" />
+
+        {/* top row */}
+        <div className="flex items-center justify-between mb-6 relative">
           <div>
-            <p className="text-blue-100 text-sm">Guten Tag</p>
-            <h1 className="text-white text-2xl font-bold">{profile?.name ?? 'Kalorilo'} 👋</h1>
+            <p className="text-blue-200 text-sm">{dateLabel}</p>
+            <h1 className="text-white text-2xl font-bold leading-tight">
+              Hey, {profile?.name?.split(' ')[0] ?? 'Kalorilo'} 👋
+            </h1>
           </div>
-          {streak > 0 && (
-            <div className="bg-white/20 rounded-full px-3 py-1 flex items-center gap-1">
-              <Flame size={14} className="text-orange-300" />
-              <span className="text-white text-sm font-bold">{streak}</span>
-            </div>
-          )}
+          <button onClick={() => setActiveTab('profile')}
+            className="w-10 h-10 bg-white/20 rounded-2xl flex items-center justify-center active:bg-white/30 transition">
+            <Settings size={18} className="text-white" />
+          </button>
         </div>
 
         {/* Quote */}
-        <div className="bg-white/10 rounded-2xl p-3 mb-4">
-          <p className="text-white/90 text-sm italic">{getTodayQuote()}</p>
+        <div className="bg-white/10 rounded-2xl px-4 py-3 mb-6 relative">
+          <p className="text-white/90 text-sm italic leading-snug">{getTodayQuote()}</p>
         </div>
 
-        {/* Main calorie ring */}
-        <div className="flex items-center justify-center gap-6">
+        {/* Ring */}
+        <div className="flex items-center justify-center gap-8">
           <div className="relative flex items-center justify-center">
-            <RingProgress value={netCalories} max={target} color="#fff" size={140} />
-            <div className="absolute text-center">
-              <div className="text-white text-3xl font-bold">{Math.round(netCalories)}</div>
-              <div className="text-blue-200 text-xs">von {target} kcal</div>
+            <Ring pct={ringPct} size={170} stroke={14} />
+            <div className="absolute inset-0 flex flex-col items-center justify-center">
+              <span className="text-white text-4xl font-bold tracking-tight">{Math.round(net)}</span>
+              <span className="text-blue-200 text-xs font-medium">kcal gegessen</span>
+              <span className={`text-sm font-bold mt-1 ${remain < 0 ? 'text-red-300' : 'text-green-300'}`}>
+                {remain >= 0 ? `${Math.round(remain)} übrig` : `${Math.abs(Math.round(remain))} darüber`}
+              </span>
             </div>
           </div>
-          <div className="flex flex-col gap-3">
-            <div className="text-white">
-              <div className="text-xs text-blue-200">Gegessen</div>
-              <div className="text-lg font-bold">{Math.round(totalCalories)} kcal</div>
-            </div>
-            <div className="text-white">
-              <div className="text-xs text-blue-200">Verbrannt</div>
-              <div className="text-lg font-bold text-green-300">{Math.round(caloriesBurned)} kcal</div>
-            </div>
-            <div className="text-white">
-              <div className="text-xs text-blue-200">{remaining >= 0 ? 'Noch verfügbar' : 'Überschuss'}</div>
-              <div className={`text-lg font-bold ${remaining < 0 ? 'text-red-300' : 'text-yellow-300'}`}>
-                {Math.abs(Math.round(remaining))} kcal
+          <div className="space-y-4">
+            {[
+              { label: 'Ziel', val: `${target}`, unit: 'kcal', color: 'text-blue-200' },
+              { label: 'Gegessen', val: `${Math.round(calories)}`, unit: 'kcal', color: 'text-white' },
+              { label: 'Verbrannt', val: `${Math.round(burned)}`, unit: 'kcal', color: 'text-green-300' },
+            ].map((item) => (
+              <div key={item.label}>
+                <p className="text-blue-200 text-[11px]">{item.label}</p>
+                <p className={`font-bold text-lg leading-tight ${item.color}`}>{item.val} <span className="text-sm font-medium opacity-70">{item.unit}</span></p>
               </div>
-            </div>
+            ))}
           </div>
         </div>
       </div>
 
-      <div className="px-4 -mt-2 space-y-4">
-        {/* Makros */}
-        <div className="card p-4">
-          <h3 className="text-sm font-semibold text-gray-700 mb-3">Makronährstoffe</h3>
+      <div className="px-4 -mt-1 space-y-3 relative">
+        {/* ── Makros ── */}
+        <div className="card p-4 anim-up" style={{ animationDelay: '0.05s' }}>
+          <p className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-3">Makros heute</p>
           <div className="flex gap-4">
-            <MacroBar label="Eiweiß" value={totalProtein} max={macroTargets.protein} color="#3b82f6" />
-            <MacroBar label="Kohlenhydrate" value={totalCarbs} max={macroTargets.carbs} color="#f59e0b" />
-            <MacroBar label="Fett" value={totalFat} max={macroTargets.fat} color="#ef4444" />
+            <MacroChip label="Eiweiß" value={protein} max={macroT.protein} color="#3b82f6" />
+            <MacroChip label="Kohlenhydrate" value={carbs} max={macroT.carbs} color="#f59e0b" />
+            <MacroChip label="Fett" value={fat} max={macroT.fat} color="#ef4444" />
           </div>
         </div>
 
-        {/* Quick Actions */}
-        <div className="grid grid-cols-2 gap-3">
-          <button onClick={() => setActiveTab('food')} className="card p-4 text-left card-pressed flex items-center gap-3">
-            <div className="w-10 h-10 gradient-blue rounded-xl flex items-center justify-center">
+        {/* ── Quick Actions ── */}
+        <div className="grid grid-cols-2 gap-3 anim-up" style={{ animationDelay: '0.1s' }}>
+          <button onClick={() => setActiveTab('food')}
+            className="card card-press p-4 flex items-center gap-3 text-left">
+            <div className="w-11 h-11 grad-blue rounded-2xl flex items-center justify-center flex-shrink-0">
               <Plus size={20} className="text-white" />
             </div>
             <div>
-              <div className="text-sm font-semibold text-gray-800">Essen</div>
-              <div className="text-xs text-gray-400">Eintragen</div>
+              <p className="text-sm font-bold text-slate-800">Essen</p>
+              <p className="text-xs text-slate-400">Eintragen</p>
             </div>
           </button>
-          <button onClick={() => setActiveTab('sport')} className="card p-4 text-left card-pressed flex items-center gap-3">
-            <div className="w-10 h-10 gradient-green rounded-xl flex items-center justify-center">
+          <button onClick={() => setActiveTab('sport')}
+            className="card card-press p-4 flex items-center gap-3 text-left">
+            <div className="w-11 h-11 grad-green rounded-2xl flex items-center justify-center flex-shrink-0">
               <Zap size={20} className="text-white" />
             </div>
             <div>
-              <div className="text-sm font-semibold text-gray-800">Sport</div>
-              <div className="text-xs text-gray-400">Aktivität</div>
+              <p className="text-sm font-bold text-slate-800">Sport</p>
+              <p className="text-xs text-slate-400">Aktivität</p>
             </div>
           </button>
         </div>
 
-        {/* Water Tracker */}
-        <div className="card p-4">
+        {/* ── Wasser ── */}
+        <div className="card p-4 anim-up" style={{ animationDelay: '0.15s' }}>
           <div className="flex items-center justify-between mb-3">
             <div className="flex items-center gap-2">
               <Droplets size={18} className="text-blue-500" />
-              <span className="text-sm font-semibold text-gray-700">Wasseraufnahme</span>
+              <p className="text-sm font-bold text-slate-700">Wasser</p>
             </div>
-            <span className="text-sm text-gray-500">{water} / {waterGoal()} ml</span>
+            <p className="text-sm font-bold text-blue-600">{water} <span className="text-slate-400 font-normal">/ {waterGoal()} ml</span></p>
           </div>
-          <div className="h-2 bg-gray-100 rounded-full overflow-hidden mb-3">
-            <div
-              className="h-full bg-blue-400 rounded-full transition-all duration-500"
-              style={{ width: `${getProgressPercent(water, waterGoal())}%` }}
-            />
+          <div className="flex gap-1.5 mb-3">
+            {Array.from({ length: 8 }).map((_, i) => (
+              <button key={i} onClick={() => addWater(today, 250)}
+                className="flex-1 h-8 rounded-xl transition-all duration-200"
+                style={{ background: i < Math.floor(water / 250) ? '#3b82f6' : i === Math.floor(water / 250) && water % 250 > 0 ? '#93c5fd' : '#f1f5f9' }}
+              >
+                <span className="text-[16px]">💧</span>
+              </button>
+            ))}
           </div>
           <div className="flex gap-2">
             {[150, 250, 500].map((ml) => (
-              <button
-                key={ml}
-                onClick={() => addWater(today, ml)}
-                className="flex-1 bg-blue-50 text-blue-600 text-xs font-semibold py-2 rounded-xl active:bg-blue-100 transition"
-              >
+              <button key={ml} onClick={() => addWater(today, ml)}
+                className="flex-1 bg-blue-50 text-blue-600 text-xs font-bold py-2.5 rounded-2xl active:bg-blue-100 transition">
                 +{ml}ml
               </button>
             ))}
           </div>
         </div>
 
-        {/* Goal Progress */}
-        {profile && (
-          <div className="card p-4">
-            <div className="flex items-center gap-2 mb-3">
-              <Target size={18} className="text-purple-500" />
-              <span className="text-sm font-semibold text-gray-700">Zielfortschritt</span>
-            </div>
-            <div className="flex items-center gap-4">
-              <div className="flex-1">
-                <div className="flex justify-between text-xs text-gray-500 mb-1">
-                  <span>{profile.weight} kg</span>
-                  <span>{profile.targetWeight} kg</span>
-                </div>
-                <div className="h-2 bg-gray-100 rounded-full overflow-hidden">
-                  <div className="h-full gradient-purple rounded-full" style={{ width: `${Math.max(5, getProgressPercent(Math.abs(profile.weight - profile.targetWeight), Math.abs(Number(profile.weight) - Number(profile.targetWeight)) || 1))}%` }} />
-                </div>
+        {/* ── Whoop ── */}
+        {whoopData && (
+          <div className="rounded-3xl overflow-hidden" style={{ background: 'linear-gradient(135deg,#0f172a 0%,#1e293b 100%)' }}>
+            <div className="px-4 pt-4 pb-3">
+              <div className="flex items-center gap-2 mb-3">
+                <span className="text-lg">⌚</span>
+                <p className="text-white font-bold text-sm">Whoop · {whoopData.date}</p>
               </div>
-              <div className="text-right">
-                <div className="text-sm font-bold text-gray-800">Noch {(profile.targetWeeks ?? 12) * 7} Tage</div>
-                <div className="text-xs text-gray-400">bis zum Ziel</div>
+              <div className="grid grid-cols-4 gap-3">
+                {[
+                  { l: 'Recovery', v: `${whoopData.recovery}%`, c: whoopData.recovery > 66 ? '#10b981' : whoopData.recovery > 33 ? '#f59e0b' : '#ef4444' },
+                  { l: 'HRV', v: `${whoopData.hrv}ms`, c: '#60a5fa' },
+                  { l: 'Schlaf', v: `${whoopData.sleepQuality}%`, c: '#a78bfa' },
+                  { l: 'Strain', v: `${Number(whoopData.strain).toFixed(1)}`, c: '#fb923c' },
+                ].map((item) => (
+                  <div key={item.l} className="bg-white/10 rounded-2xl p-2.5 text-center">
+                    <p className="text-[10px] text-slate-400 mb-0.5">{item.l}</p>
+                    <p className="font-bold text-sm" style={{ color: item.c }}>{item.v}</p>
+                  </div>
+                ))}
               </div>
+              {whoopData.recovery < 34 && (
+                <div className="mt-2 bg-red-500/20 rounded-2xl px-3 py-2 text-xs text-red-300">
+                  ⚠️ Niedrige Recovery – leichteres Training empfohlen
+                </div>
+              )}
             </div>
           </div>
         )}
 
-        {/* Whoop Widget */}
-        {whoopData && (
-          <div className="card p-4 bg-gradient-to-r from-gray-800 to-gray-900">
-            <div className="flex items-center gap-2 mb-3">
-              <span className="text-white text-sm font-bold">⌚ Whoop</span>
-              <span className="text-gray-400 text-xs">{whoopData.date}</span>
+        {/* ── Stats Row ── */}
+        <div className="grid grid-cols-3 gap-3 anim-up" style={{ animationDelay: '0.2s' }}>
+          <div className="card p-3.5 text-center">
+            <p className="text-2xl font-black text-orange-500">{streak}</p>
+            <p className="text-[11px] text-slate-500 font-medium mt-0.5">🔥 Streak</p>
+          </div>
+          <div className="card p-3.5 text-center">
+            <p className="text-2xl font-black text-blue-500">{bmi ?? '–'}</p>
+            <p className="text-[11px] text-slate-500 font-medium mt-0.5">BMI</p>
+          </div>
+          <div className="card p-3.5 text-center">
+            <p className="text-2xl font-black text-green-500">{Math.round(burned)}</p>
+            <p className="text-[11px] text-slate-500 font-medium mt-0.5">kcal Sport</p>
+          </div>
+        </div>
+
+        {/* ── Cheat Day ── */}
+        <div className="card p-4 flex items-center justify-between anim-up" style={{ animationDelay: '0.25s' }}>
+          <div className="flex items-center gap-3">
+            <span className="text-2xl">🍕</span>
+            <div>
+              <p className="text-sm font-bold text-slate-800">Cheat Day</p>
+              <p className="text-xs text-slate-400">{isCheatDay ? 'Heute aktiv' : 'Noch keiner heute'}</p>
             </div>
-            <div className="grid grid-cols-4 gap-2">
-              {[
-                { label: 'Recovery', value: `${whoopData.recovery}%`, color: whoopData.recovery > 66 ? '#10b981' : whoopData.recovery > 33 ? '#f59e0b' : '#ef4444' },
-                { label: 'HRV', value: `${whoopData.hrv}ms`, color: '#60a5fa' },
-                { label: 'Schlaf', value: `${whoopData.sleepQuality}%`, color: '#a78bfa' },
-                { label: 'Strain', value: String(whoopData.strain?.toFixed(1) ?? 0), color: '#fb923c' },
-              ].map((item) => (
-                <div key={item.label} className="text-center">
-                  <div className="text-xs text-gray-400 mb-1">{item.label}</div>
-                  <div className="text-sm font-bold" style={{ color: item.color }}>{item.value}</div>
+          </div>
+          <button onClick={() => isCheatDay ? removeCheatDay(today) : addCheatDay({ date: today })}
+            className={`px-4 py-2 rounded-2xl text-sm font-bold transition ${isCheatDay ? 'bg-red-50 text-red-500' : 'bg-blue-50 text-blue-600'}`}>
+            {isCheatDay ? 'Deaktivieren' : 'Aktivieren'}
+          </button>
+        </div>
+
+        {/* ── KI Shortcut ── */}
+        <button onClick={() => setActiveTab('ai')}
+          className="card card-press p-4 w-full flex items-center gap-3 text-left anim-up" style={{ animationDelay: '0.3s' }}>
+          <div className="w-11 h-11 grad-purple rounded-2xl flex items-center justify-center text-xl flex-shrink-0">🤖</div>
+          <div className="flex-1">
+            <p className="text-sm font-bold text-slate-800">KI-Ernährungsberater</p>
+            <p className="text-xs text-slate-400">Frag mich alles rund ums Essen</p>
+          </div>
+          <ChevronRight size={16} className="text-slate-300" />
+        </button>
+
+        {/* ── Letzte Mahlzeiten ── */}
+        {todayFoods.length > 0 && (
+          <div className="card p-4 anim-up" style={{ animationDelay: '0.35s' }}>
+            <div className="flex items-center justify-between mb-3">
+              <p className="text-sm font-bold text-slate-700">Heute gegessen</p>
+              <button onClick={() => setActiveTab('food')} className="text-xs text-blue-500 font-semibold">Alle anzeigen</button>
+            </div>
+            <div className="space-y-2">
+              {todayFoods.slice(-3).map((log) => (
+                <div key={log.id} className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm font-medium text-slate-700">{log.foodItem.name}</p>
+                    <p className="text-xs text-slate-400">{log.amount}g · {log.mealType === 'breakfast' ? 'Frühstück' : log.mealType === 'lunch' ? 'Mittagessen' : log.mealType === 'dinner' ? 'Abendessen' : 'Snack'}</p>
+                  </div>
+                  <p className="text-sm font-bold text-blue-600">{log.macros.calories} kcal</p>
                 </div>
               ))}
             </div>
-            {whoopData.recovery < 34 && (
-              <div className="mt-2 bg-red-900/30 rounded-xl p-2 text-xs text-red-300">
-                ⚠️ Niedrige Recovery – leichteres Training empfohlen
-              </div>
-            )}
           </div>
         )}
-
-        {/* Stats row */}
-        <div className="grid grid-cols-3 gap-3">
-          <div className="card p-3 text-center">
-            <div className="text-2xl font-bold text-orange-500">{streak}</div>
-            <div className="text-xs text-gray-500 mt-0.5">🔥 Streak</div>
-          </div>
-          <div className="card p-3 text-center">
-            <div className="text-2xl font-bold text-blue-500">{bmi ?? '–'}</div>
-            <div className="text-xs text-gray-500 mt-0.5">BMI</div>
-          </div>
-          <div className="card p-3 text-center">
-            <div className="text-2xl font-bold text-green-500">{Math.round(caloriesBurned)}</div>
-            <div className="text-xs text-gray-500 mt-0.5">kcal Sport</div>
-          </div>
-        </div>
-
-        {/* Cheat Day */}
-        <div className="card p-4">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <span className="text-xl">🍕</span>
-              <div>
-                <div className="text-sm font-semibold text-gray-800">Cheat Day</div>
-                <div className="text-xs text-gray-400">{isCheatDay ? 'Heute ist Cheat Day!' : 'Kein Cheat Day heute'}</div>
-              </div>
-            </div>
-            <button
-              onClick={() => isCheatDay ? removeCheatDay(today) : addCheatDay({ date: today })}
-              className={`px-4 py-2 rounded-xl text-sm font-semibold transition ${isCheatDay ? 'bg-red-100 text-red-600' : 'bg-blue-50 text-blue-600'}`}
-            >
-              {isCheatDay ? 'Rückgängig' : 'Aktivieren'}
-            </button>
-          </div>
-        </div>
-
-        {/* AI shortcut */}
-        <button
-          onClick={() => setActiveTab('ai')}
-          className="card p-4 w-full text-left card-pressed flex items-center gap-3"
-        >
-          <div className="w-10 h-10 gradient-purple rounded-xl flex items-center justify-center text-xl">🤖</div>
-          <div className="flex-1">
-            <div className="text-sm font-semibold text-gray-800">KI-Ernährungsberater</div>
-            <div className="text-xs text-gray-400">Frag mich alles rund ums Essen</div>
-          </div>
-          <ChevronRight size={18} className="text-gray-300" />
-        </button>
       </div>
     </div>
   )

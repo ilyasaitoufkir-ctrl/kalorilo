@@ -1,10 +1,10 @@
 import type { FoodItem } from '../types'
 
 export const FOOD_CATEGORIES = [
-  'Fleisch', 'Fisch & Meeresfrüchte', 'Geflügel', 'Gemüse', 'Obst',
-  'Milchprodukte', 'Getreide & Brot', 'Hülsenfrüchte', 'Nüsse & Samen',
-  'Snacks', 'Süßigkeiten', 'Getränke', 'Fertiggerichte', 'Fast Food',
-  'Eier', 'Saucen & Dips', 'Öle & Fette',
+  '⭐ Markenartikel', '🥩 Fleisch', '🐟 Fisch', '🍗 Geflügel', '🥦 Gemüse', '🍎 Obst',
+  '🧀 Milchprodukte', '🍞 Getreide & Brot', '🫘 Hülsenfrüchte', '🥜 Nüsse & Samen',
+  '🍿 Snacks', '🍫 Süßigkeiten', '🥤 Getränke', '🍔 Fast Food',
+  '🥚 Eier', '🫙 Saucen', '🧈 Öle & Fette',
 ]
 
 export const FOOD_DATABASE: FoodItem[] = [
@@ -164,16 +164,83 @@ export const FOOD_DATABASE: FoodItem[] = [
   { id: 'ff8', name: 'Pizza Margherita (1 Stück)', category: 'Fast Food', macros: { calories: 266, protein: 11.0, fat: 10.0, carbs: 33.0 }, serving: 100 },
 ]
 
+// ── Deutsche Markenartikel ────────────────────────────────────────────────
+export const BRANDED_PRODUCTS: FoodItem[] = [
+  // SÜSSIGKEITEN
+  { id: 'bm1', name: 'Kinder Maxi King', brand: 'Ferrero', category: '⭐ Markenartikel', macros: { calories: 443, protein: 7.7, fat: 28.0, carbs: 43.7 }, serving: 35 },
+  { id: 'bm2', name: 'Kinder Bueno', brand: 'Ferrero', category: '⭐ Markenartikel', macros: { calories: 518, protein: 8.4, fat: 30.2, carbs: 51.4 }, serving: 43 },
+  { id: 'bm3', name: 'Kinder Schokolade', brand: 'Ferrero', category: '⭐ Markenartikel', macros: { calories: 557, protein: 8.5, fat: 33.6, carbs: 55.4 }, serving: 12 },
+  { id: 'bm4', name: 'Ferrero Rocher', brand: 'Ferrero', category: '⭐ Markenartikel', macros: { calories: 584, protein: 7.2, fat: 39.4, carbs: 50.2 }, serving: 13 },
+  { id: 'bm5', name: 'Nutella (1 EL)', brand: 'Ferrero', category: '⭐ Markenartikel', macros: { calories: 530, protein: 6.3, fat: 30.9, carbs: 57.5 }, serving: 20 },
+  { id: 'bm6', name: 'Snickers', brand: 'Mars', category: '⭐ Markenartikel', macros: { calories: 488, protein: 7.7, fat: 23.2, carbs: 62.0 }, serving: 50 },
+  { id: 'bm7', name: 'Mars Riegel', brand: 'Mars', category: '⭐ Markenartikel', macros: { calories: 447, protein: 3.8, fat: 16.8, carbs: 70.4 }, serving: 51 },
+  { id: 'bm8', name: 'Twix', brand: 'Mars', category: '⭐ Markenartikel', macros: { calories: 500, protein: 4.5, fat: 24.0, carbs: 65.0 }, serving: 50 },
+  { id: 'bm9', name: 'Bounty', brand: 'Mars', category: '⭐ Markenartikel', macros: { calories: 465, protein: 3.4, fat: 25.0, carbs: 57.8 }, serving: 57 },
+  { id: 'bm10', name: 'KitKat (2 Finger)', brand: 'Nestlé', category: '⭐ Markenartikel', macros: { calories: 509, protein: 6.2, fat: 26.0, carbs: 64.5 }, serving: 41 },
+  { id: 'bm11', name: 'Milka Alpenmilch', brand: 'Milka', category: '⭐ Markenartikel', macros: { calories: 535, protein: 7.6, fat: 29.7, carbs: 59.4 }, serving: 40 },
+  { id: 'bm12', name: 'Milka Oreo', brand: 'Milka', category: '⭐ Markenartikel', macros: { calories: 530, protein: 6.0, fat: 27.5, carbs: 66.0 }, serving: 37 },
+  { id: 'bm13', name: 'Haribo Goldbären', brand: 'Haribo', category: '⭐ Markenartikel', macros: { calories: 343, protein: 6.3, fat: 0.1, carbs: 77.0 }, serving: 80 },
+  { id: 'bm14', name: 'Haribo Happy Cola', brand: 'Haribo', category: '⭐ Markenartikel', macros: { calories: 343, protein: 6.0, fat: 0.1, carbs: 77.0 }, serving: 80 },
+  { id: 'bm15', name: 'Ritter Sport Vollmilch', brand: 'Ritter Sport', category: '⭐ Markenartikel', macros: { calories: 530, protein: 7.4, fat: 29.8, carbs: 58.2 }, serving: 50 },
+  // FAST FOOD
+  { id: 'bm16', name: 'McDonald\'s Big Mac', brand: 'McDonald\'s', category: '⭐ Markenartikel', macros: { calories: 257, protein: 13.3, fat: 13.1, carbs: 22.4 }, serving: 202 },
+  { id: 'bm17', name: 'McDonald\'s Pommes (groß)', brand: 'McDonald\'s', category: '⭐ Markenartikel', macros: { calories: 288, protein: 3.6, fat: 14.7, carbs: 38.3 }, serving: 154 },
+  { id: 'bm18', name: 'McDonald\'s McFlurry Oreo', brand: 'McDonald\'s', category: '⭐ Markenartikel', macros: { calories: 140, protein: 3.2, fat: 5.5, carbs: 20.0 }, serving: 250 },
+  { id: 'bm19', name: 'McDonald\'s McNuggets (6 St.)', brand: 'McDonald\'s', category: '⭐ Markenartikel', macros: { calories: 255, protein: 14.7, fat: 14.7, carbs: 17.0 }, serving: 102 },
+  { id: 'bm20', name: 'McDonald\'s McChicken', brand: 'McDonald\'s', category: '⭐ Markenartikel', macros: { calories: 268, protein: 13.6, fat: 12.8, carbs: 24.8 }, serving: 162 },
+  { id: 'bm21', name: 'Burger King Whopper', brand: 'Burger King', category: '⭐ Markenartikel', macros: { calories: 243, protein: 10.4, fat: 14.8, carbs: 18.1 }, serving: 270 },
+  { id: 'bm22', name: 'Burger King Cheeseburger', brand: 'Burger King', category: '⭐ Markenartikel', macros: { calories: 305, protein: 16.5, fat: 14.4, carbs: 28.0 }, serving: 132 },
+  { id: 'bm23', name: 'Subway Chicken Teriyaki (15cm)', brand: 'Subway', category: '⭐ Markenartikel', macros: { calories: 190, protein: 17.0, fat: 2.5, carbs: 29.0 }, serving: 219 },
+  { id: 'bm24', name: 'Subway Italian BMT (15cm)', brand: 'Subway', category: '⭐ Markenartikel', macros: { calories: 217, protein: 13.0, fat: 9.0, carbs: 23.0 }, serving: 228 },
+  // GETRÄNKE
+  { id: 'bm25', name: 'Coca-Cola (0,33L)', brand: 'Coca-Cola', category: '⭐ Markenartikel', macros: { calories: 42, protein: 0, fat: 0, carbs: 10.6 }, serving: 330 },
+  { id: 'bm26', name: 'Coca-Cola Zero', brand: 'Coca-Cola', category: '⭐ Markenartikel', macros: { calories: 0.4, protein: 0, fat: 0, carbs: 0.1 }, serving: 330 },
+  { id: 'bm27', name: 'Fanta Orange', brand: 'Coca-Cola', category: '⭐ Markenartikel', macros: { calories: 48, protein: 0, fat: 0, carbs: 11.9 }, serving: 330 },
+  { id: 'bm28', name: 'Sprite', brand: 'Coca-Cola', category: '⭐ Markenartikel', macros: { calories: 39, protein: 0, fat: 0, carbs: 9.7 }, serving: 330 },
+  { id: 'bm29', name: 'Red Bull Energy', brand: 'Red Bull', category: '⭐ Markenartikel', macros: { calories: 45, protein: 0, fat: 0, carbs: 11.0 }, serving: 250 },
+  { id: 'bm30', name: 'Monster Energy', brand: 'Monster', category: '⭐ Markenartikel', macros: { calories: 44, protein: 0, fat: 0, carbs: 11.0 }, serving: 500 },
+  { id: 'bm31', name: 'Capri Sun Multivitamin', brand: 'Capri Sun', category: '⭐ Markenartikel', macros: { calories: 46, protein: 0.3, fat: 0, carbs: 11.5 }, serving: 200 },
+  { id: 'bm32', name: 'Innocent Smoothie Mango', brand: 'Innocent', category: '⭐ Markenartikel', macros: { calories: 88, protein: 0.9, fat: 0.3, carbs: 20.5 }, serving: 250 },
+  // SNACKS
+  { id: 'bm33', name: 'Pringles Original', brand: 'Pringles', category: '⭐ Markenartikel', macros: { calories: 544, protein: 5.1, fat: 34.6, carbs: 52.8 }, serving: 30 },
+  { id: 'bm34', name: 'Pringles Sour Cream', brand: 'Pringles', category: '⭐ Markenartikel', macros: { calories: 550, protein: 5.0, fat: 35.3, carbs: 53.0 }, serving: 30 },
+  { id: 'bm35', name: 'Lay\'s Classic', brand: 'Lay\'s', category: '⭐ Markenartikel', macros: { calories: 536, protein: 7.0, fat: 34.8, carbs: 49.5 }, serving: 30 },
+  { id: 'bm36', name: 'Doritos Nacho Cheese', brand: 'Doritos', category: '⭐ Markenartikel', macros: { calories: 495, protein: 7.0, fat: 24.0, carbs: 63.5 }, serving: 30 },
+  { id: 'bm37', name: 'Erdnüsse gesalzen', brand: 'Seeberger', category: '⭐ Markenartikel', macros: { calories: 600, protein: 26.5, fat: 49.7, carbs: 14.5 }, serving: 30 },
+  { id: 'bm38', name: 'Studentenfutter', brand: 'Seeberger', category: '⭐ Markenartikel', macros: { calories: 489, protein: 12.0, fat: 28.3, carbs: 48.5 }, serving: 50 },
+  // FRÜHSTÜCK & MILCHPRODUKTE
+  { id: 'bm39', name: 'Kellogg\'s Cornflakes', brand: 'Kellogg\'s', category: '⭐ Markenartikel', macros: { calories: 375, protein: 7.6, fat: 0.9, carbs: 84.0 }, serving: 40 },
+  { id: 'bm40', name: 'Kellogg\'s Crunchy Nut', brand: 'Kellogg\'s', category: '⭐ Markenartikel', macros: { calories: 408, protein: 6.9, fat: 6.2, carbs: 80.3 }, serving: 40 },
+  { id: 'bm41', name: 'Danone Activia Joghurt', brand: 'Danone', category: '⭐ Markenartikel', macros: { calories: 54, protein: 4.2, fat: 1.8, carbs: 5.8 }, serving: 125 },
+  { id: 'bm42', name: 'Müller Milchreis', brand: 'Müller', category: '⭐ Markenartikel', macros: { calories: 89, protein: 3.0, fat: 2.7, carbs: 13.8 }, serving: 200 },
+  { id: 'bm43', name: 'Ehrmann High Protein Quark', brand: 'Ehrmann', category: '⭐ Markenartikel', macros: { calories: 94, protein: 20.0, fat: 0.3, carbs: 3.5 }, serving: 250 },
+  { id: 'bm44', name: 'Skyr Vanille', brand: 'Arla', category: '⭐ Markenartikel', macros: { calories: 64, protein: 10.5, fat: 0.2, carbs: 5.5 }, serving: 200 },
+  { id: 'bm45', name: 'Müller Joghurt mild', brand: 'Müller', category: '⭐ Markenartikel', macros: { calories: 79, protein: 3.5, fat: 2.7, carbs: 10.2 }, serving: 150 },
+  // BÄCKEREI
+  { id: 'bm46', name: 'Brezel (groß)', brand: 'Bäckerei', category: '⭐ Markenartikel', macros: { calories: 296, protein: 8.3, fat: 1.2, carbs: 61.5 }, serving: 80 },
+  { id: 'bm47', name: 'Baguette (Scheibe)', brand: 'Bäckerei', category: '⭐ Markenartikel', macros: { calories: 263, protein: 9.5, fat: 1.2, carbs: 53.5 }, serving: 50 },
+  { id: 'bm48', name: 'Laugenbrötchen', brand: 'Bäckerei', category: '⭐ Markenartikel', macros: { calories: 298, protein: 9.0, fat: 4.2, carbs: 55.0 }, serving: 65 },
+  { id: 'bm49', name: 'Croissant Butter', brand: 'Bäckerei', category: '⭐ Markenartikel', macros: { calories: 406, protein: 8.2, fat: 21.0, carbs: 45.7 }, serving: 60 },
+  { id: 'bm50', name: 'Vollkorntoast (Scheibe)', brand: 'Harry\'s', category: '⭐ Markenartikel', macros: { calories: 230, protein: 9.5, fat: 3.5, carbs: 40.0 }, serving: 30 },
+  // STARBUCKS
+  { id: 'bm51', name: 'Starbucks Latte Macchiato (M)', brand: 'Starbucks', category: '⭐ Markenartikel', macros: { calories: 126, protein: 7.1, fat: 4.7, carbs: 15.1 }, serving: 354 },
+  { id: 'bm52', name: 'Starbucks Frappuccino Karamell', brand: 'Starbucks', category: '⭐ Markenartikel', macros: { calories: 268, protein: 5.0, fat: 8.0, carbs: 44.0 }, serving: 473 },
+  { id: 'bm53', name: 'Starbucks Cappuccino (M)', brand: 'Starbucks', category: '⭐ Markenartikel', macros: { calories: 100, protein: 6.0, fat: 3.7, carbs: 10.9 }, serving: 354 },
+]
+
+// Gesamtdatenbank (Basis + Markenartikel)
+export const ALL_FOODS: FoodItem[] = [...FOOD_DATABASE, ...BRANDED_PRODUCTS]
+
 export function searchFoods(query: string): FoodItem[] {
   if (!query.trim()) return []
   const q = query.toLowerCase()
-  return FOOD_DATABASE.filter(
+  return ALL_FOODS.filter(
     (f) => f.name.toLowerCase().includes(q) || f.category.toLowerCase().includes(q) || (f.brand ?? '').toLowerCase().includes(q)
-  ).slice(0, 20)
+  ).slice(0, 30)
 }
 
 export function getFoodsByCategory(category: string): FoodItem[] {
-  return FOOD_DATABASE.filter((f) => f.category === category)
+  return ALL_FOODS.filter((f) => f.category === category)
 }
 
 export function calculateMacros(food: FoodItem, amount: number) {

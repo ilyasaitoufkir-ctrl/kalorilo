@@ -7,7 +7,6 @@ import SportTracker from './components/SportTracker'
 import AIAdvisor from './components/AIAdvisor'
 import Statistics from './components/Statistics'
 import Profile from './components/Profile'
-import FridgeScan from './components/FridgeScan'
 import Onboarding from './components/Onboarding'
 import ErrorBoundary from './components/ErrorBoundary'
 
@@ -15,21 +14,16 @@ function MainApp() {
   const profile = useStore((s) => s.profile)
   const activeTab = useStore((s) => s.activeTab)
 
-  if (!profile) {
-    return <Onboarding />
-  }
-
-  const tab = activeTab as string
+  if (!profile) return <Onboarding />
 
   return (
-    <div className="relative min-h-screen bg-gray-50">
-      {tab === 'dashboard' && <Dashboard />}
-      {tab === 'food' && <FoodTracker />}
-      {tab === 'sport' && <SportTracker />}
-      {tab === 'ai' && <AIAdvisor />}
-      {tab === 'stats' && <Statistics />}
-      {tab === 'profile' && <Profile />}
-      {tab === 'fridge' && <FridgeScan />}
+    <div className="min-h-dvh bg-slate-100">
+      {activeTab === 'home'    && <Dashboard />}
+      {activeTab === 'food'    && <FoodTracker />}
+      {activeTab === 'sport'   && <SportTracker />}
+      {activeTab === 'stats'   && <Statistics />}
+      {activeTab === 'ai'      && <AIAdvisor />}
+      {activeTab === 'profile' && <Profile />}
       <Navigation />
     </div>
   )
@@ -42,8 +36,16 @@ export default function App() {
       <Toaster
         position="top-center"
         toastOptions={{
-          duration: 2500,
-          style: { borderRadius: '16px', background: '#1e293b', color: '#fff', fontSize: '14px' },
+          duration: 2800,
+          style: {
+            borderRadius: '16px',
+            background: '#0f172a',
+            color: '#f8fafc',
+            fontSize: '14px',
+            fontWeight: '500',
+            padding: '12px 16px',
+            maxWidth: '340px',
+          },
         }}
       />
     </ErrorBoundary>
