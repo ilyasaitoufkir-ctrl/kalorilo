@@ -18,13 +18,15 @@ export default function Profile() {
   const setProfile   = useStore((s) => s.setProfile)
   const apiKeys      = useStore((s) => s.apiKeys)
   const setApiKeys   = useStore((s) => s.setApiKeys)
+  const darkMode     = useStore((s) => s.darkMode)
+  const setDarkMode  = useStore((s) => s.setDarkMode)
   const reminders    = useStore((s) => s.reminders)
   const setReminders = useStore((s) => s.setReminders)
   const getDailyCalorieTarget = useStore((s) => s.getDailyCalorieTarget)
   const whoopData    = useStore((s) => s.whoopData)
   const setWhoopData = useStore((s) => s.setWhoopData)
 
-  const [section, setSection] = useState<'profile'|'goals'|'apikeys'|'whoop'|'reminders'>('profile')
+  const [section, setSection] = useState<'profile'|'goals'|'apikeys'|'appearance'|'whoop'|'reminders'>('profile')
   const [form, setForm] = useState<Partial<UserProfile>>(storeProfile ?? { name:'', age:25, weight:75, height:175, gender:'male', activityLevel:'moderate', goal:'lose', targetWeight:70, targetWeeks:12 })
   const [keys, setKeys] = useState(apiKeys)
   const [whoopForm, setWhoopForm] = useState({ recovery: '', hrv: '', restingHR: '', sleepQuality: '', strain: '' })
@@ -48,6 +50,7 @@ export default function Profile() {
     { id: 'profile' as const,   label: '👤 Profil' },
     { id: 'goals' as const,     label: '🎯 Ziele' },
     { id: 'apikeys' as const,   label: '🔑 API Keys' },
+    { id: 'appearance' as const,label: '🌙 Design' },
     { id: 'whoop' as const,     label: '⌚ Whoop' },
     { id: 'reminders' as const, label: '🔔 Erinnerungen' },
   ]
@@ -168,6 +171,35 @@ export default function Profile() {
             <button onClick={saveProfile} className="w-full py-4 bg-blue-500 rounded-3xl text-white font-black flex items-center justify-center gap-2">
               <Save size={16} />Ziele speichern
             </button>
+          </div>
+        )}
+
+        {/* ── Appearance / Dark Mode ── */}
+        {section === ('appearance' as any) && (
+          <div className="card p-5 space-y-4">
+            <div>
+              <p className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-3">Dark Mode</p>
+              <div className="space-y-2">
+                {([
+                  { id: 'auto',  emoji: '⚙️', label: 'Automatisch', desc: 'Folgt der iPhone-Systemeinstellung' },
+                  { id: 'light', emoji: '☀️', label: 'Hell',         desc: 'Immer heller Modus' },
+                  { id: 'dark',  emoji: '🌙', label: 'Dunkel',       desc: 'Immer dunkler Modus' },
+                ] as { id: 'auto'|'light'|'dark'; emoji: string; label: string; desc: string }[]).map((opt) => (
+                  <button key={opt.id} onClick={() => setDarkMode(opt.id)}
+                    className={`w-full flex items-center gap-3 p-4 rounded-2xl text-left transition ${darkMode === opt.id ? 'bg-blue-500' : 'bg-slate-50'}`}>
+                    <span className="text-2xl">{opt.emoji}</span>
+                    <div>
+                      <p className={`text-sm font-bold ${darkMode === opt.id ? 'text-white' : 'text-slate-800'}`}>{opt.label}</p>
+                      <p className={`text-xs ${darkMode === opt.id ? 'text-blue-100' : 'text-slate-400'}`}>{opt.desc}</p>
+                    </div>
+                    {darkMode === opt.id && <span className="ml-auto text-white text-lg">✓</span>}
+                  </button>
+                ))}
+              </div>
+            </div>
+            <div className="bg-blue-50 rounded-2xl p-3">
+              <p className="text-xs text-blue-700 font-medium">💡 Im dunklen Modus wird weniger Akkuenergie bei OLED-Displays (iPhone X+) verbraucht.</p>
+            </div>
           </div>
         )}
 

@@ -1,5 +1,5 @@
-import { useMemo } from 'react'
-import { Settings, Droplets, Plus, Zap, ChevronRight } from 'lucide-react'
+import { useMemo, useState, useRef, useCallback } from 'react'
+import { Settings, Droplets, Plus, Zap, ChevronRight, Footprints, Heart } from 'lucide-react'
 import { useStore } from '../store/useStore'
 import { formatDate, getMacroTargets, getTodayQuote, waterGoal, getBMI } from '../utils/calculations'
 
@@ -39,14 +39,39 @@ function MacroChip({ label, value, max, color }: { label: string; value: number;
 export default function Dashboard() {
   const profile       = useStore((s) => s.profile)
   const foodLogs      = useStore((s) => s.foodLogs)
-  const activityLogs  = useStore((s) => s.activityLogs)
-  const waterLogs     = useStore((s) => s.waterLogs)
-  const whoopData     = useStore((s) => s.whoopData)
-  const cheatDays     = useStore((s) => s.cheatDays)
-  const addWater      = useStore((s) => s.addWater)
-  const addCheatDay   = useStore((s) => s.addCheatDay)
-  const removeCheatDay= useStore((s) => s.removeCheatDay)
-  const setActiveTab  = useStore((s) => s.setActiveTab)
+  const activityLogs   = useStore((s) => s.activityLogs)
+  const waterLogs      = useStore((s) => s.waterLogs)
+  const whoopData      = useStore((s) => s.whoopData)
+  const cheatDays      = useStore((s) => s.cheatDays)
+  const addWater       = useStore((s) => s.addWater)
+  const addCheatDay    = useStore((s) => s.addCheatDay)
+  const removeCheatDay = useStore((s) => s.removeCheatDay)
+  const setActiveTab   = useStore((s) => s.setActiveTab)
+  const stepsToday     = useStore((s) => s.stepsToday)
+  const healthCalories = useStore((s) => s.healthCalories)
+  const setStepsToday  = useStore((s) => s.setStepsToday)
+
+  // Pull-to-refresh
+  const [refreshing, setRefreshing] = useState(false)
+  const [pullY, setPullY] = useState(0)
+  const touchStartY = useRef(0)
+  const scrollRef = useRef<HTMLDivElement>(null)
+
+  const onTouchStart = useCallback((e: React.TouchEvent) => {
+    touchStartY.current = e.touches[0].clientY
+  }, [])
+  const onTouchMove = useCallback((e: React.TouchEvent) => {
+    const el = scrollRef.current
+    if (!el || el.scrollTop > 0) return
+    const dy = e.touches[0].clientY - touchStartY.current
+    if (dy > 0) setPullY(Math.min(56, dy * 0.45))
+  }, [])
+  const onTouchEnd = useCallback(() => {
+    if (pullY > 44) {
+      setRefreshing(true)
+      setTimeout(() => { setRefreshing(false); setPullY(0) }, 1200)
+    } else setPullY(0)
+  }, [pullY])
 
   const todayFoods  = useMemo(() => foodLogs.filter((l) => l.date === today), [foodLogs])
   const todayActs   = useMemo(() => activityLogs.filter((l) => l.date === today), [activityLogs])
@@ -71,9 +96,11 @@ export default function Dashboard() {
     return Math.round(tdee)
   }, [profile])
 
-  const macroT  = useMemo(() => getMacroTargets(target), [target])
-  const net     = calories - burned
-  const remain  = target - net
+  const macroT      = useMemo(() => getMacroTargets(target), [target])
+  const stepsCals   = Math.round(stepsToday * 0.04)  // 0.04 kcal per step
+  const totalBurned = burned + stepsCals + healthCalories
+  const net         = calories - totalBurned
+  const remain      = target - net
   const ringPct = net / target
   const streak = useMemo(() => {
     let count = 0
@@ -95,7 +122,15 @@ export default function Dashboard() {
   const dateLabel = new Date().toLocaleDateString('de-DE', { weekday: 'long', day: 'numeric', month: 'long' })
 
   return (
-    <div className="pb-nav anim-fade">
+    <div ref={scrollRef} className="pb-nav anim-fade overflow-y-auto h-dvh"
+      onTouchStart={onTouchStart} onTouchMove={onTouchMove} onTouchEnd={onTouchEnd}>
+      {/* Pull-to-refresh indicator */}
+      {(pullY > 10 || refreshing) && (
+        <div className="ptr-indicator" style={{ height: pullY || 40 }}>
+          {refreshing ? <span className="anim-pulse">🔄 Aktualisierung…</span> : <span>↓ Loslassen zum Aktualisieren</span>}
+        </div>
+      )}
+
       {/* ── Blue Header ── */}
       <div className="grad-blue px-5 pt-safe pb-8 relative overflow-hidden">
         {/* decorative circles */}
@@ -137,7 +172,7 @@ export default function Dashboard() {
             {[
               { label: 'Ziel', val: `${target}`, unit: 'kcal', color: 'text-blue-200' },
               { label: 'Gegessen', val: `${Math.round(calories)}`, unit: 'kcal', color: 'text-white' },
-              { label: 'Verbrannt', val: `${Math.round(burned)}`, unit: 'kcal', color: 'text-green-300' },
+              { label: 'Verbrannt', val: `${Math.round(totalBurned)}`, unit: 'kcal', color: 'text-green-300' },
             ].map((item) => (
               <div key={item.label}>
                 <p className="text-blue-200 text-[11px]">{item.label}</p>
@@ -253,8 +288,38 @@ export default function Dashboard() {
             <p className="text-[11px] text-slate-500 font-medium mt-0.5">BMI</p>
           </div>
           <div className="card p-3.5 text-center">
-            <p className="text-2xl font-black text-green-500">{Math.round(burned)}</p>
+            <p className="text-2xl font-black text-green-500">{Math.round(totalBurned)}</p>
             <p className="text-[11px] text-slate-500 font-medium mt-0.5">kcal Sport</p>
+          </div>
+        </div>
+
+        {/* ── Apple Health / Schritte ── */}
+        <div className="card p-4 anim-up" style={{ animationDelay: '0.22s' }}>
+          <div className="flex items-center gap-2 mb-3">
+            <Heart size={18} className="text-red-500" />
+            <p className="text-sm font-bold" style={{ color: 'var(--text1)' }}>Apple Health & Schritte</p>
+          </div>
+          <div className="flex items-center gap-3 mb-3">
+            <div className="flex-1">
+              <div className="flex items-center gap-2 card rounded-2xl px-3 py-2">
+                <Footprints size={16} className="text-blue-500 flex-shrink-0" />
+                <input
+                  type="number" inputMode="numeric"
+                  value={stepsToday || ''}
+                  onChange={(e) => setStepsToday(parseInt(e.target.value) || 0)}
+                  className="flex-1 text-sm font-bold outline-none bg-transparent min-w-0"
+                  style={{ color: 'var(--text1)' }}
+                  placeholder="Schritte heute"
+                />
+              </div>
+            </div>
+            <div className="text-right">
+              <p className="text-sm font-black text-green-500">+{stepsCals} kcal</p>
+              <p className="text-[10px]" style={{ color: 'var(--text3)' }}>verbrannt</p>
+            </div>
+          </div>
+          <div className="bg-red-50 rounded-2xl px-3 py-2.5 text-xs" style={{ color: '#be123c' }}>
+            <span className="font-bold">💡 Apple Health Sync:</span> Öffne iPhone Einstellungen → Datenschutz → Gesundheit, um Daten zu exportieren. Schritte hier manuell eingeben oder über iOS-Kurzbefehle automatisieren.
           </div>
         </div>
 

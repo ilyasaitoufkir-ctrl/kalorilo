@@ -1,9 +1,10 @@
 import { useState, useRef, useMemo } from 'react'
-import { Search, Camera, Trash2, ChevronRight, X, ScanLine, PenLine, Plus, ArrowLeft } from 'lucide-react'
+import { Search, Camera, Trash2, ChevronRight, X, ScanLine, PenLine, Plus, ArrowLeft, Mic } from 'lucide-react'
 import { useStore } from '../store/useStore'
 import { ALL_FOODS, FOOD_CATEGORIES, BRANDED_PRODUCTS, searchFoods, calculateMacros } from '../data/foodDatabase'
 import { formatDate, uid, imageToBase64 } from '../utils/calculations'
 import { fetchByBarcode, analyzePlate } from '../utils/api'
+import VoiceInput from './VoiceInput'
 import type { FoodItem, MealType } from '../types'
 import toast from 'react-hot-toast'
 
@@ -80,7 +81,8 @@ function AddSheet({ mealType, onClose }: { mealType: MealType; onClose: () => vo
   return (
     <div className="fixed inset-0 z-50 flex items-end" onClick={onClose}>
       <div className="sheet-overlay absolute inset-0" />
-      <div className="relative bg-slate-50 w-full max-w-[430px] mx-auto rounded-t-[32px] max-h-[92dvh] overflow-hidden flex flex-col anim-up"
+      <div className="relative w-full max-w-[430px] mx-auto rounded-t-[32px] max-h-[92dvh] overflow-hidden flex flex-col anim-up"
+        style={{ background: 'var(--bg)' }}
         onClick={(e) => e.stopPropagation()}>
         {/* Handle */}
         <div className="flex justify-center pt-3 pb-1 flex-shrink-0">
@@ -91,24 +93,45 @@ function AddSheet({ mealType, onClose }: { mealType: MealType; onClose: () => vo
         <div className="flex items-center gap-3 px-5 pb-4 pt-1 flex-shrink-0">
           {view !== 'main' && (
             <button onClick={() => { setView('main'); setSelected(null); setPhotoResult(null) }}
-              className="w-9 h-9 bg-white rounded-2xl flex items-center justify-center shadow-sm flex-shrink-0">
-              <ArrowLeft size={18} className="text-slate-600" />
+              className="w-9 h-9 rounded-2xl flex items-center justify-center shadow-sm flex-shrink-0 card">
+              <ArrowLeft size={18} style={{ color: 'var(--text1)' }} />
             </button>
           )}
           <div className="flex-1">
-            <h2 className="text-lg font-black text-slate-900">
-              {{ main: 'Essen hinzufügen', search: 'Lebensmittel suchen', barcode: 'Barcode scannen', manual: 'Manuell eintragen', photo: '📸 KI-Teller-Analyse' }[view]}
+            <h2 className="text-lg font-black" style={{ color: 'var(--text1)' }}>
+              {{ main: 'Essen hinzufügen', search: 'Lebensmittel suchen', barcode: 'Barcode scannen', manual: 'Manuell eintragen', photo: '📸 KI-Teller-Analyse', voice: '🎤 Spracheingabe' }[view]}
             </h2>
           </div>
-          <button onClick={onClose} className="w-9 h-9 bg-white rounded-2xl flex items-center justify-center shadow-sm">
-            <X size={18} className="text-slate-600" />
+          <button onClick={onClose} className="w-9 h-9 rounded-2xl flex items-center justify-center shadow-sm card">
+            <X size={18} style={{ color: 'var(--text1)' }} />
           </button>
         </div>
 
         <div className="flex-1 overflow-y-auto px-5 pb-8">
+          {/* Voice view */}
+          {(view as string) === 'voice' && (
+            <div className="py-8 flex flex-col items-center">
+              <VoiceInput defaultMealType={mealType} onDone={onClose} />
+            </div>
+          )}
+
           {/* Main */}
           {view === 'main' && (
             <div className="space-y-3">
+              {/* Voice Banner */}
+              <button onClick={() => (setView as any)('voice')}
+                className="w-full rounded-3xl p-4 flex items-center gap-4 text-left overflow-hidden relative"
+                style={{ background: 'linear-gradient(135deg,#3b82f6,#7c3aed)' }}>
+                <div className="w-12 h-12 bg-white/20 rounded-2xl flex items-center justify-center flex-shrink-0">
+                  <Mic size={24} className="text-white" />
+                </div>
+                <div>
+                  <p className="text-white font-black text-sm">Spracheingabe 🎤</p>
+                  <p className="text-blue-100 text-xs mt-0.5">„Ich habe Hähnchen gegessen"</p>
+                </div>
+                <div className="absolute right-4 text-white/30 text-3xl">✦</div>
+              </button>
+
               {/* Quick option cards */}
               {[
                 { icon: Search,   label: 'Lebensmittel suchen',     sub: '100+ Einträge + Markenprodukte', action: () => setView('search'),  color: 'bg-blue-500' },
@@ -222,10 +245,10 @@ function AddSheet({ mealType, onClose }: { mealType: MealType; onClose: () => vo
                       className={`flex-1 py-2.5 rounded-2xl text-sm font-bold transition ${amount === String(g) ? 'bg-blue-500 text-white' : 'bg-white text-slate-600'}`}>{g}g</button>
                   ))}
                 </div>
-                <div className="flex items-center gap-2 bg-white rounded-2xl px-4 py-3">
-                  <input type="number" value={amount} onChange={(e) => setAmount(e.target.value)}
-                    className="flex-1 text-base font-bold text-slate-800 outline-none bg-transparent" />
-                  <span className="text-slate-400 font-medium">Gramm</span>
+                <div className="flex items-center gap-2 card rounded-2xl px-4 py-3">
+                  <input type="number" inputMode="decimal" value={amount} onChange={(e) => setAmount(e.target.value)}
+                    className="flex-1 text-base font-bold outline-none bg-transparent" style={{ color: 'var(--text1)' }} />
+                  <span style={{ color: 'var(--text3)' }} className="font-medium">Gramm</span>
                 </div>
               </div>
               <button onClick={addSelected} className="w-full py-4 bg-blue-500 rounded-3xl text-white font-black text-base">
@@ -239,9 +262,9 @@ function AddSheet({ mealType, onClose }: { mealType: MealType; onClose: () => vo
             <div className="space-y-3">
               <p className="text-sm text-slate-500">Barcode-Nummer eingeben (vom Produkt abtippen) oder scannen:</p>
               <div className="flex gap-2">
-                <input type="number" value={barcodeVal} onChange={(e) => setBarcodeVal(e.target.value)}
-                  className="flex-1 bg-white rounded-2xl px-4 py-3.5 text-sm font-medium outline-none"
-                  placeholder="z.B. 4000539000015" />
+                <input type="number" inputMode="numeric" value={barcodeVal} onChange={(e) => setBarcodeVal(e.target.value)}
+                  className="flex-1 rounded-2xl px-4 py-3.5 text-sm font-medium outline-none card"
+                  placeholder="z.B. 4000539000015" style={{ color: 'var(--text1)' }} />
                 <button onClick={handleBarcode} disabled={loading || !barcodeVal}
                   className="px-5 py-3 bg-blue-500 rounded-2xl text-white font-bold text-sm disabled:opacity-50">
                   {loading ? '⏳' : 'Suchen'}

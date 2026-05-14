@@ -1,5 +1,7 @@
+import { useRef } from 'react'
 import { Toaster } from 'react-hot-toast'
 import { useStore } from './store/useStore'
+import { useDarkMode } from './hooks/useDarkMode'
 import Navigation from './components/Navigation'
 import Dashboard from './components/Dashboard'
 import FoodTracker from './components/FoodTracker'
@@ -9,15 +11,57 @@ import Statistics from './components/Statistics'
 import Profile from './components/Profile'
 import Onboarding from './components/Onboarding'
 import ErrorBoundary from './components/ErrorBoundary'
+import type { TabId } from './types'
+
+// Tab order for swipe navigation
+const TAB_ORDER: TabId[] = ['home', 'food', 'sport', 'stats', 'ai']
 
 function MainApp() {
-  const profile = useStore((s) => s.profile)
-  const activeTab = useStore((s) => s.activeTab)
+  const profile    = useStore((s) => s.profile)
+  const activeTab  = useStore((s) => s.activeTab)
+  const setActiveTab = useStore((s) => s.setActiveTab)
+  // Apply dark mode class to html element
+  useDarkMode()
+
+  // Swipe navigation
+  const touchStartX = useRef(0)
+  const touchStartY = useRef(0)
+
+  const handleTouchStart = (e: React.TouchEvent) => {
+    touchStartX.current = e.touches[0].clientX
+    touchStartY.current = e.touches[0].clientY
+  }
+
+  const handleTouchEnd = (e: React.TouchEvent) => {
+    const dx = e.changedTouches[0].clientX - touchStartX.current
+    const dy = Math.abs(e.changedTouches[0].clientY - touchStartY.current)
+    // Only horizontal swipes (not vertical scroll)
+    if (Math.abs(dx) > 70 && dy < 50) {
+      const idx = TAB_ORDER.indexOf(activeTab as TabId)
+      if (idx === -1) return
+      if (dx < 0 && idx < TAB_ORDER.length - 1) setActiveTab(TAB_ORDER[idx + 1])
+      if (dx > 0 && idx > 0) setActiveTab(TAB_ORDER[idx - 1])
+    }
+  }
+
+  // Dismiss keyboard on outside tap
+  const handleTap = (e: React.MouseEvent) => {
+    const target = e.target as HTMLElement
+    if (!target.closest('input, textarea, [contenteditable]')) {
+      (document.activeElement as HTMLElement)?.blur()
+    }
+  }
 
   if (!profile) return <Onboarding />
 
   return (
-    <div className="min-h-dvh bg-slate-100">
+    <div
+      className="min-h-dvh"
+      style={{ background: 'var(--bg)' }}
+      onTouchStart={handleTouchStart}
+      onTouchEnd={handleTouchEnd}
+      onClick={handleTap}
+    >
       {activeTab === 'home'    && <Dashboard />}
       {activeTab === 'food'    && <FoodTracker />}
       {activeTab === 'sport'   && <SportTracker />}
@@ -39,12 +83,13 @@ export default function App() {
           duration: 2800,
           style: {
             borderRadius: '16px',
-            background: '#0f172a',
-            color: '#f8fafc',
+            background: 'var(--surface)',
+            color: 'var(--text1)',
             fontSize: '14px',
             fontWeight: '500',
             padding: '12px 16px',
             maxWidth: '340px',
+            boxShadow: 'var(--shadow)',
           },
         }}
       />

@@ -1,4 +1,37 @@
-import type { FoodItem, Macros } from '../types'
+import type { FoodItem, Macros, MealType } from '../types'
+
+// ── Voice Input Parsing ────────────────────────────────────────────────────
+export interface VoiceParseResult {
+  type: 'food' | 'water' | 'sport' | 'unknown'
+  mealType?: MealType
+  items?: { name: string; amount: number; calories: number; protein: number; fat: number; carbs: number }[]
+  amount?: number
+  sport?: { name: string; duration: number; caloriesBurned: number }
+}
+
+export async function parseVoiceInput(text: string, apiKey: string): Promise<VoiceParseResult> {
+  console.log('[parseVoice] Input:', text)
+  const res = await anthropicPost(apiKey, {
+    model: ANTHROPIC_MODEL,
+    max_tokens: 512,
+    messages: [{
+      role: 'user',
+      content: `Parse diese deutsche Spracheingabe für eine Kalorie-Tracking App: "${text}"
+
+Antworte NUR mit validem JSON ohne Markdown:
+- Essen: {"type":"food","mealType":"breakfast|lunch|dinner|snack","items":[{"name":"Hähnchenbrust","amount":150,"calories":248,"protein":46.5,"fat":5.4,"carbs":0}]}
+- Wasser: {"type":"water","amount":300}
+- Sport: {"type":"sport","name":"Laufen","duration":30,"caloriesBurned":280}
+- Unklar: {"type":"unknown"}
+
+Schätze typische Portionsgrößen. mealType: breakfast=Frühstück, lunch=Mittagessen, dinner=Abendessen, snack=Snack.`,
+    }],
+  })
+  const data = await res.json()
+  const raw: string = data.content?.[0]?.text ?? '{}'
+  const json = raw.match(/\{[\s\S]*\}/)?.[0] ?? '{"type":"unknown"}'
+  try { return JSON.parse(json) } catch { return { type: 'unknown' } }
+}
 
 const ANTHROPIC_MODEL = 'claude-sonnet-4-5'
 

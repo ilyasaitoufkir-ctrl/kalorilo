@@ -11,6 +11,16 @@ interface AppState {
   activeTab: TabId
   setActiveTab: (tab: TabId) => void
 
+  // Dark mode
+  darkMode: 'auto' | 'light' | 'dark'
+  setDarkMode: (m: 'auto' | 'light' | 'dark') => void
+
+  // Apple Health / Steps
+  stepsToday: number
+  setStepsToday: (steps: number) => void
+  healthCalories: number
+  setHealthCalories: (cal: number) => void
+
   // Profile
   profile: UserProfile | null
   setProfile: (p: UserProfile) => void
@@ -92,6 +102,14 @@ export const useStore = create<AppState>()(
     (set, get) => ({
       activeTab: 'home',
       setActiveTab: (tab) => set({ activeTab: tab }),
+
+      darkMode: 'auto',
+      setDarkMode: (m) => set({ darkMode: m }),
+
+      stepsToday: 0,
+      setStepsToday: (steps) => set({ stepsToday: steps }),
+      healthCalories: 0,
+      setHealthCalories: (cal) => set({ healthCalories: cal }),
 
       profile: null,
       setProfile: (profile) => set({ profile }),
@@ -224,6 +242,9 @@ export const useStore = create<AppState>()(
         if ((state.activeTab as string) === 'fridge') state.activeTab = 'ai'
       },
       partialize: (state) => ({
+        darkMode: state.darkMode,
+        stepsToday: state.stepsToday,
+        healthCalories: state.healthCalories,
         profile: state.profile,
         apiKeys: state.apiKeys,
         foodLogs: state.foodLogs,
