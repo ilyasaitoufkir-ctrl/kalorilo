@@ -1,17 +1,17 @@
-import { Home, Utensils, Dumbbell, BarChart2, Bot } from 'lucide-react'
+import { Home, Utensils, Dumbbell, Bot, Users } from 'lucide-react'
 import { useStore } from '../store/useStore'
 import type { TabId } from '../types'
 
 const TABS: { id: TabId; icon: React.ElementType; label: string }[] = [
-  { id: 'home',  icon: Home,     label: 'Start'  },
-  { id: 'food',  icon: Utensils, label: 'Essen'  },
-  { id: 'sport', icon: Dumbbell, label: 'Sport'  },
-  { id: 'stats', icon: BarChart2,label: 'Stats'  },
-  { id: 'ai',    icon: Bot,      label: 'KI'     },
+  { id: 'home',    icon: Home,     label: 'Start'   },
+  { id: 'food',    icon: Utensils, label: 'Essen'   },
+  { id: 'sport',   icon: Dumbbell, label: 'Sport'   },
+  { id: 'friends', icon: Users,    label: 'Gruppen' },
+  { id: 'ai',      icon: Bot,      label: 'KI'      },
 ]
 
 export default function Navigation() {
-  const activeTab = useStore((s) => s.activeTab)
+  const activeTab    = useStore((s) => s.activeTab)
   const setActiveTab = useStore((s) => s.setActiveTab)
 
   return (
@@ -23,7 +23,7 @@ export default function Navigation() {
             <button
               key={id}
               onClick={() => setActiveTab(id)}
-              className="flex flex-col items-center gap-1 px-4 py-1 min-w-[56px]"
+              className="flex flex-col items-center gap-1 px-3 py-1 min-w-[52px]"
             >
               <div className={`w-10 h-10 flex items-center justify-center rounded-2xl transition-all duration-200 ${active ? 'bg-blue-50' : ''}`}>
                 <Icon

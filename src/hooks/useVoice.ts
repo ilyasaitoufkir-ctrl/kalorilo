@@ -34,8 +34,17 @@ export function useVoice() {
     onResult: (text: string) => void,
     onError?: (msg: string) => void
   ) => {
+    // HTTPS-Prüfung – Web Speech API braucht Secure Context (außer localhost)
+    if (typeof window !== 'undefined' && !window.isSecureContext) {
+      onError?.('Spracheingabe benötigt HTTPS. Bitte https:// Adresse verwenden.')
+      return
+    }
+
     const SR = window.SpeechRecognition ?? window.webkitSpeechRecognition
-    if (!SR) { onError?.('Spracheingabe nicht unterstützt'); return }
+    if (!SR) {
+      onError?.('Spracheingabe wird auf diesem Gerät nicht unterstützt. Bitte Safari nutzen.')
+      return
+    }
 
     const rec = new SR()
     rec.lang = 'de-DE'
@@ -45,17 +54,33 @@ export function useVoice() {
 
     rec.onstart = () => setListening(true)
     rec.onend   = () => setListening(false)
+
     rec.onresult = (e: any) => {
       const text: string = e.results[0][0].transcript
       setTranscript(text)
       onResult(text)
     }
+
     rec.onerror = (e: any) => {
       setListening(false)
-      onError?.(e.error === 'not-allowed' ? 'Mikrofon-Zugriff verweigert' : 'Erkennungsfehler')
+      const errMap: Record<string, string> = {
+        'not-allowed':  'Mikrofon-Zugriff verweigert. Einstellungen → Safari → Mikrofon erlauben.',
+        'no-speech':    'Keine Sprache erkannt. Bitte nochmal versuchen.',
+        'network':      'Netzwerkfehler bei der Spracherkennung.',
+        'aborted':      '',   // user aborted = kein Fehler
+        'audio-capture':'Kein Mikrofon gefunden.',
+        'service-not-allowed': 'Mikrofon-Zugriff verweigert.',
+      }
+      const msg = errMap[e.error] ?? `Fehler: ${e.error}`
+      if (msg) onError?.(msg)
     }
 
-    try { rec.start() } catch { setListening(false) }
+    try {
+      rec.start()
+    } catch (e: any) {
+      setListening(false)
+      onError?.(e?.message ?? 'Spracheingabe konnte nicht gestartet werden.')
+    }
   }
 
   const stopListening = () => {

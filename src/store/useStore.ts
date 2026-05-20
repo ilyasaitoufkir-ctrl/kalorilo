@@ -21,6 +21,14 @@ interface AppState {
   healthCalories: number
   setHealthCalories: (cal: number) => void
 
+  // Social / Groups
+  userId: string
+  firebaseConfig: { apiKey: string; authDomain: string; projectId: string; storageBucket: string; messagingSenderId: string; appId: string } | null
+  setFirebaseConfig: (cfg: AppState['firebaseConfig']) => void
+  groupIds: string[]
+  addGroupId: (id: string) => void
+  removeGroupId: (id: string) => void
+
   // Profile
   profile: UserProfile | null
   setProfile: (p: UserProfile) => void
@@ -110,6 +118,13 @@ export const useStore = create<AppState>()(
       setStepsToday: (steps) => set({ stepsToday: steps }),
       healthCalories: 0,
       setHealthCalories: (cal) => set({ healthCalories: cal }),
+
+      userId: crypto.randomUUID ? crypto.randomUUID() : Math.random().toString(36).slice(2),
+      firebaseConfig: null,
+      setFirebaseConfig: (cfg) => set({ firebaseConfig: cfg }),
+      groupIds: [],
+      addGroupId: (id) => set((s) => ({ groupIds: s.groupIds.includes(id) ? s.groupIds : [...s.groupIds, id] })),
+      removeGroupId: (id) => set((s) => ({ groupIds: s.groupIds.filter((g) => g !== id) })),
 
       profile: null,
       setProfile: (profile) => set({ profile }),
@@ -245,6 +260,9 @@ export const useStore = create<AppState>()(
         darkMode: state.darkMode,
         stepsToday: state.stepsToday,
         healthCalories: state.healthCalories,
+        userId: state.userId,
+        firebaseConfig: state.firebaseConfig,
+        groupIds: state.groupIds,
         profile: state.profile,
         apiKeys: state.apiKeys,
         foodLogs: state.foodLogs,
