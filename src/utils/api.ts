@@ -118,6 +118,43 @@ export async function analyzePlate(base64Image: string, apiKey: string): Promise
   return JSON.parse(json)
 }
 
+// ── Claude – Plate Correction via Voice ────────────────────────────────────
+export async function correctPlateAnalysis(
+  originalDescription: string,
+  originalMacros: Macros,
+  originalItems: { name: string; amount: string; calories: number }[],
+  voiceCorrection: string,
+  apiKey: string
+): Promise<PlateAnalysisResult> {
+  console.log('[correctPlate] Korrektur:', voiceCorrection)
+  const itemsText = originalItems.map((i) => `- ${i.name} (${i.amount}, ${i.calories} kcal)`).join('\n')
+  const res = await anthropicPost(apiKey, {
+    model: ANTHROPIC_MODEL,
+    max_tokens: 1024,
+    messages: [{
+      role: 'user',
+      content: `Die KI hat einen Teller analysiert mit folgendem Ergebnis:
+
+Beschreibung: "${originalDescription}"
+Erkannte Zutaten:
+${itemsText}
+Gesamt: ${originalMacros.calories} kcal | Eiweiß: ${originalMacros.protein}g | Fett: ${originalMacros.fat}g | KH: ${originalMacros.carbs}g
+
+Der Nutzer möchte korrigieren/ergänzen: "${voiceCorrection}"
+
+Passe die Nährwertangaben entsprechend an (addiere, subtrahiere oder ersetze Zutaten).
+Antworte NUR mit validem JSON ohne Markdown:
+{"description":"aktualisierte Beschreibung","items":[{"name":"Zutat","amount":"150g","calories":200}],"macros":{"calories":550,"protein":35,"fat":16,"carbs":58}}`,
+    }],
+  })
+  const data = await res.json()
+  console.log('[correctPlate] Antwort:', data)
+  const text: string = data.content?.[0]?.text ?? ''
+  const json = text.match(/\{[\s\S]*\}/)?.[0]
+  if (!json) throw new Error(`Keine gültige Antwort: ${text.slice(0, 100)}`)
+  return JSON.parse(json)
+}
+
 // ── Claude Vision – Fridge Scan ────────────────────────────────────────────
 export async function analyzeFridge(base64Image: string, apiKey: string): Promise<{ ingredients: string[] }> {
   console.log('[analyzeFridge] Starte Scan, Key vorhanden:', !!apiKey)

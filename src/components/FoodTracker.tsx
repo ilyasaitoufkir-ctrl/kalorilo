@@ -1,9 +1,10 @@
 import { useState, useRef, useMemo } from 'react'
-import { Search, Camera, Trash2, ChevronRight, X, ScanLine, PenLine, Plus, ArrowLeft, Mic } from 'lucide-react'
+import { Search, Camera, Trash2, ChevronRight, X, ScanLine, PenLine, Plus, ArrowLeft, Mic, MicOff, RefreshCw, Loader } from 'lucide-react'
 import { useStore } from '../store/useStore'
 import { ALL_FOODS, FOOD_CATEGORIES, BRANDED_PRODUCTS, searchFoods, calculateMacros } from '../data/foodDatabase'
 import { formatDate, uid, imageToBase64 } from '../utils/calculations'
-import { fetchByBarcode, analyzePlate } from '../utils/api'
+import { fetchByBarcode, analyzePlate, correctPlateAnalysis } from '../utils/api'
+import { useVoice } from '../hooks/useVoice'
 import VoiceInput from './VoiceInput'
 import type { FoodItem, MealType } from '../types'
 import toast from 'react-hot-toast'
@@ -18,6 +19,13 @@ const MEALS: { id: MealType; emoji: string; label: string }[] = [
 ]
 
 // ── Add Food Sheet ────────────────────────────────────────────────────────
+// ── Photo correction type ─────────────────────────────────────────────────
+interface PhotoResult {
+  description: string
+  macros: { calories: number; protein: number; fat: number; carbs: number }
+  items: { name: string; amount: string; calories: number }[]
+}
+
 function AddSheet({ mealType, onClose }: { mealType: MealType; onClose: () => void }) {
   const [view, setView]           = useState<'main'|'search'|'barcode'|'manual'|'photo'>('main')
   const [query, setQuery]         = useState('')
@@ -25,13 +33,18 @@ function AddSheet({ mealType, onClose }: { mealType: MealType; onClose: () => vo
   const [selected, setSelected]   = useState<FoodItem | null>(null)
   const [amount, setAmount]       = useState('100')
   const [loading, setLoading]     = useState(false)
+  const [correcting, setCorrecting] = useState(false)   // voice correction in progress
   const [barcodeVal, setBarcodeVal] = useState('')
-  const [photoResult, setPhotoResult] = useState<{ description: string; macros: { calories: number; protein: number; fat: number; carbs: number } } | null>(null)
+  const [photoResult, setPhotoResult] = useState<PhotoResult | null>(null)
+  const [lastCorrection, setLastCorrection] = useState('')
   const [manualForm, setManualForm] = useState({ name: '', cal: '', protein: '', fat: '', carbs: '' })
   const [activeCategory, setActiveCategory] = useState('⭐ Markenartikel')
   const fileRef = useRef<HTMLInputElement>(null)
   const addFoodLog = useStore((s) => s.addFoodLog)
   const apiKeys    = useStore((s) => s.apiKeys)
+
+  // Voice hook for photo correction
+  const { listening, startListening, stopListening, isSupported: voiceSupported } = useVoice()
 
   const handleSearch = (q: string) => { setQuery(q); setResults(q.length >= 2 ? searchFoods(q) : []) }
   const pick = (food: FoodItem) => { setSelected(food); setAmount(String(food.serving ?? 100)) }
@@ -58,9 +71,37 @@ function AddSheet({ mealType, onClose }: { mealType: MealType; onClose: () => vo
     setLoading(true)
     try {
       const result = await analyzePlate(await imageToBase64(file), apiKeys.anthropic)
-      setPhotoResult({ description: result.description, macros: result.macros })
+      setPhotoResult({ description: result.description, macros: result.macros, items: result.items ?? [] })
     } catch (e) { toast.error(e instanceof Error ? e.message : 'Fehler', { duration: 5000 }) }
     setLoading(false)
+  }
+
+  // ── Voice correction handler ───────────────────────────────────────────
+  const handleVoiceCorrection = (transcript: string) => {
+    if (!photoResult || !apiKeys.anthropic) return
+    setLastCorrection(transcript)
+    setCorrecting(true)
+    correctPlateAnalysis(
+      photoResult.description,
+      photoResult.macros,
+      photoResult.items,
+      transcript,
+      apiKeys.anthropic
+    )
+      .then((updated) => {
+        setPhotoResult({ description: updated.description, macros: updated.macros, items: updated.items ?? [] })
+        toast.success('✅ Kalorien aktualisiert!')
+      })
+      .catch((e) => toast.error(e instanceof Error ? e.message : 'Fehler', { duration: 5000 }))
+      .finally(() => setCorrecting(false))
+  }
+
+  const startVoiceCorrection = () => {
+    if (listening) { stopListening(); return }
+    startListening(
+      handleVoiceCorrection,
+      (err) => toast.error(err)
+    )
   }
 
   const savePhoto = () => {
@@ -308,35 +349,135 @@ function AddSheet({ mealType, onClose }: { mealType: MealType; onClose: () => vo
 
           {/* Photo */}
           {view === 'photo' && (
-            <div className="space-y-4">
-              <div className="bg-blue-50 rounded-2xl p-4">
-                <p className="text-sm text-blue-800 font-medium">Fotografiere deinen Teller – Claude AI analysiert automatisch Kalorien & Makros.</p>
-                <p className="text-xs text-blue-600 mt-1">⚠️ Schätzung ±15% – Werte anpassbar</p>
+            <div className="space-y-3">
+              <div className="bg-blue-50 rounded-2xl p-3 flex items-start gap-2">
+                <span className="text-lg flex-shrink-0">📸</span>
+                <div>
+                  <p className="text-sm text-blue-800 font-semibold">KI-Teller-Analyse</p>
+                  <p className="text-xs text-blue-600 mt-0.5">Claude AI erkennt alle Zutaten und berechnet Kalorien. Falls etwas fehlt → per Sprache korrigieren!</p>
+                </div>
               </div>
+
               {!photoResult ? (
                 <>
                   <input ref={fileRef} type="file" accept="image/*" capture="environment" className="hidden"
                     onChange={(e) => e.target.files?.[0] && handlePhoto(e.target.files[0])} />
                   <button onClick={() => fileRef.current?.click()} disabled={loading}
-                    className="w-full py-8 border-2 border-dashed border-blue-200 rounded-3xl flex flex-col items-center gap-3 text-blue-500 font-semibold disabled:opacity-50">
-                    {loading ? <><span className="text-4xl anim-pulse">⏳</span><span>KI analysiert…</span></> : <><Camera size={36} /><span>Foto aufnehmen</span></>}
+                    className="w-full py-8 border-2 border-dashed border-blue-200 rounded-3xl flex flex-col items-center gap-3 text-blue-500 font-bold disabled:opacity-50 transition-all active:scale-95"
+                    style={{ background: 'var(--surface2)' }}>
+                    {loading
+                      ? <><Loader size={32} className="animate-spin" /><span>KI analysiert Teller…</span><span className="text-xs font-normal" style={{ color: 'var(--text3)' }}>Bitte warten</span></>
+                      : <><Camera size={36} /><span className="text-base">Foto aufnehmen</span><span className="text-xs font-normal" style={{ color: 'var(--text3)' }}>Tippe hier</span></>}
                   </button>
-                  {!apiKeys.anthropic && <p className="text-center text-xs text-red-500">⚠️ Anthropic API Key fehlt → Profil → API Keys</p>}
+                  {!apiKeys.anthropic && (
+                    <p className="text-center text-xs text-red-500">⚠️ Anthropic API Key fehlt → Profil → API Keys</p>
+                  )}
                 </>
               ) : (
-                <div className="card p-4">
-                  <p className="font-black text-slate-900 mb-3">🎯 {photoResult.description}</p>
-                  <div className="grid grid-cols-4 gap-2 mb-4">
-                    {[['kcal', photoResult.macros.calories], ['E', `${photoResult.macros.protein}g`], ['KH', `${photoResult.macros.carbs}g`], ['F', `${photoResult.macros.fat}g`]].map(([l, v]) => (
-                      <div key={String(l)} className="bg-blue-50 rounded-2xl py-2.5 text-center">
-                        <p className="text-sm font-black text-slate-800">{v}</p>
-                        <p className="text-[10px] text-slate-400">{l}</p>
+                <div className="space-y-3">
+                  {/* Result card */}
+                  <div className="card p-4">
+                    <div className="flex items-start justify-between mb-3">
+                      <p className="font-black text-sm flex-1 pr-2" style={{ color: 'var(--text1)' }}>
+                        🎯 {photoResult.description}
+                      </p>
+                      <span className="text-[10px] font-bold text-orange-500 bg-orange-50 rounded-xl px-2 py-0.5 flex-shrink-0">±15%</span>
+                    </div>
+
+                    {/* Macro chips */}
+                    <div className="grid grid-cols-4 gap-2 mb-3">
+                      {[
+                        { l: 'kcal', v: photoResult.macros.calories,          color: '#3b82f6' },
+                        { l: 'Eiweiß', v: `${photoResult.macros.protein}g`,   color: '#10b981' },
+                        { l: 'KH',    v: `${photoResult.macros.carbs}g`,      color: '#f59e0b' },
+                        { l: 'Fett',  v: `${photoResult.macros.fat}g`,        color: '#ef4444' },
+                      ].map((item) => (
+                        <div key={item.l} className="rounded-2xl py-2.5 text-center" style={{ background: 'var(--surface2)' }}>
+                          <p className="text-sm font-black" style={{ color: item.color }}>{item.v}</p>
+                          <p className="text-[10px]" style={{ color: 'var(--text3)' }}>{item.l}</p>
+                        </div>
+                      ))}
+                    </div>
+
+                    {/* Detected items */}
+                    {photoResult.items.length > 0 && (
+                      <div className="mb-3 space-y-1">
+                        <p className="text-xs font-bold mb-1" style={{ color: 'var(--text3)' }}>Erkannte Zutaten:</p>
+                        {photoResult.items.map((item, i) => (
+                          <div key={i} className="flex items-center justify-between text-xs">
+                            <span style={{ color: 'var(--text2)' }}>• {item.name} ({item.amount})</span>
+                            <span className="font-semibold" style={{ color: 'var(--text1)' }}>{item.calories} kcal</span>
+                          </div>
+                        ))}
                       </div>
-                    ))}
+                    )}
+
+                    {/* Action buttons */}
+                    <div className="flex gap-2">
+                      <button onClick={() => { setPhotoResult(null); setLastCorrection('') }}
+                        className="flex items-center justify-center gap-1.5 px-4 py-3 rounded-2xl text-sm font-bold transition"
+                        style={{ background: 'var(--surface2)', color: 'var(--text2)' }}>
+                        <RefreshCw size={14} />Neu
+                      </button>
+                      <button onClick={savePhoto}
+                        className="flex-1 py-3 bg-blue-500 rounded-2xl text-sm font-black text-white">
+                        Speichern ✓
+                      </button>
+                    </div>
                   </div>
-                  <div className="flex gap-2">
-                    <button onClick={() => setPhotoResult(null)} className="flex-1 py-3 bg-slate-100 rounded-2xl text-sm font-bold text-slate-600">Neu</button>
-                    <button onClick={savePhoto} className="flex-1 py-3 bg-blue-500 rounded-2xl text-sm font-bold text-white">Speichern</button>
+
+                  {/* ── Voice Correction Section ─────────────────────────── */}
+                  <div className="card p-4">
+                    <div className="flex items-center gap-2 mb-3">
+                      <div className="w-8 h-8 rounded-xl flex items-center justify-center"
+                        style={{ background: listening ? '#fee2e2' : 'var(--surface2)' }}>
+                        <Mic size={16} className={listening ? 'text-red-500' : 'text-blue-500'} />
+                      </div>
+                      <div>
+                        <p className="text-sm font-black" style={{ color: 'var(--text1)' }}>
+                          Etwas fehlt? Per Sprache korrigieren
+                        </p>
+                        <p className="text-xs" style={{ color: 'var(--text3)' }}>
+                          z.B. „Der Käse fehlt" · „Reis war 200g" · „Noch Soße dazu"
+                        </p>
+                      </div>
+                    </div>
+
+                    {/* Big microphone button */}
+                    <button
+                      onClick={startVoiceCorrection}
+                      disabled={correcting || !voiceSupported}
+                      className={`w-full py-4 rounded-2xl font-black text-sm flex items-center justify-center gap-2.5 transition-all active:scale-95 disabled:opacity-50 ${
+                        listening
+                          ? 'bg-red-500 text-white'
+                          : correcting
+                            ? 'bg-purple-500 text-white'
+                            : 'bg-gradient-to-r from-blue-500 to-purple-500 text-white'
+                      }`}
+                    >
+                      {correcting ? (
+                        <><Loader size={18} className="animate-spin" />KI rechnet nach…</>
+                      ) : listening ? (
+                        <><MicOff size={18} /><span>Tippe zum Stoppen</span><span className="w-2 h-2 bg-white rounded-full anim-pulse" /></>
+                      ) : (
+                        <><Mic size={18} />🎤 Sprache zur Korrektur</>
+                      )}
+                    </button>
+
+                    {/* Last correction shown */}
+                    {lastCorrection && !listening && !correcting && (
+                      <div className="mt-2 rounded-xl px-3 py-2" style={{ background: 'var(--surface2)' }}>
+                        <p className="text-xs" style={{ color: 'var(--text3)' }}>
+                          Letzte Korrektur: <span className="italic" style={{ color: 'var(--text2)' }}>„{lastCorrection}"</span>
+                        </p>
+                      </div>
+                    )}
+
+                    {!voiceSupported && (
+                      <p className="text-center text-xs text-slate-400 mt-2">
+                        Spracheingabe nur in Safari verfügbar
+                      </p>
+                    )}
                   </div>
                 </div>
               )}
