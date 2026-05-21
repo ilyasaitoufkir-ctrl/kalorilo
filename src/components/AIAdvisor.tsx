@@ -173,7 +173,7 @@ export default function AIAdvisor() {
   const glassInput = { background:'rgba(255,255,255,0.05)', border:'1px solid rgba(255,255,255,0.08)', borderRadius:20, color:'var(--text-1)', padding:'14px 18px', width:'100%', fontSize:15, fontWeight:500 } as const
 
   return (
-    <div className="flex flex-col overflow-x-hidden" style={{ height:'100dvh', background:'var(--bg)', paddingBottom:'calc(80px + max(env(safe-area-inset-bottom),8px))' }}>
+    <div className="flex flex-col overflow-x-hidden" style={{ height:'100dvh', background:'var(--bg)', paddingBottom:'calc(110px + max(env(safe-area-inset-bottom),20px))' }}>
 
       {/* Header */}
       <div className="pt-safe px-5 pb-4 flex-shrink-0" style={{ background:'linear-gradient(160deg,var(--bg-2),var(--bg))' }}>
@@ -192,7 +192,7 @@ export default function AIAdvisor() {
       {/* Chat */}
       {tab==='chat' && (
         <>
-          <div className="flex-1 overflow-y-auto overflow-x-hidden px-4 py-3 space-y-3">
+          <div className="flex-1 overflow-y-auto overflow-x-hidden px-4 pt-3 space-y-3 scroll-pb">
             {messages.length===0 && (
               <div>
                 <div className="text-center py-4 mb-4">
@@ -254,7 +254,7 @@ export default function AIAdvisor() {
 
       {/* ── Coach ── */}
       {tab==='coach' && (
-        <div className="flex-1 overflow-y-auto overflow-x-hidden px-4 py-4 space-y-3">
+        <div className="flex-1 overflow-y-auto overflow-x-hidden px-4 pt-4 space-y-3 scroll-pb">
           {/* Hero */}
           <div className="glass p-5" style={{ background:'rgba(245,158,11,0.06)', borderColor:'rgba(245,158,11,0.2)' }}>
             <div className="flex items-center gap-3 mb-3">
@@ -346,7 +346,7 @@ export default function AIAdvisor() {
 
       {/* Plan */}
       {tab==='plan' && (
-        <div className="flex-1 overflow-y-auto overflow-x-hidden px-4 py-4 space-y-3">
+        <div className="flex-1 overflow-y-auto overflow-x-hidden px-4 pt-4 space-y-3 scroll-pb">
           <div className="glass p-5">
             <div className="flex items-center gap-3 mb-3">
               <div className="w-12 h-12 rounded-2xl flex items-center justify-center text-2xl flex-shrink-0"
@@ -372,7 +372,7 @@ export default function AIAdvisor() {
 
       {/* Fridge */}
       {tab==='fridge' && (
-        <div className="flex-1 overflow-y-auto overflow-x-hidden px-4 py-4 space-y-3">
+        <div className="flex-1 overflow-y-auto overflow-x-hidden px-4 pt-4 space-y-3 scroll-pb">
           {fridgeStep==='scan' && (
             <>
               <div className="glass p-4" style={{ background:'rgba(56,189,248,0.06)', borderColor:'rgba(56,189,248,0.15)' }}>

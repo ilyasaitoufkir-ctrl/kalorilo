@@ -83,7 +83,7 @@ function AddSheet({ onClose }: { onClose: ()=>void }) {
           </button>
         </div>
 
-        <div className="flex-1 overflow-y-auto overflow-x-hidden px-5 pb-8 space-y-3">
+        <div className="flex-1 overflow-y-auto overflow-x-hidden px-5 space-y-3" style={{ paddingBottom:'calc(40px + max(env(safe-area-inset-bottom),16px))' }}>
           {!sport ? (
             <>
               <div className="flex gap-2 overflow-x-auto pb-1 -mx-1 px-1" style={{ scrollbarWidth:'none' }}>

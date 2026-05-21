@@ -149,7 +149,7 @@ function AddSheet({ mealType, onClose }: { mealType: MealType; onClose: () => vo
           </button>
         </div>
 
-        <div className="flex-1 overflow-y-auto overflow-x-hidden px-5 pb-8 space-y-3">
+        <div className="flex-1 overflow-y-auto overflow-x-hidden px-5 space-y-3" style={{ paddingBottom:'calc(40px + max(env(safe-area-inset-bottom),16px))' }}>
 
           {/* Main view */}
           {view === 'main' && (

@@ -420,7 +420,7 @@ export default function Friends() {
 
   if (selectedGroup) {
     return (
-      <div className="flex flex-col h-dvh pb-[calc(72px+max(env(safe-area-inset-bottom),8px))]" style={{ background: 'var(--bg)' }}>
+      <div className="flex flex-col h-dvh pb-nav" style={{ background: 'var(--bg)' }}>
         <div className="grad-blue px-5 pt-safe pb-4 flex-shrink-0">
           <h1 className="text-white text-2xl font-black">👥 Gruppen</h1>
         </div>
