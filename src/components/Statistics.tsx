@@ -1,26 +1,47 @@
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useRef } from 'react'
 import { BarChart, Bar, LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from 'recharts'
-import { Scale, Camera, X } from 'lucide-react'
+import { Scale, Camera, X, Loader } from 'lucide-react'
 import { useStore } from '../store/useStore'
-import { getLast7Days, getLast30Days, formatDate, getDayName, uid, imageFileToDataUrl } from '../utils/calculations'
+import { getLast7Days, getLast30Days, formatDate, getDayName, uid, imageFileToDataUrl, imageToBase64 } from '../utils/calculations'
+import { analyzeBodyPhoto } from '../utils/api'
 import toast from 'react-hot-toast'
 
 const today = formatDate()
 
 export default function Statistics() {
-  const [activeTab, setActiveTab] = useState<'week'|'weight'|'photos'>('week')
-  const [newWeight, setNewWeight]   = useState('')
-  const [showInput, setShowInput]   = useState(false)
+  const [activeTab, setActiveTab] = useState<'week'|'weight'|'body'|'photos'>('week')
+  const [newWeight, setNewWeight]     = useState('')
+  const [showInput, setShowInput]     = useState(false)
+  // Body tracking
+  const [bodyAnalyzing, setBodyAnalyzing] = useState(false)
+  const [selectedPhoto, setSelectedPhoto] = useState<string|null>(null)
+  const bodyFileRef = useRef<HTMLInputElement>(null)
 
   const weightHistory       = useStore((s) => s.weightHistory)
-  const addWeightEntry      = useStore((s) => s.addWeightEntry)
-  const profile             = useStore((s) => s.profile)
-  const foodLogs            = useStore((s) => s.foodLogs)
-  const activityLogs        = useStore((s) => s.activityLogs)
-  const beforeAfterPhotos   = useStore((s) => s.beforeAfterPhotos)
-  const addBeforeAfterPhoto = useStore((s) => s.addBeforeAfterPhoto)
+  const addWeightEntry         = useStore((s) => s.addWeightEntry)
+  const profile                = useStore((s) => s.profile)
+  const foodLogs               = useStore((s) => s.foodLogs)
+  const activityLogs           = useStore((s) => s.activityLogs)
+  const beforeAfterPhotos      = useStore((s) => s.beforeAfterPhotos)
+  const addBeforeAfterPhoto    = useStore((s) => s.addBeforeAfterPhoto)
   const removeBeforeAfterPhoto = useStore((s) => s.removeBeforeAfterPhoto)
-  const getStatsForDate     = useStore((s) => s.getStatsForDate)
+  const getStatsForDate        = useStore((s) => s.getStatsForDate)
+  const apiKeys                = useStore((s) => s.apiKeys)
+
+  const analyzePhoto = async (file: File) => {
+    if (!apiKeys.anthropic) { toast.error('Anthropic API Key fehlt → Profil → API Keys'); return }
+    setBodyAnalyzing(true)
+    try {
+      const b64      = await imageToBase64(file)
+      const dataUrl  = await imageFileToDataUrl(file)
+      const analysis = await analyzeBodyPhoto(b64, apiKeys.anthropic)
+      addBeforeAfterPhoto({ id: uid(), date: today, photo: dataUrl, weight: profile?.weight, analysis })
+      toast.success('Foto analysiert! 🎯')
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : 'Fehler', { duration: 5000 })
+    }
+    setBodyAnalyzing(false)
+  }
 
   const last7  = useMemo(() => getLast7Days(), [])
   const last30 = useMemo(() => getLast30Days(), [])
@@ -85,7 +106,12 @@ export default function Statistics() {
   const tooltipStyle = { background:'rgba(17,24,40,0.95)', border:'1px solid rgba(255,255,255,0.08)', borderRadius:12, color:'#f1f5f9', fontSize:12 }
   const axisStyle    = { fontSize:10, fill:'#475569', fontWeight:600 }
 
-  const TABS = [{ id:'week' as const, label:'📊 Woche' },{ id:'weight' as const, label:'⚖️ Gewicht' },{ id:'photos' as const, label:'📸 Fotos' }]
+  const TABS = [
+    { id:'week'   as const, label:'📊 Woche'  },
+    { id:'weight' as const, label:'⚖️ Gewicht'},
+    { id:'body'   as const, label:'💪 Körper' },
+    { id:'photos' as const, label:'📸 Fotos'  },
+  ]
 
   return (
     <div className="pb-nav anim-fade overflow-x-hidden" style={{ background:'var(--bg)' }}>
@@ -241,6 +267,124 @@ export default function Statistics() {
                   </div>
                 ))}
               </div>
+            )}
+          </div>
+        )}
+
+        {/* ── Body Tracking ── */}
+        {activeTab==='body' && (
+          <div className="space-y-3">
+            {/* Disclaimer */}
+            <div className="glass p-4" style={{ background:'rgba(245,158,11,0.06)', borderColor:'rgba(245,158,11,0.2)' }}>
+              <p className="text-xs font-bold" style={{ color:'var(--gold)' }}>⚠️ KI-Schätzung · kein medizinischer Rat</p>
+              <p className="text-xs mt-1" style={{ color:'var(--text-3)' }}>Claude AI analysiert Fotos visuell. Die Werte sind grobe Schätzungen und ersetzen keine medizinische Beurteilung.</p>
+            </div>
+
+            {/* Upload button */}
+            <input ref={bodyFileRef} type="file" accept="image/*" capture="environment" className="hidden"
+              onChange={(e) => e.target.files?.[0] && analyzePhoto(e.target.files[0])} />
+            <button onClick={() => bodyFileRef.current?.click()} disabled={bodyAnalyzing}
+              className="w-full py-5 rounded-3xl flex items-center justify-center gap-3 glass-press disabled:opacity-50"
+              style={{ background:'rgba(139,92,246,0.1)', border:'2px dashed rgba(139,92,246,0.3)' }}>
+              {bodyAnalyzing
+                ? <><Loader size={22} className="animate-spin" style={{ color:'#a78bfa' }}/><span className="font-bold" style={{ color:'var(--text-1)' }}>KI analysiert…</span></>
+                : <><Camera size={24} style={{ color:'#a78bfa' }}/><span className="font-bold" style={{ color:'var(--text-1)' }}>Körperfoto aufnehmen + analysieren</span></>}
+            </button>
+
+            {/* Photo gallery with analysis */}
+            {beforeAfterPhotos.length === 0 ? (
+              <div className="glass p-8 text-center">
+                <p className="text-3xl mb-2">💪</p>
+                <p className="text-sm font-bold" style={{ color:'var(--text-2)' }}>Noch keine Körperfotos</p>
+                <p className="text-xs mt-1" style={{ color:'var(--text-3)' }}>Füge dein erstes Foto hinzu um deinen Fortschritt zu tracken</p>
+              </div>
+            ) : (
+              <>
+                {/* Before/After Vergleich */}
+                {beforeAfterPhotos.length >= 2 && (
+                  <div className="glass p-4">
+                    <p className="label mb-3">Vorher / Nachher Vergleich</p>
+                    <div className="grid grid-cols-2 gap-2">
+                      {[beforeAfterPhotos[0], beforeAfterPhotos[beforeAfterPhotos.length - 1]].map((p, i) => (
+                        <div key={p.id}>
+                          <p className="text-xs font-bold mb-1.5 text-center" style={{ color: i===0 ? '#94a3b8' : 'var(--gold)' }}>
+                            {i===0 ? 'Vorher' : 'Nachher'}
+                          </p>
+                          <img src={p.photo} alt="" className="w-full h-40 object-cover rounded-2xl" />
+                          <p className="text-[10px] text-center mt-1" style={{ color:'var(--text-3)' }}>{p.date}</p>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Timeline */}
+                <p className="label px-1">Zeitstrahl</p>
+                <div className="space-y-3">
+                  {beforeAfterPhotos.slice().reverse().map((photo) => (
+                    <div key={photo.id} className="glass overflow-hidden">
+                      <div className="flex gap-3 p-4">
+                        <img src={photo.photo} alt="" className="w-24 h-24 object-cover rounded-2xl flex-shrink-0" />
+                        <div className="flex-1" style={{ minWidth:0 }}>
+                          <div className="flex items-start justify-between">
+                            <div>
+                              <p className="text-sm font-black" style={{ color:'var(--text-1)' }}>{photo.date.split('-').reverse().join('.')}</p>
+                              {photo.weight && <p className="text-xs" style={{ color:'var(--gold)' }}>{photo.weight} kg</p>}
+                            </div>
+                            <button onClick={() => removeBeforeAfterPhoto(photo.id)} className="glass-press p-1 flex-shrink-0">
+                              <X size={13} style={{ color:'var(--text-3)' }}/>
+                            </button>
+                          </div>
+                          {photo.analysis ? (
+                            <div className="mt-2 space-y-1">
+                              <div className="flex flex-wrap gap-1.5">
+                                {[
+                                  { label:'KFA', val: photo.analysis.bodyFatRange, color:'#f59e0b' },
+                                  { label:'Muskeltonus', val: photo.analysis.muscleTonus, color:'#10b981' },
+                                  { label:'Level', val: photo.analysis.fitnessLevel, color:'#60a5fa' },
+                                ].map((item) => (
+                                  <span key={item.label} className="text-[10px] font-bold px-2 py-0.5 rounded-lg"
+                                    style={{ background:`${item.color}15`, color:item.color }}>
+                                    {item.label}: {item.val}
+                                  </span>
+                                ))}
+                              </div>
+                              <button onClick={() => setSelectedPhoto(photo.id === selectedPhoto ? null : photo.id)}
+                                className="text-xs font-bold glass-press" style={{ color:'var(--text-3)' }}>
+                                {selectedPhoto === photo.id ? '▲ Weniger' : '▼ Details'}
+                              </button>
+                            </div>
+                          ) : (
+                            <p className="text-xs mt-2" style={{ color:'var(--text-3)' }}>Keine KI-Analyse</p>
+                          )}
+                        </div>
+                      </div>
+
+                      {/* Expanded analysis */}
+                      {selectedPhoto === photo.id && photo.analysis && (
+                        <div className="px-4 pb-4 space-y-2" style={{ borderTop:'1px solid var(--glass-border)' }}>
+                          {photo.analysis.observations.length > 0 && (
+                            <div>
+                              <p className="label mt-3 mb-1.5">Beobachtungen</p>
+                              {photo.analysis.observations.map((obs, i) => (
+                                <p key={i} className="text-xs mb-1" style={{ color:'var(--text-2)' }}>• {obs}</p>
+                              ))}
+                            </div>
+                          )}
+                          {photo.analysis.recommendations.length > 0 && (
+                            <div>
+                              <p className="label mb-1.5">Empfehlungen</p>
+                              {photo.analysis.recommendations.map((rec, i) => (
+                                <p key={i} className="text-xs mb-1" style={{ color:'var(--text-2)' }}>→ {rec}</p>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              </>
             )}
           </div>
         )}

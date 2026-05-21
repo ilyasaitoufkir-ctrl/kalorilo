@@ -135,12 +135,21 @@ export interface CheatDay {
   note?: string
 }
 
+export interface BodyAnalysis {
+  bodyFatRange: string
+  muscleTonus: string
+  fitnessLevel: string
+  observations: string[]
+  recommendations: string[]
+}
+
 export interface BeforeAfterPhoto {
   id: string
   date: string
   photo: string
   weight?: number
   note?: string
+  analysis?: BodyAnalysis
 }
 
 export type TabId = 'home' | 'food' | 'sport' | 'stats' | 'ai' | 'profile' | 'friends'

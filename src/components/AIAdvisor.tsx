@@ -1,9 +1,12 @@
 import { useState, useRef, useEffect, useMemo } from 'react'
-import { Send, Loader, RefreshCw, Sparkles, Refrigerator } from 'lucide-react'
+import { Send, Loader, RefreshCw, Sparkles, Refrigerator, TrendingUp, ChevronRight } from 'lucide-react'
 import { useStore } from '../store/useStore'
-import { askNutritionAdvisor, generateWeeklyPlan, analyzeFridge, getRecipesFromIngredients, getShoppingList } from '../utils/api'
-import { formatDate, imageToBase64 } from '../utils/calculations'
-
+import {
+  askNutritionAdvisor, generateWeeklyPlan,
+  analyzeFridge, getRecipesFromIngredients, getShoppingList,
+  generateCoachInsights, type CoachReport,
+} from '../utils/api'
+import { formatDate, getLast7Days, getDayName, imageToBase64 } from '../utils/calculations'
 import toast from 'react-hot-toast'
 
 const today = formatDate()
@@ -20,7 +23,7 @@ const QUICK = [
 export default function AIAdvisor() {
   const [input, setInput]         = useState('')
   const [loading, setLoading]     = useState(false)
-  const [tab, setTab]             = useState<'chat'|'plan'|'fridge'>('chat')
+  const [tab, setTab]             = useState<'chat'|'coach'|'plan'|'fridge'>('chat')
   const [weeklyPlan, setWeeklyPlan] = useState('')
   const [planLoading, setPlanLoading] = useState(false)
   const [fridgeStep, setFridgeStep] = useState<'scan'|'choose'|'result'>('scan')
@@ -29,15 +32,21 @@ export default function AIAdvisor() {
   const [fridgeType, setFridgeType] = useState<'recipe'|'shopping'|null>(null)
   const [fridgeLoading, setFridgeLoading] = useState(false)
   const [fridgePreview, setFridgePreview] = useState<string|null>(null)
+  // Coach state
+  const [coachReport, setCoachReport]   = useState<CoachReport|null>(null)
+  const [coachLoading, setCoachLoading] = useState(false)
   const fileRef   = useRef<HTMLInputElement>(null)
   const bottomRef = useRef<HTMLDivElement>(null)
 
-  const messages   = useStore((s) => s.aiMessages)
-  const addMessage = useStore((s) => s.addAIMessage)
-  const clearMsgs  = useStore((s) => s.clearAIMessages)
-  const apiKeys    = useStore((s) => s.apiKeys)
-  const profile    = useStore((s) => s.profile)
-  const allFoodLogs= useStore((s) => s.foodLogs)
+  const messages      = useStore((s) => s.aiMessages)
+  const addMessage    = useStore((s) => s.addAIMessage)
+  const clearMsgs     = useStore((s) => s.clearAIMessages)
+  const apiKeys       = useStore((s) => s.apiKeys)
+  const profile       = useStore((s) => s.profile)
+  const allFoodLogs   = useStore((s) => s.foodLogs)
+  const allActivities = useStore((s) => s.activityLogs)
+  const weightHistory = useStore((s) => s.weightHistory)
+  const whoopData     = useStore((s) => s.whoopData)
 
   const todayCals = useMemo(() => allFoodLogs.filter((l)=>l.date===today).reduce((s,f)=>s+(f.macros?.calories??0),0), [allFoodLogs])
   const target = useMemo(() => {
@@ -81,6 +90,45 @@ export default function AIAdvisor() {
     setPlanLoading(false)
   }
 
+  // Build coach data string from last 7 days
+  const buildCoachData = () => {
+    const last7 = getLast7Days()
+    const lines: string[] = []
+    lines.push(`=== Letzte 7 Tage ===`)
+    last7.forEach((date) => {
+      const foods = allFoodLogs.filter((l) => l.date === date)
+      const acts  = allActivities.filter((l) => l.date === date)
+      const cals  = foods.reduce((s, f) => s + (f.macros?.calories ?? 0), 0)
+      const prot  = foods.reduce((s, f) => s + (f.macros?.protein  ?? 0), 0)
+      const burned= acts.reduce((s, a) => s + a.caloriesBurned, 0)
+      const sport = acts.map((a) => `${a.sport.name} ${a.duration}min`).join(', ')
+      const dow   = getDayName(date)
+      lines.push(`${dow} (${date}): ${Math.round(cals)} kcal, ${Math.round(prot)}g Protein, ${Math.round(burned)} kcal verbrannt${sport ? `, Sport: ${sport}` : ''}`)
+    })
+    if (weightHistory.length > 0) {
+      const recent = weightHistory.slice(-3)
+      lines.push(`\nGewicht: ${recent.map((w) => `${w.date}: ${w.weight}kg`).join(', ')}`)
+    }
+    if (whoopData) {
+      lines.push(`Whoop: Recovery ${whoopData.recovery}%, Schlaf ${whoopData.sleepQuality}%, HRV ${whoopData.hrv}ms`)
+    }
+    return lines.join('\n')
+  }
+
+  const runCoachAnalysis = async () => {
+    if (!apiKey) { toast.error('API Key fehlt → Profil → API Keys'); return }
+    setCoachLoading(true)
+    try {
+      const data   = buildCoachData()
+      const goal   = profile?.goal === 'lose' ? 'Abnehmen' : profile?.goal === 'gain' ? 'Zunehmen' : 'Halten'
+      const report = await generateCoachInsights(profile?.name ?? 'Nutzer', goal, target, data, apiKey)
+      setCoachReport(report)
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : 'Fehler', { duration: 5000 })
+    }
+    setCoachLoading(false)
+  }
+
   const handleFridgePhoto = async (file: File) => {
     if (!apiKey) { toast.error('API Key fehlt'); return }
     setFridgeLoading(true)
@@ -106,7 +154,21 @@ export default function AIAdvisor() {
     setFridgeLoading(false)
   }
 
-  const TABS = [{ id:'chat' as const, label:'💬 Chat' }, { id:'plan' as const, label:'📅 Wochenplan' }, { id:'fridge' as const, label:'🧊 Kühlschrank' }]
+  const TABS = [
+    { id:'chat'  as const, label:'💬 Chat'       },
+    { id:'coach' as const, label:'🧠 Coach'      },
+    { id:'plan'  as const, label:'📅 Wochenplan' },
+    { id:'fridge'as const, label:'🧊 Kühlschrank'},
+  ]
+
+  const INSIGHT_COLORS: Record<string, string> = {
+    success:'rgba(16,185,129,0.12)', warning:'rgba(245,158,11,0.12)',
+    info:'rgba(59,130,246,0.12)',    tip:'rgba(139,92,246,0.12)',
+  }
+  const INSIGHT_BORDERS: Record<string, string> = {
+    success:'rgba(16,185,129,0.25)', warning:'rgba(245,158,11,0.25)',
+    info:'rgba(59,130,246,0.25)',    tip:'rgba(139,92,246,0.25)',
+  }
 
   const glassInput = { background:'rgba(255,255,255,0.05)', border:'1px solid rgba(255,255,255,0.08)', borderRadius:20, color:'var(--text-1)', padding:'14px 18px', width:'100%', fontSize:15, fontWeight:500 } as const
 
@@ -188,6 +250,98 @@ export default function AIAdvisor() {
             {!apiKey && <p className="text-xs mt-1.5" style={{ color:'#ef4444' }}>⚠️ API Key fehlt → Profil → API Keys</p>}
           </div>
         </>
+      )}
+
+      {/* ── Coach ── */}
+      {tab==='coach' && (
+        <div className="flex-1 overflow-y-auto overflow-x-hidden px-4 py-4 space-y-3">
+          {/* Hero */}
+          <div className="glass p-5" style={{ background:'rgba(245,158,11,0.06)', borderColor:'rgba(245,158,11,0.2)' }}>
+            <div className="flex items-center gap-3 mb-3">
+              <div className="w-14 h-14 rounded-3xl flex items-center justify-center text-3xl flex-shrink-0"
+                style={{ background:'rgba(245,158,11,0.12)', border:'1px solid rgba(245,158,11,0.2)' }}>🧠</div>
+              <div>
+                <p className="font-black" style={{ color:'var(--text-1)' }}>Dein persönlicher KI-Coach</p>
+                <p className="text-xs" style={{ color:'var(--text-3)' }}>Analysiert Mahlzeiten, Sport & Muster der letzten 7 Tage</p>
+              </div>
+            </div>
+            <button onClick={runCoachAnalysis} disabled={coachLoading || !apiKey}
+              className="btn-gold w-full py-4 text-sm flex items-center justify-center gap-2 disabled:opacity-40" style={{ minHeight:50 }}>
+              {coachLoading
+                ? <><Loader size={16} className="animate-spin"/>Analysiere deine Daten…</>
+                : <><TrendingUp size={16}/>{coachReport ? 'Neu analysieren' : 'Jetzt analysieren'}</>}
+            </button>
+            {!apiKey && <p className="text-xs mt-2 text-center" style={{ color:'#ef4444' }}>⚠️ API Key fehlt → Profil → API Keys</p>}
+          </div>
+
+          {/* Report */}
+          {coachReport && (
+            <>
+              {/* Greeting */}
+              <div className="glass p-4">
+                <p className="text-sm leading-relaxed" style={{ color:'var(--text-1)' }}>{coachReport.greeting}</p>
+              </div>
+
+              {/* Weekly score */}
+              <div className="glass p-4 flex items-center gap-4">
+                <div className="flex-shrink-0 relative w-16 h-16">
+                  <svg width="64" height="64" style={{ transform:'rotate(-90deg)' }}>
+                    <circle cx="32" cy="32" r="26" fill="none" stroke="rgba(255,255,255,0.06)" strokeWidth="8"/>
+                    <circle cx="32" cy="32" r="26" fill="none" stroke="#f59e0b" strokeWidth="8"
+                      strokeDasharray={`${2*Math.PI*26*coachReport.weeklyScore/100} ${2*Math.PI*26}`}
+                      strokeLinecap="round"/>
+                  </svg>
+                  <div className="absolute inset-0 flex items-center justify-center">
+                    <span className="text-sm font-black" style={{ color:'var(--gold)' }}>{coachReport.weeklyScore}</span>
+                  </div>
+                </div>
+                <div>
+                  <p className="text-sm font-black" style={{ color:'var(--text-1)' }}>Wochen-Score</p>
+                  <p className="text-xs mt-0.5" style={{ color:'var(--text-2)' }}>{coachReport.weekSummary}</p>
+                </div>
+              </div>
+
+              {/* Insights */}
+              <p className="label px-1">Erkannte Muster & Insights</p>
+              <div className="space-y-2">
+                {coachReport.insights.map((ins, i) => (
+                  <div key={i} className="glass p-4 flex items-start gap-3"
+                    style={{ background: INSIGHT_COLORS[ins.type], borderColor: INSIGHT_BORDERS[ins.type] }}>
+                    <span className="text-2xl flex-shrink-0 mt-0.5">{ins.emoji}</span>
+                    <div style={{ minWidth:0 }}>
+                      <p className="text-sm font-black" style={{ color:'var(--text-1)' }}>{ins.title}</p>
+                      <p className="text-xs mt-1 leading-relaxed" style={{ color:'var(--text-2)' }}>{ins.description}</p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              {/* Next week focus */}
+              <div className="glass p-4" style={{ background:'rgba(59,130,246,0.08)', borderColor:'rgba(59,130,246,0.2)' }}>
+                <p className="label mb-1.5">Fokus nächste Woche</p>
+                <p className="text-sm" style={{ color:'var(--text-1)' }}>{coachReport.focus}</p>
+              </div>
+
+              {/* Ask coach button */}
+              <button onClick={() => { setTab('chat'); }} className="glass glass-press w-full p-4 flex items-center gap-3 text-left">
+                <span className="text-xl flex-shrink-0">💬</span>
+                <div className="flex-1" style={{ minWidth:0 }}>
+                  <p className="text-sm font-black" style={{ color:'var(--text-1)' }}>Coach direkt fragen</p>
+                  <p className="text-xs" style={{ color:'var(--text-3)' }}>Weitere Fragen im Chat stellen</p>
+                </div>
+                <ChevronRight size={15} style={{ color:'var(--text-3)', flexShrink:0 }}/>
+              </button>
+            </>
+          )}
+
+          {!coachReport && !coachLoading && (
+            <div className="glass p-8 text-center">
+              <p className="text-3xl mb-2">🔍</p>
+              <p className="text-sm font-bold mb-1" style={{ color:'var(--text-1)' }}>Noch keine Analyse</p>
+              <p className="text-xs" style={{ color:'var(--text-3)' }}>Tippe auf „Jetzt analysieren" um deine Daten auszuwerten</p>
+            </div>
+          )}
+        </div>
       )}
 
       {/* Plan */}

@@ -3,7 +3,7 @@ import { Search, Camera, Trash2, X, ScanLine, PenLine, Plus, ArrowLeft, Mic, Mic
 import { useStore } from '../store/useStore'
 import { ALL_FOODS, FOOD_CATEGORIES, BRANDED_PRODUCTS, searchFoods, calculateMacros } from '../data/foodDatabase'
 import { formatDate, uid, imageToBase64 } from '../utils/calculations'
-import { fetchByBarcode, analyzePlate, correctPlateAnalysis } from '../utils/api'
+import { fetchByBarcode, analyzePlate, correctPlateAnalysis, searchUSDA, getAINutrients } from '../utils/api'
 import { useVoice } from '../hooks/useVoice'
 import VoiceInput from './VoiceInput'
 import type { FoodItem, MealType } from '../types'
@@ -33,7 +33,9 @@ function AddSheet({ mealType, onClose }: { mealType: MealType; onClose: () => vo
   const [amount, setAmount]     = useState('100')
   const [loading, setLoading]   = useState(false)
   const [correcting, setCorrecting] = useState(false)
-  const [barcodeVal, setBarcodeVal] = useState('')
+  const [barcodeVal, setBarcodeVal]     = useState('')
+  const [barcodeStatus, setBarcodeStatus] = useState<'idle'|'found'|'notfound'>('idle')
+  const [productNameSuggestion, setProductNameSuggestion] = useState('')
   const [photoResult, setPhotoResult] = useState<PhotoResult|null>(null)
   const [lastCorrection, setLastCorrection] = useState('')
   const [manualForm, setManualForm] = useState({ name:'', cal:'', protein:'', fat:'', carbs:'' })
@@ -57,9 +59,35 @@ function AddSheet({ mealType, onClose }: { mealType: MealType; onClose: () => vo
   const handleBarcode = async () => {
     if (!barcodeVal) return
     setLoading(true)
-    const f = await fetchByBarcode(barcodeVal)
+    setBarcodeStatus('idle')
+    // 1. Open Food Facts (größte kostenlose DB)
+    let f = await fetchByBarcode(barcodeVal)
+    // 2. Fallback: USDA FoodData Central
+    if (!f) {
+      f = await searchUSDA(barcodeVal)
+    }
     setLoading(false)
-    if (f) pick(f); else toast.error('Produkt nicht gefunden')
+    if (f) { pick(f); setBarcodeStatus('found') }
+    else   { setBarcodeStatus('notfound') }
+  }
+
+  const handleAISuggestNutrients = async () => {
+    if (!productNameSuggestion.trim() || !apiKeys.anthropic) return
+    setLoading(true)
+    try {
+      const nutrients = await getAINutrients(productNameSuggestion, apiKeys.anthropic)
+      if (nutrients) {
+        const food: FoodItem = {
+          id: uid(), name: productNameSuggestion, category: 'KI-Schätzung',
+          macros: nutrients, serving: 100,
+        }
+        pick(food)
+        toast.success(`KI-Schätzung für „${productNameSuggestion}" geladen`)
+      } else {
+        toast.error('KI konnte keine Nährwerte finden')
+      }
+    } catch (e) { toast.error(e instanceof Error ? e.message : 'Fehler') }
+    setLoading(false)
   }
 
   const handlePhoto = async (file: File) => {
@@ -278,17 +306,28 @@ function AddSheet({ mealType, onClose }: { mealType: MealType; onClose: () => vo
           {/* Barcode */}
           {view === 'barcode' && (
             <div className="space-y-3">
-              <p className="text-sm" style={{ color:'var(--text-2)' }}>Barcode-Nummer eingeben:</p>
+              <div className="glass p-3" style={{ background:'rgba(16,185,129,0.06)', borderColor:'rgba(16,185,129,0.15)' }}>
+                <p className="text-xs font-semibold" style={{ color:'var(--text-2)' }}>
+                  🔍 Sucht in <strong>Open Food Facts</strong> (3 Mio. Produkte) + <strong>USDA FoodData Central</strong>
+                </p>
+              </div>
               <div className="flex gap-2">
-                <input type="number" inputMode="numeric" value={barcodeVal} onChange={(e)=>setBarcodeVal(e.target.value)}
-                  style={{ ...inputStyle, flex:1 }} placeholder="z.B. 4000539000015" />
+                <input type="number" inputMode="numeric" value={barcodeVal}
+                  onChange={(e)=>{ setBarcodeVal(e.target.value); setBarcodeStatus('idle') }}
+                  style={{ ...inputStyle, flex:1 }} placeholder="Barcode-Nummer eingeben…" />
                 <button onClick={handleBarcode} disabled={loading||!barcodeVal} className="btn-gold px-5" style={btnStyle}>
                   {loading ? <Loader size={16} className="animate-spin"/> : 'Suchen'}
                 </button>
               </div>
-              {selected && macro && (
-                <div className="glass p-4 space-y-3">
-                  <p className="font-black" style={{ color:'var(--text-1)' }}>{selected.name}</p>
+
+              {/* Found */}
+              {barcodeStatus==='found' && selected && macro && (
+                <div className="glass p-4 space-y-3" style={{ background:'rgba(16,185,129,0.06)', borderColor:'rgba(16,185,129,0.2)' }}>
+                  <div className="flex items-center gap-2">
+                    <span className="text-lg">✅</span>
+                    <p className="font-black" style={{ color:'var(--text-1)' }}>{selected.name}</p>
+                  </div>
+                  {selected.brand && <p className="text-xs" style={{ color:'var(--gold)' }}>{selected.brand}</p>}
                   <div className="flex items-center gap-2">
                     <input type="number" inputMode="decimal" value={amount} onChange={(e)=>setAmount(e.target.value)}
                       className="w-24 text-center" style={{ ...inputStyle, width:96 }} />
@@ -296,6 +335,36 @@ function AddSheet({ mealType, onClose }: { mealType: MealType; onClose: () => vo
                     <span className="ml-auto font-black text-lg" style={{ color:'var(--gold)' }}>{macro.calories} kcal</span>
                   </div>
                   <button onClick={addSelected} className="btn-gold w-full py-3 text-sm" style={btnStyle}>Hinzufügen</button>
+                </div>
+              )}
+
+              {/* Not found – AI fallback */}
+              {barcodeStatus==='notfound' && !selected && (
+                <div className="glass p-4 space-y-3" style={{ background:'rgba(239,68,68,0.06)', borderColor:'rgba(239,68,68,0.15)' }}>
+                  <div className="flex items-center gap-2">
+                    <span>❌</span>
+                    <p className="text-sm font-bold" style={{ color:'var(--text-1)' }}>Produkt nicht gefunden</p>
+                  </div>
+                  <p className="text-xs" style={{ color:'var(--text-3)' }}>
+                    Gib den Produktnamen ein – die KI schlägt Nährwerte vor:
+                  </p>
+                  <div className="flex gap-2">
+                    <input value={productNameSuggestion}
+                      onChange={(e)=>setProductNameSuggestion(e.target.value)}
+                      onKeyDown={(e)=>e.key==='Enter'&&handleAISuggestNutrients()}
+                      style={{ ...inputStyle, flex:1 }} placeholder="z.B. Haribo Goldbären 200g" />
+                    <button onClick={handleAISuggestNutrients}
+                      disabled={loading||!productNameSuggestion.trim()||!apiKeys.anthropic}
+                      className="btn-gold px-4 text-xs disabled:opacity-40" style={btnStyle}>
+                      {loading ? <Loader size={14} className="animate-spin"/> : '🤖 KI'}
+                    </button>
+                  </div>
+                  {!apiKeys.anthropic && <p className="text-xs" style={{ color:'#ef4444' }}>⚠️ API Key für KI-Vorschläge fehlt</p>}
+                  <button onClick={() => setView('manual')}
+                    className="w-full py-2.5 rounded-2xl text-sm font-bold glass-press"
+                    style={{ color:'var(--text-2)', background:'var(--glass)', border:'1px solid var(--glass-border)' }}>
+                    ✏️ Manuell eingeben
+                  </button>
                 </div>
               )}
             </div>

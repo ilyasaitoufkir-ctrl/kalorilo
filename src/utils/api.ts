@@ -1,4 +1,4 @@
-import type { FoodItem, Macros, MealType } from '../types'
+import type { FoodItem, Macros, MealType, BodyAnalysis } from '../types'
 
 // ── Voice Input Parsing ────────────────────────────────────────────────────
 export interface VoiceParseResult {
@@ -280,4 +280,134 @@ export async function askOpenAI(prompt: string, apiKey: string): Promise<string>
   }
   const data = await res.json()
   return data.choices?.[0]?.message?.content ?? 'Keine Antwort'
+}
+
+// ── AI Coach – Muster erkennen & Insights generieren ─────────────────────
+export interface CoachInsight {
+  type: 'success' | 'warning' | 'info' | 'tip'
+  emoji: string
+  title: string
+  description: string
+}
+
+export interface CoachReport {
+  greeting: string
+  insights: CoachInsight[]
+  weeklyScore: number
+  weekSummary: string
+  focus: string
+}
+
+export async function generateCoachInsights(
+  userName: string,
+  goal: string,
+  calorieTarget: number,
+  weekData: string,
+  apiKey: string
+): Promise<CoachReport> {
+  const res = await anthropicPost(apiKey, {
+    model: ANTHROPIC_MODEL,
+    max_tokens: 1800,
+    messages: [{
+      role: 'user',
+      content: `Du bist ein persönlicher Ernährungs-Coach. Analysiere die Daten und erstelle einen personalisierten Wochenbericht.
+
+Nutzer: ${userName}
+Ziel: ${goal}
+Kalorienziel: ${calorieTarget} kcal/Tag
+
+${weekData}
+
+Antworte NUR mit validem JSON ohne Markdown:
+{
+  "greeting": "Hey ${userName}, ich habe deine Daten analysiert...",
+  "insights": [
+    {"type": "warning", "emoji": "⚠️", "title": "Kurze Überschrift", "description": "Konkrete, persönliche Beobachtung mit Zahlen aus den Daten."}
+  ],
+  "weeklyScore": 72,
+  "weekSummary": "Diese Woche in 2 Sätzen zusammengefasst.",
+  "focus": "Nächste Woche: eine konkrete Empfehlung."
+}
+
+Regeln: 3–5 Insights, konkret mit echten Zahlen aus den Daten, persönlich angesprochen. Erkenne echte Muster (Wochentage, nach Sport, Schlafdauer).`,
+    }],
+  })
+  const raw = (await res.json()).content?.[0]?.text ?? '{}'
+  const json = raw.match(/\{[\s\S]*\}/)?.[0] ?? '{"greeting":"","insights":[],"weeklyScore":0,"weekSummary":"","focus":""}'
+  try { return JSON.parse(json) } catch { return { greeting: '', insights: [], weeklyScore: 0, weekSummary: raw.slice(0, 200), focus: '' } }
+}
+
+// ── Body Photo Analysis – Körperzusammensetzung schätzen ──────────────────
+export async function analyzeBodyPhoto(base64Image: string, apiKey: string): Promise<BodyAnalysis> {
+  const res = await anthropicPost(apiKey, {
+    model: ANTHROPIC_MODEL,
+    max_tokens: 800,
+    messages: [{
+      role: 'user',
+      content: [
+        { type: 'image', source: { type: 'base64', media_type: 'image/jpeg', data: base64Image } },
+        { type: 'text', text: `Analysiere dieses Körperfoto visuell und sachlich.
+Antworte NUR mit validem JSON ohne Markdown:
+{
+  "bodyFatRange": "15–20%",
+  "muscleTonus": "gering|mittel|gut|sehr gut",
+  "fitnessLevel": "Anfänger|Fortgeschritten|Fit|Sehr fit",
+  "observations": ["Sachliche Beobachtung 1", "Beobachtung 2"],
+  "recommendations": ["Konkrete Empfehlung 1", "Empfehlung 2"]
+}
+WICHTIG: Grobe visuelle Schätzung, kein medizinischer Rat. Respektvoll und motivierend bleiben.` },
+      ],
+    }],
+  })
+  const raw = (await res.json()).content?.[0]?.text ?? '{}'
+  const json = raw.match(/\{[\s\S]*\}/)?.[0] ?? '{}'
+  return JSON.parse(json)
+}
+
+// ── USDA FoodData Central – Zweite Produktdatenbank ───────────────────────
+export async function searchUSDA(query: string): Promise<FoodItem | null> {
+  try {
+    const url = `https://api.nal.usda.gov/fdc/v1/foods/search?query=${encodeURIComponent(query)}&api_key=DEMO_KEY&pageSize=1&dataType=Branded,SR%20Legacy`
+    const res  = await fetch(url)
+    if (!res.ok) return null
+    const data = await res.json()
+    const food = data.foods?.[0]
+    if (!food) return null
+    const n    = food.foodNutrients ?? []
+    const get  = (id: number) => (n.find((x: any) => x.nutrientId === id)?.value ?? 0) as number
+    return {
+      id: `usda_${food.fdcId}`,
+      name: food.description,
+      brand: food.brandOwner ?? food.brandName,
+      category: food.foodCategory ?? 'Sonstiges',
+      macros: {
+        calories: Math.round(get(1008)),
+        protein:  Math.round(get(1003) * 10) / 10,
+        fat:      Math.round(get(1004) * 10) / 10,
+        carbs:    Math.round(get(1005) * 10) / 10,
+      },
+      serving: 100,
+    }
+  } catch { return null }
+}
+
+// ── KI-Nährwert-Vorschlag für unbekannte Produkte ─────────────────────────
+export async function getAINutrients(
+  productName: string,
+  apiKey: string
+): Promise<{ calories: number; protein: number; fat: number; carbs: number } | null> {
+  try {
+    const res = await anthropicPost(apiKey, {
+      model: ANTHROPIC_MODEL,
+      max_tokens: 150,
+      messages: [{
+        role: 'user',
+        content: `Schätze Nährwerte pro 100g für: "${productName}".
+Antworte NUR mit JSON: {"calories":100,"protein":5.0,"fat":2.0,"carbs":15.0}`,
+      }],
+    })
+    const raw  = (await res.json()).content?.[0]?.text ?? '{}'
+    const json = raw.match(/\{[\s\S]*\}/)?.[0] ?? '{}'
+    return JSON.parse(json)
+  } catch { return null }
 }
