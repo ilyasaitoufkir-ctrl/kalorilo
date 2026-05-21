@@ -100,7 +100,7 @@ function AddSheet({ mealType, onClose }: { mealType: MealType; onClose: () => vo
     if (listening) { stopListening(); return }
     startListening(
       handleVoiceCorrection,
-      (err) => toast.error(err)
+      (err) => toast.error(err, { duration: 8000 })
     )
   }
 

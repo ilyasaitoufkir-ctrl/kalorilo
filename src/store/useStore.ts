@@ -111,7 +111,7 @@ export const useStore = create<AppState>()(
       activeTab: 'home',
       setActiveTab: (tab) => set({ activeTab: tab }),
 
-      darkMode: 'auto',
+      darkMode: 'dark',
       setDarkMode: (m) => set({ darkMode: m }),
 
       stepsToday: 0,
@@ -252,9 +252,11 @@ export const useStore = create<AppState>()(
         const envOAI  = import.meta.env.VITE_OPENAI_KEY ?? ''
         if (envAnth && !state.apiKeys.anthropic) state.apiKeys.anthropic = envAnth
         if (envOAI  && !state.apiKeys.openai)    state.apiKeys.openai    = envOAI
-        // Migrate old 'dashboard' tab to 'home'
+        // Migrate old tab IDs
         if ((state.activeTab as string) === 'dashboard') state.activeTab = 'home'
         if ((state.activeTab as string) === 'fridge') state.activeTab = 'ai'
+        // Dark mode als Standard setzen falls noch 'auto'
+        if ((state.darkMode as string) === 'auto') state.darkMode = 'dark'
       },
       partialize: (state) => ({
         darkMode: state.darkMode,

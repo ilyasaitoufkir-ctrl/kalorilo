@@ -64,14 +64,16 @@ export function useVoice() {
     rec.onerror = (e: any) => {
       setListening(false)
       const errMap: Record<string, string> = {
-        'not-allowed':  'Mikrofon-Zugriff verweigert. Einstellungen → Safari → Mikrofon erlauben.',
-        'no-speech':    'Keine Sprache erkannt. Bitte nochmal versuchen.',
-        'network':      'Netzwerkfehler bei der Spracherkennung.',
-        'aborted':      '',   // user aborted = kein Fehler
+        'not-allowed':
+          '🎙️ Mikrofon-Zugriff verweigert.\n\niPhone Einstellungen → Safari → Mikrofon → „Fragen" oder „Erlauben".\n\nOder: In Safari oben auf „AA" tippen → Website-Einstellungen → Mikrofon.',
+        'no-speech':    'Keine Sprache erkannt – bitte nochmal versuchen.',
+        'network':      'Netzwerkfehler. Bitte erneut versuchen.',
+        'aborted':      '',
         'audio-capture':'Kein Mikrofon gefunden.',
-        'service-not-allowed': 'Mikrofon-Zugriff verweigert.',
+        'service-not-allowed':
+          '🎙️ Mikrofon-Zugriff verweigert.\n\niPhone Einstellungen → Safari → Mikrofon → „Erlauben".',
       }
-      const msg = errMap[e.error] ?? `Fehler: ${e.error}`
+      const msg = errMap[e.error] ?? `Sprachfehler: ${e.error}`
       if (msg) onError?.(msg)
     }
 

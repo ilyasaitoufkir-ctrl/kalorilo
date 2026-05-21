@@ -89,7 +89,7 @@ export default function VoiceInput({ defaultMealType = 'snack', onDone }: Props)
   return (
     <div className="flex flex-col items-center gap-2">
       <button
-        onClick={() => listening ? stopListening() : startListening(handleResult, (err) => toast.error(err))}
+        onClick={() => listening ? stopListening() : startListening(handleResult, (err) => toast.error(err, { duration: 8000 }))}
         disabled={processing}
         className={`w-16 h-16 rounded-full flex items-center justify-center transition-all duration-200 shadow-lg disabled:opacity-60 ${
           listening
