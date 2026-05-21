@@ -15,7 +15,7 @@ import Onboarding from './components/Onboarding'
 import ErrorBoundary from './components/ErrorBoundary'
 import type { TabId } from './types'
 
-const TAB_ORDER: TabId[] = ['home', 'food', 'sport', 'friends', 'ai']
+const TAB_ORDER: TabId[] = ['home', 'food', 'sport', 'ai', 'profile']
 
 function MainApp() {
   const profile        = useStore((s) => s.profile)
@@ -24,8 +24,6 @@ function MainApp() {
   const firebaseConfig = useStore((s) => s.firebaseConfig)
 
   useDarkMode()
-
-  // Auto-init Firebase if config saved
   if (firebaseConfig?.apiKey) tryInitFromConfig(firebaseConfig)
 
   const touchStartX = useRef(0)
@@ -46,24 +44,31 @@ function MainApp() {
     }
   }
   const handleTap = (e: React.MouseEvent) => {
-    const target = e.target as HTMLElement
-    if (!target.closest('input, textarea, [contenteditable]')) {
+    const t = e.target as HTMLElement
+    if (!t.closest('input, textarea, [contenteditable]')) {
       (document.activeElement as HTMLElement)?.blur()
     }
   }
 
   if (!profile) return <Onboarding />
 
+  const tab = activeTab as string
+
   return (
-    <div className="min-h-dvh" style={{ background: 'var(--bg)' }}
-      onTouchStart={handleTouchStart} onTouchEnd={handleTouchEnd} onClick={handleTap}>
-      {activeTab === 'home'    && <Dashboard />}
-      {activeTab === 'food'    && <FoodTracker />}
-      {activeTab === 'sport'   && <SportTracker />}
-      {activeTab === 'stats'   && <Statistics />}
-      {activeTab === 'ai'      && <AIAdvisor />}
-      {activeTab === 'profile' && <Profile />}
-      {activeTab === 'friends' && <Friends />}
+    <div
+      className="min-h-dvh overflow-x-hidden"
+      style={{ background: 'var(--bg)' }}
+      onTouchStart={handleTouchStart}
+      onTouchEnd={handleTouchEnd}
+      onClick={handleTap}
+    >
+      {tab === 'home'    && <Dashboard />}
+      {tab === 'food'    && <FoodTracker />}
+      {tab === 'sport'   && <SportTracker />}
+      {tab === 'ai'      && <AIAdvisor />}
+      {tab === 'profile' && <Profile />}
+      {tab === 'stats'   && <Statistics />}
+      {tab === 'friends' && <Friends />}
       <Navigation />
     </div>
   )
@@ -73,14 +78,23 @@ export default function App() {
   return (
     <ErrorBoundary>
       <MainApp />
-      <Toaster position="top-center" toastOptions={{
-        duration: 2800,
-        style: {
-          borderRadius: '16px', background: 'var(--surface)', color: 'var(--text1)',
-          fontSize: '14px', fontWeight: '500', padding: '12px 16px',
-          maxWidth: '340px', boxShadow: 'var(--shadow)',
-        },
-      }} />
+      <Toaster
+        position="top-center"
+        toastOptions={{
+          duration: 2800,
+          style: {
+            borderRadius: '16px',
+            background: 'rgba(17,24,40,0.95)',
+            color: '#f1f5f9',
+            border: '1px solid rgba(255,255,255,0.08)',
+            fontSize: '14px',
+            fontWeight: '600',
+            padding: '12px 18px',
+            backdropFilter: 'blur(20px)',
+            boxShadow: '0 8px 32px rgba(0,0,0,0.5)',
+          },
+        }}
+      />
     </ErrorBoundary>
   )
 }

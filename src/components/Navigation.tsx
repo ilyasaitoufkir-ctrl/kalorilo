@@ -1,13 +1,13 @@
-import { Home, Utensils, Dumbbell, Bot, Users } from 'lucide-react'
+import { Home, Utensils, Dumbbell, Bot, User } from 'lucide-react'
 import { useStore } from '../store/useStore'
 import type { TabId } from '../types'
 
 const TABS: { id: TabId; icon: React.ElementType; label: string }[] = [
-  { id: 'home',    icon: Home,     label: 'Start'   },
-  { id: 'food',    icon: Utensils, label: 'Essen'   },
-  { id: 'sport',   icon: Dumbbell, label: 'Sport'   },
-  { id: 'friends', icon: Users,    label: 'Gruppen' },
-  { id: 'ai',      icon: Bot,      label: 'KI'      },
+  { id: 'home',    icon: Home,     label: 'Start'  },
+  { id: 'food',    icon: Utensils, label: 'Essen'  },
+  { id: 'sport',   icon: Dumbbell, label: 'Sport'  },
+  { id: 'ai',      icon: Bot,      label: 'KI'     },
+  { id: 'profile', icon: User,     label: 'Profil' },
 ]
 
 export default function Navigation() {
@@ -16,23 +16,44 @@ export default function Navigation() {
 
   return (
     <nav className="tab-bar">
-      <div className="flex items-center justify-around pt-2">
+      <div className="flex items-center justify-around pt-2 px-2">
         {TABS.map(({ id, icon: Icon, label }) => {
           const active = activeTab === id
           return (
             <button
               key={id}
               onClick={() => setActiveTab(id)}
-              className="flex flex-col items-center gap-1 px-3 py-1 min-w-[52px]"
+              className="flex flex-col items-center gap-1 py-1.5 px-4 rounded-2xl transition-all duration-200 relative"
+              style={{ minWidth: 56 }}
             >
-              <div className={`w-10 h-10 flex items-center justify-center rounded-2xl transition-all duration-200 ${active ? 'bg-blue-50' : ''}`}>
+              {/* Active glow background */}
+              {active && (
+                <div
+                  className="absolute inset-0 rounded-2xl"
+                  style={{
+                    background: 'rgba(245,158,11,0.08)',
+                    border: '1px solid rgba(245,158,11,0.15)',
+                  }}
+                />
+              )}
+              <div className="relative">
                 <Icon
                   size={22}
-                  strokeWidth={active ? 2.5 : 1.8}
-                  className={active ? 'text-blue-600' : 'text-slate-400'}
+                  strokeWidth={active ? 2.5 : 1.7}
+                  style={{ color: active ? '#f59e0b' : '#475569', transition: 'color 0.2s ease' }}
                 />
+                {/* Gold dot indicator */}
+                {active && (
+                  <div
+                    className="absolute -bottom-1 left-1/2 w-1 h-1 rounded-full"
+                    style={{ background: '#f59e0b', transform: 'translateX(-50%)', boxShadow: '0 0 6px #f59e0b' }}
+                  />
+                )}
               </div>
-              <span className={`text-[10px] font-semibold transition-colors duration-200 ${active ? 'text-blue-600' : 'text-slate-400'}`}>
+              <span
+                className="text-[10px] font-semibold relative"
+                style={{ color: active ? '#f59e0b' : '#475569', transition: 'color 0.2s ease' }}
+              >
                 {label}
               </span>
             </button>

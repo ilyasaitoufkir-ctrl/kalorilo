@@ -1,312 +1,353 @@
 import { useState } from 'react'
-import { Save, Key, ExternalLink, Bell } from 'lucide-react'
+import { Save, Key, ExternalLink, Bell, ChevronRight } from 'lucide-react'
 import { useStore } from '../store/useStore'
 import { getBMI, getBMICategory } from '../utils/calculations'
 import type { UserProfile, Gender, ActivityLevel, Goal } from '../types'
 import toast from 'react-hot-toast'
 
 const ACTIVITY_OPTIONS: { value: ActivityLevel; emoji: string; label: string; desc: string }[] = [
-  { value: 'sedentary',  emoji: '🛋️', label: 'Sitzend',      desc: 'Bürojob, kaum Bewegung' },
-  { value: 'light',      emoji: '🚶', label: 'Leicht aktiv', desc: '1–3x Sport/Woche' },
-  { value: 'moderate',   emoji: '🏃', label: 'Moderat',      desc: '3–5x Sport/Woche' },
-  { value: 'active',     emoji: '⚡', label: 'Sehr aktiv',   desc: '6–7x Sport/Woche' },
-  { value: 'very_active',emoji: '🏋️', label: 'Sportler',     desc: 'Intensiv täglich' },
+  { value:'sedentary',   emoji:'🛋️', label:'Sitzend',      desc:'Bürojob, kaum Bewegung'  },
+  { value:'light',       emoji:'🚶', label:'Leicht aktiv', desc:'1–3x Sport/Woche'         },
+  { value:'moderate',    emoji:'🏃', label:'Moderat',      desc:'3–5x Sport/Woche'         },
+  { value:'active',      emoji:'⚡', label:'Sehr aktiv',   desc:'6–7x Sport/Woche'         },
+  { value:'very_active', emoji:'🏋️', label:'Sportler',     desc:'Intensiv täglich'         },
 ]
 
+const inputStyle = {
+  background:'rgba(255,255,255,0.05)',
+  border:'1px solid rgba(255,255,255,0.08)',
+  borderRadius: 16,
+  color:'var(--text-1)',
+  padding:'13px 16px',
+  width:'100%',
+  fontSize:14,
+  fontWeight:600,
+} as const
+
 export default function Profile() {
-  const storeProfile = useStore((s) => s.profile)
-  const setProfile   = useStore((s) => s.setProfile)
-  const apiKeys      = useStore((s) => s.apiKeys)
-  const setApiKeys   = useStore((s) => s.setApiKeys)
-  const darkMode     = useStore((s) => s.darkMode)
-  const setDarkMode  = useStore((s) => s.setDarkMode)
-  const reminders    = useStore((s) => s.reminders)
-  const setReminders = useStore((s) => s.setReminders)
+  const storeProfile  = useStore((s) => s.profile)
+  const setProfile    = useStore((s) => s.setProfile)
+  const apiKeys       = useStore((s) => s.apiKeys)
+  const setApiKeys    = useStore((s) => s.setApiKeys)
+  const reminders     = useStore((s) => s.reminders)
+  const setReminders  = useStore((s) => s.setReminders)
   const getDailyCalorieTarget = useStore((s) => s.getDailyCalorieTarget)
-  const whoopData    = useStore((s) => s.whoopData)
-  const setWhoopData = useStore((s) => s.setWhoopData)
+  const whoopData     = useStore((s) => s.whoopData)
+  const setWhoopData  = useStore((s) => s.setWhoopData)
+  const darkMode      = useStore((s) => s.darkMode)
+  const setDarkMode   = useStore((s) => s.setDarkMode)
+  const setActiveTab  = useStore((s) => s.setActiveTab)
 
   const [section, setSection] = useState<'profile'|'goals'|'apikeys'|'appearance'|'whoop'|'reminders'>('profile')
-  const [form, setForm] = useState<Partial<UserProfile>>(storeProfile ?? { name:'', age:25, weight:75, height:175, gender:'male', activityLevel:'moderate', goal:'lose', targetWeight:70, targetWeeks:12 })
+  const [form, setForm] = useState<Partial<UserProfile>>(storeProfile ?? { name:'',age:25,weight:75,height:175,gender:'male',activityLevel:'moderate',goal:'lose',targetWeight:70,targetWeeks:12 })
   const [keys, setKeys] = useState(apiKeys)
-  const [whoopForm, setWhoopForm] = useState({ recovery: '', hrv: '', restingHR: '', sleepQuality: '', strain: '' })
+  const [whoopForm, setWhoopForm] = useState({ recovery:'',hrv:'',restingHR:'',sleepQuality:'',strain:'' })
 
   const target = getDailyCalorieTarget()
-  const bmi = form.weight && form.height ? getBMI(Number(form.weight), Number(form.height)) : null
+  const bmi    = form.weight && form.height ? getBMI(Number(form.weight), Number(form.height)) : null
 
   const saveProfile = () => {
-    if (!form.name || !form.age || !form.weight || !form.height) { toast.error('Pflichtfelder ausfüllen'); return }
+    if (!form.name||!form.age||!form.weight||!form.height) { toast.error('Pflichtfelder ausfüllen'); return }
     setProfile(form as UserProfile); toast.success('Gespeichert! ✅')
   }
-
   const saveKeys = () => { setApiKeys(keys); toast.success('API Keys gespeichert!') }
-
   const saveWhoop = () => {
-    setWhoopData({ recovery: parseFloat(whoopForm.recovery)||0, hrv: parseFloat(whoopForm.hrv)||0, restingHR: parseFloat(whoopForm.restingHR)||0, sleepQuality: parseFloat(whoopForm.sleepQuality)||0, strain: parseFloat(whoopForm.strain)||0, date: new Date().toISOString().split('T')[0] })
+    setWhoopData({ recovery:parseFloat(whoopForm.recovery)||0, hrv:parseFloat(whoopForm.hrv)||0, restingHR:parseFloat(whoopForm.restingHR)||0, sleepQuality:parseFloat(whoopForm.sleepQuality)||0, strain:parseFloat(whoopForm.strain)||0, date:new Date().toISOString().split('T')[0] })
     toast.success('Whoop-Daten gespeichert!')
   }
 
   const SECTIONS = [
-    { id: 'profile' as const,   label: '👤 Profil' },
-    { id: 'goals' as const,     label: '🎯 Ziele' },
-    { id: 'apikeys' as const,   label: '🔑 API Keys' },
-    { id: 'appearance' as const,label: '🌙 Design' },
-    { id: 'whoop' as const,     label: '⌚ Whoop' },
-    { id: 'reminders' as const, label: '🔔 Erinnerungen' },
+    { id:'profile' as const,    label:'👤 Profil'       },
+    { id:'goals' as const,      label:'🎯 Ziele'        },
+    { id:'apikeys' as const,    label:'🔑 API Keys'     },
+    { id:'appearance' as const, label:'🌙 Design'       },
+    { id:'whoop' as const,      label:'⌚ Whoop'        },
+    { id:'reminders' as const,  label:'🔔 Erinnerungen' },
   ]
 
   return (
-    <div className="pb-nav anim-fade">
+    <div className="pb-nav anim-fade overflow-x-hidden" style={{ background:'var(--bg)' }}>
       {/* Header */}
-      <div className="grad-blue px-5 pt-safe pb-6 relative overflow-hidden">
-        <div className="absolute -top-16 -right-16 w-56 h-56 rounded-full bg-white/5" />
-        <h1 className="text-white text-2xl font-black">{storeProfile?.name ? `Hallo, ${storeProfile.name.split(' ')[0]}!` : 'Profil & Einstellungen'}</h1>
+      <div className="pt-safe px-5 pb-5 relative overflow-hidden" style={{ background:'linear-gradient(160deg,var(--bg-2),var(--bg))' }}>
+        <div className="absolute" style={{ top:-40,right:-40,width:200,height:200,background:'radial-gradient(circle,rgba(245,158,11,0.06),transparent 70%)',pointerEvents:'none' }}/>
+        <h1 className="text-2xl font-black relative" style={{ color:'var(--text-1)' }}>
+          {storeProfile?.name ? `Hallo, ${storeProfile.name.split(' ')[0]}!` : 'Profil & Einstellungen'}
+        </h1>
         {storeProfile && (
-          <div className="flex gap-2 mt-2">
-            <div className="bg-white/20 rounded-xl px-3 py-1 text-white text-sm font-bold">{target} kcal/Tag</div>
-            {bmi && <div className="bg-white/20 rounded-xl px-3 py-1 text-white text-sm font-bold">BMI {bmi} · {getBMICategory(bmi)}</div>}
+          <div className="flex gap-2 mt-2 flex-wrap">
+            <span className="glass-sm px-3 py-1 text-sm font-bold" style={{ color:'var(--gold)' }}>{target} kcal/Tag</span>
+            {bmi && <span className="glass-sm px-3 py-1 text-sm font-bold" style={{ color:'var(--text-2)' }}>BMI {bmi} · {getBMICategory(bmi)}</span>}
           </div>
         )}
       </div>
 
-      <div className="px-4 py-4">
-        {/* Section tabs */}
-        <div className="flex gap-2 overflow-x-auto pb-2 mb-4 -mx-1 px-1">
+      <div className="px-4 pt-4">
+        {/* Tabs */}
+        <div className="flex gap-2 overflow-x-auto pb-2 mb-4 -mx-1 px-1" style={{ scrollbarWidth:'none' }}>
           {SECTIONS.map((s) => (
-            <button key={s.id} onClick={() => setSection(s.id)}
-              className={`flex-shrink-0 px-4 py-2.5 rounded-2xl text-sm font-bold transition whitespace-nowrap ${section === s.id ? 'bg-blue-500 text-white' : 'bg-white text-slate-600'}`}>
-              {s.label}
-            </button>
+            <button key={s.id} onClick={()=>setSection(s.id)}
+              className="flex-shrink-0 glass-press rounded-2xl px-4 py-2.5 text-sm font-bold whitespace-nowrap transition-all"
+              style={section===s.id
+                ? { background:'var(--gold-dim)', border:'1px solid rgba(245,158,11,0.3)', color:'var(--gold)' }
+                : { background:'var(--glass)', border:'1px solid var(--glass-border)', color:'var(--text-3)' }
+              }>{s.label}</button>
           ))}
         </div>
 
-        {/* ── Profil ── */}
-        {section === 'profile' && (
-          <div className="card p-5 space-y-4">
+        {/* Profile */}
+        {section==='profile' && (
+          <div className="glass p-5 space-y-4">
             <div>
-              <label className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-1.5 block">Name</label>
-              <input value={form.name??''} onChange={(e) => setForm({ ...form, name: e.target.value })}
-                className="w-full bg-slate-50 rounded-2xl px-4 py-3.5 text-sm font-medium outline-none" placeholder="Dein Name" />
+              <p className="label mb-2">Name</p>
+              <input value={form.name??''} onChange={(e)=>setForm({...form,name:e.target.value})}
+                style={inputStyle} placeholder="Dein Name"/>
             </div>
-            <div className="flex gap-2">
-              {(['male','female'] as Gender[]).map((g) => (
-                <button key={g} onClick={() => setForm({ ...form, gender: g })}
-                  className={`flex-1 py-3 rounded-2xl font-bold text-sm transition ${form.gender === g ? 'bg-blue-500 text-white' : 'bg-slate-50 text-slate-600'}`}>
-                  {g === 'male' ? '♂ Mann' : '♀ Frau'}
+            <div className="flex gap-3">
+              {(['male','female'] as Gender[]).map((g)=>(
+                <button key={g} onClick={()=>setForm({...form,gender:g})}
+                  className="flex-1 py-3 rounded-2xl font-bold text-sm glass-press transition-all"
+                  style={form.gender===g ? { background:'var(--grad-gold)',color:'#fff' } : { background:'var(--glass)',border:'1px solid var(--glass-border)',color:'var(--text-2)' }}>
+                  {g==='male'?'♂ Mann':'♀ Frau'}
                 </button>
               ))}
             </div>
             <div className="grid grid-cols-3 gap-2">
-              {[{ label: 'Alter', key: 'age', placeholder: '25' }, { label: 'Gewicht (kg)', key: 'weight', placeholder: '75' }, { label: 'Größe (cm)', key: 'height', placeholder: '175' }].map((f) => (
+              {[{label:'Alter',key:'age'},{label:'Gewicht (kg)',key:'weight'},{label:'Größe (cm)',key:'height'}].map((f)=>(
                 <div key={f.key}>
-                  <label className="text-xs font-bold text-slate-500 mb-1.5 block">{f.label}</label>
-                  <input type="number" value={(form as any)[f.key]??''} onChange={(e) => setForm({ ...form, [f.key]: parseFloat(e.target.value) })}
-                    className="w-full bg-slate-50 rounded-2xl px-3 py-3 text-sm font-medium text-center outline-none" placeholder={f.placeholder} />
+                  <p className="label mb-1.5">{f.label}</p>
+                  <input type="number" inputMode="decimal"
+                    value={(form as any)[f.key]??''}
+                    onChange={(e)=>setForm({...form,[f.key]:parseFloat(e.target.value)})}
+                    style={{ ...inputStyle, textAlign:'center' }}/>
                 </div>
               ))}
             </div>
             {bmi && (
-              <div className="bg-blue-50 rounded-2xl px-4 py-3 flex justify-between items-center">
-                <span className="text-sm font-bold text-blue-800">BMI: {bmi}</span>
-                <span className="text-sm text-blue-600">{getBMICategory(bmi)}</span>
+              <div className="rounded-2xl px-4 py-3 flex justify-between items-center"
+                style={{ background:'rgba(245,158,11,0.06)', border:'1px solid rgba(245,158,11,0.12)' }}>
+                <span className="font-bold text-sm" style={{ color:'var(--gold)' }}>BMI: {bmi}</span>
+                <span className="text-sm" style={{ color:'var(--text-2)' }}>{getBMICategory(bmi)}</span>
               </div>
             )}
             <div>
-              <label className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-2 block">Aktivitätslevel</label>
+              <p className="label mb-2">Aktivitätslevel</p>
               <div className="space-y-2">
-                {ACTIVITY_OPTIONS.map((a) => (
-                  <button key={a.value} onClick={() => setForm({ ...form, activityLevel: a.value })}
-                    className={`w-full flex items-center gap-3 p-3 rounded-2xl transition text-left ${form.activityLevel === a.value ? 'bg-blue-500' : 'bg-slate-50'}`}>
+                {ACTIVITY_OPTIONS.map((a)=>(
+                  <button key={a.value} onClick={()=>setForm({...form,activityLevel:a.value})}
+                    className="w-full flex items-center gap-3 p-3.5 rounded-2xl glass-press transition-all text-left"
+                    style={form.activityLevel===a.value
+                      ? { background:'var(--gold-dim)', border:'1px solid rgba(245,158,11,0.3)' }
+                      : { background:'var(--glass)', border:'1px solid var(--glass-border)' }
+                    }>
                     <span className="text-xl">{a.emoji}</span>
                     <div>
-                      <p className={`text-sm font-bold ${form.activityLevel === a.value ? 'text-white' : 'text-slate-800'}`}>{a.label}</p>
-                      <p className={`text-xs ${form.activityLevel === a.value ? 'text-blue-100' : 'text-slate-400'}`}>{a.desc}</p>
+                      <p className="text-sm font-bold" style={{ color:'var(--text-1)' }}>{a.label}</p>
+                      <p className="text-xs" style={{ color:'var(--text-3)' }}>{a.desc}</p>
                     </div>
+                    {form.activityLevel===a.value && <span className="ml-auto" style={{ color:'var(--gold)' }}>✓</span>}
                   </button>
                 ))}
               </div>
             </div>
-            <button onClick={saveProfile} className="w-full py-4 bg-blue-500 rounded-3xl text-white font-black flex items-center justify-center gap-2">
-              <Save size={16} />Profil speichern
+            <button onClick={saveProfile} className="btn-gold w-full py-4 flex items-center justify-center gap-2" style={{ minHeight:52 }}>
+              <Save size={16}/>Profil speichern
             </button>
           </div>
         )}
 
-        {/* ── Ziele ── */}
-        {section === 'goals' && (
-          <div className="card p-5 space-y-4">
+        {/* Goals */}
+        {section==='goals' && (
+          <div className="glass p-5 space-y-4">
             <div>
-              <label className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-2 block">Mein Ziel</label>
+              <p className="label mb-2">Mein Ziel</p>
               <div className="grid grid-cols-3 gap-2">
-                {([['lose','📉','Abnehmen'],['maintain','➡️','Halten'],['gain','📈','Zunehmen']] as [Goal,string,string][]).map(([g,emoji,label]) => (
-                  <button key={g} onClick={() => setForm({ ...form, goal: g })}
-                    className={`py-4 rounded-2xl text-center transition ${form.goal === g ? 'bg-blue-500' : 'bg-slate-50'}`}>
-                    <p className="text-2xl mb-0.5">{emoji}</p>
-                    <p className={`text-xs font-bold ${form.goal === g ? 'text-white' : 'text-slate-600'}`}>{label}</p>
+                {([['lose','📉','Abnehmen'],['maintain','➡️','Halten'],['gain','📈','Zunehmen']] as [Goal,string,string][]).map(([g,emoji,label])=>(
+                  <button key={g} onClick={()=>setForm({...form,goal:g})}
+                    className="py-4 rounded-2xl text-center glass-press transition-all"
+                    style={form.goal===g
+                      ? { background:'var(--gold-dim)', border:'1px solid rgba(245,158,11,0.3)' }
+                      : { background:'var(--glass)', border:'1px solid var(--glass-border)' }
+                    }>
+                    <p className="text-2xl mb-1">{emoji}</p>
+                    <p className="text-xs font-bold" style={{ color:'var(--text-1)' }}>{label}</p>
                   </button>
                 ))}
               </div>
             </div>
             <div className="grid grid-cols-2 gap-3">
               <div>
-                <label className="text-xs font-bold text-slate-500 mb-1.5 block">Zielgewicht (kg)</label>
-                <input type="number" step="0.1" value={form.targetWeight??''} onChange={(e) => setForm({ ...form, targetWeight: parseFloat(e.target.value) })}
-                  className="w-full bg-slate-50 rounded-2xl px-4 py-3.5 text-sm font-medium outline-none" placeholder="70" />
+                <p className="label mb-1.5">Zielgewicht (kg)</p>
+                <input type="number" inputMode="decimal" value={form.targetWeight??''} onChange={(e)=>setForm({...form,targetWeight:parseFloat(e.target.value)})}
+                  style={inputStyle} placeholder="70"/>
               </div>
               <div>
-                <label className="text-xs font-bold text-slate-500 mb-1.5 block">In Wochen</label>
-                <input type="number" value={form.targetWeeks??12} onChange={(e) => setForm({ ...form, targetWeeks: parseInt(e.target.value) })}
-                  className="w-full bg-slate-50 rounded-2xl px-4 py-3.5 text-sm font-medium outline-none" placeholder="12" />
+                <p className="label mb-1.5">In Wochen</p>
+                <input type="number" inputMode="numeric" value={form.targetWeeks??12} onChange={(e)=>setForm({...form,targetWeeks:parseInt(e.target.value)})}
+                  style={inputStyle} placeholder="12"/>
               </div>
             </div>
-            {form.targetWeeks && (
-              <div className="bg-green-50 rounded-2xl px-4 py-3 text-center">
-                <p className="text-sm font-bold text-green-700">⏳ Noch {(form.targetWeeks||12) * 7} Tage bis zum Ziel</p>
-              </div>
-            )}
-            <div className="bg-blue-50 rounded-2xl px-4 py-4 text-center">
-              <p className="text-3xl font-black text-blue-600">{target}</p>
-              <p className="text-sm text-blue-500">kcal Tagesziel</p>
+            <div className="rounded-2xl p-4 text-center"
+              style={{ background:'var(--gold-dim)', border:'1px solid rgba(245,158,11,0.2)' }}>
+              <p className="text-4xl font-black" style={{ color:'var(--gold)' }}>{target}</p>
+              <p className="text-sm" style={{ color:'var(--text-2)' }}>kcal Tagesziel</p>
             </div>
-            <button onClick={saveProfile} className="w-full py-4 bg-blue-500 rounded-3xl text-white font-black flex items-center justify-center gap-2">
-              <Save size={16} />Ziele speichern
+            <button onClick={saveProfile} className="btn-gold w-full py-4 flex items-center justify-center gap-2" style={{ minHeight:52 }}>
+              <Save size={16}/>Ziele speichern
             </button>
           </div>
         )}
 
-        {/* ── Appearance / Dark Mode ── */}
-        {section === ('appearance' as any) && (
-          <div className="card p-5 space-y-4">
-            <div>
-              <p className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-3">Dark Mode</p>
-              <div className="space-y-2">
-                {([
-                  { id: 'auto',  emoji: '⚙️', label: 'Automatisch', desc: 'Folgt der iPhone-Systemeinstellung' },
-                  { id: 'light', emoji: '☀️', label: 'Hell',         desc: 'Immer heller Modus' },
-                  { id: 'dark',  emoji: '🌙', label: 'Dunkel',       desc: 'Immer dunkler Modus' },
-                ] as { id: 'auto'|'light'|'dark'; emoji: string; label: string; desc: string }[]).map((opt) => (
-                  <button key={opt.id} onClick={() => setDarkMode(opt.id)}
-                    className={`w-full flex items-center gap-3 p-4 rounded-2xl text-left transition ${darkMode === opt.id ? 'bg-blue-500' : 'bg-slate-50'}`}>
-                    <span className="text-2xl">{opt.emoji}</span>
-                    <div>
-                      <p className={`text-sm font-bold ${darkMode === opt.id ? 'text-white' : 'text-slate-800'}`}>{opt.label}</p>
-                      <p className={`text-xs ${darkMode === opt.id ? 'text-blue-100' : 'text-slate-400'}`}>{opt.desc}</p>
-                    </div>
-                    {darkMode === opt.id && <span className="ml-auto text-white text-lg">✓</span>}
-                  </button>
-                ))}
-              </div>
-            </div>
-            <div className="bg-blue-50 rounded-2xl p-3">
-              <p className="text-xs text-blue-700 font-medium">💡 Im dunklen Modus wird weniger Akkuenergie bei OLED-Displays (iPhone X+) verbraucht.</p>
-            </div>
-          </div>
-        )}
-
-        {/* ── API Keys ── */}
-        {section === 'apikeys' && (
+        {/* API Keys */}
+        {section==='apikeys' && (
           <div className="space-y-3">
-            <div className="bg-amber-50 rounded-2xl p-4">
-              <p className="text-xs font-bold text-amber-700">🔒 Keys werden nur lokal auf deinem Gerät gespeichert – niemals auf Servern.</p>
+            <div className="glass p-4" style={{ background:'rgba(245,158,11,0.05)', borderColor:'rgba(245,158,11,0.15)' }}>
+              <p className="text-xs font-bold" style={{ color:'var(--text-2)' }}>🔒 Keys werden nur lokal auf deinem Gerät gespeichert.</p>
             </div>
             {[
-              { key: 'anthropic' as const, label: '🤖 Anthropic (Claude)', hint: 'Teller-Foto & Kühlschrank-Scan', link: 'https://console.anthropic.com' },
-              { key: 'openai'    as const, label: '🧠 OpenAI (GPT-4o)',    hint: 'Backup KI für Chat & Rezepte',  link: 'https://platform.openai.com' },
-              { key: 'spoonacular' as const, label: '🍴 Spoonacular',      hint: 'Rezeptdatenbank (optional)',    link: 'https://spoonacular.com/food-api' },
-            ].map((item) => (
-              <div key={item.key} className="card p-4">
-                <div className="flex items-center justify-between mb-2">
-                  <p className="text-sm font-bold text-slate-700">{item.label}</p>
+              { key:'anthropic' as const, label:'🤖 Anthropic (Claude)', hint:'Teller-Foto, Kühlschrank, Chat', link:'https://console.anthropic.com' },
+              { key:'openai' as const,    label:'🧠 OpenAI (GPT-4o)',    hint:'Backup KI für Chat & Rezepte',  link:'https://platform.openai.com' },
+            ].map((item)=>(
+              <div key={item.key} className="glass p-4 space-y-2">
+                <div className="flex items-center justify-between">
+                  <p className="text-sm font-black" style={{ color:'var(--text-1)' }}>{item.label}</p>
                   <a href={item.link} target="_blank" rel="noopener noreferrer"
-                    className="text-xs text-blue-500 font-bold flex items-center gap-1">API Key <ExternalLink size={10} /></a>
+                    className="text-xs font-bold flex items-center gap-1" style={{ color:'var(--gold)' }}>
+                    API Key <ExternalLink size={10}/>
+                  </a>
                 </div>
-                <input type="password" value={keys[item.key]} onChange={(e) => setKeys({ ...keys, [item.key]: e.target.value })}
-                  className="w-full bg-slate-50 rounded-2xl px-4 py-3 text-sm font-mono outline-none" placeholder="sk-…" />
-                <p className="text-xs text-slate-400 mt-1">{item.hint}</p>
+                <input type="password" value={keys[item.key]} onChange={(e)=>setKeys({...keys,[item.key]:e.target.value})}
+                  style={{ ...inputStyle, fontFamily:'monospace' }} placeholder="sk-…"/>
+                <p className="text-xs" style={{ color:'var(--text-3)' }}>{item.hint}</p>
               </div>
             ))}
-            <button onClick={saveKeys} className="w-full py-4 bg-blue-500 rounded-3xl text-white font-black flex items-center justify-center gap-2">
-              <Key size={16} />API Keys speichern
+            <button onClick={saveKeys} className="btn-gold w-full py-4 flex items-center justify-center gap-2" style={{ minHeight:52 }}>
+              <Key size={16}/>API Keys speichern
             </button>
           </div>
         )}
 
-        {/* ── Whoop ── */}
-        {section === 'whoop' && (
-          <div className="space-y-3">
-            <div className="rounded-3xl overflow-hidden" style={{ background: 'linear-gradient(135deg,#0f172a 0%,#1e293b 100%)' }}>
-              <div className="p-4">
-                <p className="text-white font-black text-base mb-1">⌚ Whoop Daten</p>
-                <p className="text-slate-400 text-sm">Öffne die Whoop App und trage deine heutigen Werte ein.</p>
-              </div>
+        {/* Appearance */}
+        {section==='appearance' && (
+          <div className="glass p-5 space-y-4">
+            <p className="label">Dark Mode</p>
+            <div className="space-y-2">
+              {([
+                { id:'dark'  as const, emoji:'🌙', label:'Dunkel',       desc:'Immer dunkler Modus (Standard)' },
+                { id:'light' as const, emoji:'☀️', label:'Hell',         desc:'Immer heller Modus'             },
+                { id:'auto'  as const, emoji:'⚙️', label:'Automatisch',  desc:'Folgt der iPhone-Einstellung'   },
+              ]).map((opt)=>(
+                <button key={opt.id} onClick={()=>setDarkMode(opt.id)}
+                  className="w-full flex items-center gap-3 p-4 rounded-2xl glass-press transition-all text-left"
+                  style={darkMode===opt.id
+                    ? { background:'var(--gold-dim)', border:'1px solid rgba(245,158,11,0.3)' }
+                    : { background:'var(--glass)', border:'1px solid var(--glass-border)' }
+                  }>
+                  <span className="text-2xl">{opt.emoji}</span>
+                  <div>
+                    <p className="text-sm font-black" style={{ color:'var(--text-1)' }}>{opt.label}</p>
+                    <p className="text-xs" style={{ color:'var(--text-3)' }}>{opt.desc}</p>
+                  </div>
+                  {darkMode===opt.id && <span className="ml-auto" style={{ color:'var(--gold)' }}>✓</span>}
+                </button>
+              ))}
             </div>
-            <div className="card p-4 grid grid-cols-2 gap-3">
+            {/* Stats & Friends links */}
+            <div className="space-y-2 pt-2">
+              <p className="label">Weitere Seiten</p>
               {[
-                { key: 'recovery',     label: 'Recovery (%)',      placeholder: '0–100' },
-                { key: 'hrv',          label: 'HRV (ms)',          placeholder: 'z.B. 65' },
-                { key: 'restingHR',    label: 'Ruhepuls (bpm)',    placeholder: 'z.B. 52' },
-                { key: 'sleepQuality', label: 'Schlafqualität (%)',placeholder: '0–100' },
-              ].map((f) => (
+                { label:'📊 Statistiken', sub:'Gewicht, Charts, Fotos', action:()=>setActiveTab('stats') },
+                { label:'👥 Gruppen & Challenges', sub:'Mit Freunden trainieren', action:()=>setActiveTab('friends') },
+              ].map((item)=>(
+                <button key={item.label} onClick={item.action}
+                  className="w-full glass glass-press p-4 flex items-center gap-3 text-left">
+                  <div className="flex-1" style={{ minWidth:0 }}>
+                    <p className="text-sm font-black" style={{ color:'var(--text-1)' }}>{item.label}</p>
+                    <p className="text-xs" style={{ color:'var(--text-3)' }}>{item.sub}</p>
+                  </div>
+                  <ChevronRight size={15} style={{ color:'var(--text-3)' }}/>
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Whoop */}
+        {section==='whoop' && (
+          <div className="space-y-3">
+            <div className="glass p-4" style={{ background:'rgba(17,24,40,0.9)' }}>
+              <p className="font-black mb-1" style={{ color:'var(--text-1)' }}>⌚ Whoop Daten manuell eingeben</p>
+              <p className="text-sm" style={{ color:'var(--text-3)' }}>Werte aus der Whoop App übertragen</p>
+            </div>
+            <div className="glass p-4 grid grid-cols-2 gap-3">
+              {[
+                { key:'recovery',     label:'Recovery (%)',       placeholder:'0–100' },
+                { key:'hrv',          label:'HRV (ms)',           placeholder:'z.B. 65' },
+                { key:'restingHR',    label:'Ruhepuls (bpm)',     placeholder:'z.B. 52' },
+                { key:'sleepQuality', label:'Schlafqualität (%)', placeholder:'0–100' },
+              ].map((f)=>(
                 <div key={f.key}>
-                  <label className="text-xs font-bold text-slate-500 mb-1.5 block">{f.label}</label>
-                  <input type="number" value={whoopForm[f.key as keyof typeof whoopForm]}
-                    onChange={(e) => setWhoopForm({ ...whoopForm, [f.key]: e.target.value })}
-                    className="w-full bg-slate-50 rounded-2xl px-3 py-3 text-sm font-medium outline-none" placeholder={f.placeholder} />
+                  <p className="label mb-1.5">{f.label}</p>
+                  <input type="number" inputMode="decimal"
+                    value={whoopForm[f.key as keyof typeof whoopForm]}
+                    onChange={(e)=>setWhoopForm({...whoopForm,[f.key]:e.target.value})}
+                    style={inputStyle} placeholder={f.placeholder}/>
                 </div>
               ))}
               <div className="col-span-2">
-                <label className="text-xs font-bold text-slate-500 mb-1.5 block">Strain (0–21)</label>
-                <input type="number" step="0.1" value={whoopForm.strain}
-                  onChange={(e) => setWhoopForm({ ...whoopForm, strain: e.target.value })}
-                  className="w-full bg-slate-50 rounded-2xl px-4 py-3 text-sm font-medium outline-none" placeholder="z.B. 8.5" />
+                <p className="label mb-1.5">Strain (0–21)</p>
+                <input type="number" inputMode="decimal" step="0.1" value={whoopForm.strain}
+                  onChange={(e)=>setWhoopForm({...whoopForm,strain:e.target.value})}
+                  style={inputStyle} placeholder="z.B. 8.5"/>
               </div>
             </div>
             {whoopData && (
-              <div className="card p-4 grid grid-cols-4 gap-2">
-                {[{ l:'Recovery',v:`${whoopData.recovery}%`},{l:'HRV',v:`${whoopData.hrv}ms`},{l:'Schlaf',v:`${whoopData.sleepQuality}%`},{l:'Strain',v:`${whoopData.strain?.toFixed(1)}`}].map((item) => (
-                  <div key={item.l} className="bg-slate-50 rounded-2xl py-2.5 text-center">
-                    <p className="text-sm font-black text-slate-800">{item.v}</p>
-                    <p className="text-[10px] text-slate-400">{item.l}</p>
+              <div className="glass p-4 grid grid-cols-4 gap-2">
+                {[{l:'Recovery',v:`${whoopData.recovery}%`},{l:'HRV',v:`${whoopData.hrv}ms`},{l:'Schlaf',v:`${whoopData.sleepQuality}%`},{l:'Strain',v:`${Number(whoopData.strain).toFixed(1)}`}].map((item)=>(
+                  <div key={item.l} className="rounded-2xl py-3 text-center" style={{ background:'var(--glass)' }}>
+                    <p className="text-sm font-black" style={{ color:'var(--text-1)' }}>{item.v}</p>
+                    <p className="text-[10px]" style={{ color:'var(--text-3)' }}>{item.l}</p>
                   </div>
                 ))}
               </div>
             )}
-            <button onClick={saveWhoop}
-              className="w-full py-4 rounded-3xl text-white font-black flex items-center justify-center gap-2"
-              style={{ background: 'linear-gradient(135deg,#0f172a,#334155)' }}>
+            <button onClick={saveWhoop} className="w-full py-4 rounded-2xl font-black flex items-center justify-center gap-2"
+              style={{ background:'rgba(17,24,40,0.9)', border:'1px solid rgba(255,255,255,0.08)', color:'var(--text-1)', minHeight:52 }}>
               ⌚ Whoop-Daten speichern
             </button>
           </div>
         )}
 
-        {/* ── Reminders ── */}
-        {section === 'reminders' && (
+        {/* Reminders */}
+        {section==='reminders' && (
           <div className="space-y-3">
-            <div className="bg-blue-50 rounded-2xl p-4">
-              <p className="text-xs font-bold text-blue-700">💡 Erlaube Benachrichtigungen in den iPhone-Einstellungen damit Erinnerungen funktionieren.</p>
+            <div className="glass p-4" style={{ background:'rgba(59,130,246,0.06)', borderColor:'rgba(59,130,246,0.15)' }}>
+              <p className="text-xs font-bold" style={{ color:'var(--text-2)' }}>💡 Benachrichtigungen in Safari erlauben für funktionierende Erinnerungen.</p>
             </div>
-            <div className="card divide-y divide-slate-50">
-              {reminders.map((r, i) => (
-                <div key={r.id} className="flex items-center gap-3 px-4 py-3.5">
-                  <span className="text-xl">{i === 0 ? '🌅' : i === 1 ? '☀️' : '🌙'}</span>
-                  <div className="flex-1">
+            <div className="glass divide-y" style={{ borderColor:'transparent' }}>
+              {reminders.map((r,i)=>(
+                <div key={r.id} className="flex items-center gap-3 px-4 py-4" style={{ borderTop: i>0?'1px solid var(--glass-border)':'none' }}>
+                  <span className="text-xl flex-shrink-0">{i===0?'🌅':i===1?'☀️':'🌙'}</span>
+                  <div className="flex-1" style={{ minWidth:0 }}>
                     <input type="time" value={r.time}
-                      onChange={(e) => { const u=[...reminders]; u[i]={...r,time:e.target.value}; setReminders(u) }}
-                      className="text-sm font-black text-slate-800 bg-transparent outline-none" />
-                    <p className="text-xs text-slate-400">{r.label}</p>
+                      onChange={(e)=>{ const u=[...reminders]; u[i]={...r,time:e.target.value}; setReminders(u) }}
+                      className="text-sm font-black bg-transparent outline-none border-none w-full" style={{ color:'var(--text-1)' }}/>
+                    <p className="text-xs" style={{ color:'var(--text-3)' }}>{r.label}</p>
                   </div>
-                  <label className="relative inline-flex items-center cursor-pointer">
+                  <label className="relative inline-flex items-center cursor-pointer flex-shrink-0">
                     <input type="checkbox" checked={r.enabled}
-                      onChange={(e) => { const u=[...reminders]; u[i]={...r,enabled:e.target.checked}; setReminders(u) }}
-                      className="sr-only peer" />
-                    <div className="w-11 h-6 bg-slate-200 rounded-full peer peer-checked:bg-blue-500 after:content-[''] after:absolute after:top-0.5 after:left-0.5 after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:after:translate-x-5" />
+                      onChange={(e)=>{ const u=[...reminders]; u[i]={...r,enabled:e.target.checked}; setReminders(u) }}
+                      className="sr-only peer"/>
+                    <div className="w-11 h-6 rounded-full peer transition-all"
+                      style={{ background:r.enabled?'var(--grad-gold)':'rgba(255,255,255,0.08)', position:'relative' }}>
+                      <div style={{ position:'absolute', top:2, left: r.enabled ? 22 : 2, width:20, height:20, background:'#fff', borderRadius:'50%', transition:'left 0.2s ease' }}/>
+                    </div>
                   </label>
                 </div>
               ))}
             </div>
-            <button onClick={() => toast.success('Erinnerungen gespeichert!')}
-              className="w-full py-4 bg-blue-500 rounded-3xl text-white font-black flex items-center justify-center gap-2">
-              <Bell size={16} />Speichern
+            <button onClick={()=>toast.success('Erinnerungen gespeichert!')}
+              className="btn-gold w-full py-4 flex items-center justify-center gap-2" style={{ minHeight:52 }}>
+              <Bell size={16}/>Speichern
             </button>
           </div>
         )}

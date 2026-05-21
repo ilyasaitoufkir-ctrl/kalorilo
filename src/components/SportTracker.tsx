@@ -7,19 +7,14 @@ import type { ActivityLog, Intensity, SportActivity } from '../types'
 import toast from 'react-hot-toast'
 
 const today = formatDate()
-const INTENSITY: { id: Intensity; label: string; color: string }[] = [
-  { id: 'light',  label: '🟢 Leicht',  color: 'bg-emerald-50 text-emerald-600 border-emerald-200' },
-  { id: 'medium', label: '🟡 Mittel',  color: 'bg-amber-50 text-amber-600 border-amber-200' },
-  { id: 'intense',label: '🔴 Intensiv',color: 'bg-red-50 text-red-600 border-red-200' },
-]
 
-function Timer({ onStop }: { onStop: (seconds: number) => void }) {
+function Timer({ onStop }: { onStop: (s: number) => void }) {
   const [seconds, setSeconds] = useState(0)
   const [running, setRunning] = useState(true)
-  const ref = useRef<ReturnType<typeof setInterval> | null>(null)
+  const ref = useRef<ReturnType<typeof setInterval>|null>(null)
 
   useEffect(() => {
-    if (running) ref.current = setInterval(() => setSeconds((s) => s + 1), 1000)
+    if (running) ref.current = setInterval(()=>setSeconds((s)=>s+1), 1000)
     else if (ref.current) clearInterval(ref.current)
     return () => { if (ref.current) clearInterval(ref.current) }
   }, [running])
@@ -27,165 +22,169 @@ function Timer({ onStop }: { onStop: (seconds: number) => void }) {
   const fmt = (s: number) => `${String(Math.floor(s/60)).padStart(2,'0')}:${String(s%60).padStart(2,'0')}`
 
   return (
-    <div className="bg-slate-800 rounded-3xl p-5 text-center">
-      <p className="text-slate-400 text-sm mb-2">Aktive Zeit</p>
-      <p className="text-white text-6xl font-black tracking-tight font-mono">{fmt(seconds)}</p>
-      <div className="flex gap-3 mt-4 justify-center">
-        <button onClick={() => setRunning(!running)}
-          className={`px-6 py-3 rounded-2xl font-bold text-sm flex items-center gap-2 ${running ? 'bg-amber-500 text-white' : 'bg-green-500 text-white'}`}>
-          {running ? <><Square size={16} />Pause</> : <><Play size={16} />Weiter</>}
+    <div className="glass p-6 text-center">
+      <p className="label mb-2">Aktive Zeit</p>
+      <p className="text-6xl font-black font-mono tracking-tight mb-5" style={{ color:'var(--text-1)' }}>{fmt(seconds)}</p>
+      <div className="flex gap-3 justify-center">
+        <button onClick={()=>setRunning(!running)}
+          className="glass-press px-6 py-3 rounded-2xl font-bold text-sm flex items-center gap-2"
+          style={{ background:running?'rgba(245,158,11,0.1)':'rgba(16,185,129,0.1)', color:running?'#f59e0b':'#10b981', border:`1px solid ${running?'rgba(245,158,11,0.2)':'rgba(16,185,129,0.2)'}` }}>
+          {running ? <><Square size={15}/>Pause</> : <><Play size={15}/>Weiter</>}
         </button>
-        <button onClick={() => { setRunning(false); onStop(seconds) }}
-          className="px-6 py-3 bg-blue-500 text-white rounded-2xl font-bold text-sm">
-          Fertig ✓
-        </button>
+        <button onClick={()=>{ setRunning(false); onStop(seconds) }}
+          className="btn-gold px-6 py-3 text-sm">Fertig ✓</button>
       </div>
     </div>
   )
 }
 
-function AddActivitySheet({ onClose }: { onClose: () => void }) {
-  const [sport, setSport]       = useState<SportActivity | null>(null)
+function AddSheet({ onClose }: { onClose: ()=>void }) {
+  const [sport, setSport]       = useState<SportActivity|null>(null)
   const [duration, setDuration] = useState('30')
   const [intensity, setIntensity] = useState<Intensity>('medium')
   const [steps, setSteps]       = useState('')
   const [timerMode, setTimerMode] = useState(false)
-  const [activeCategory, setActiveCategory] = useState<string | null>(null)
-  const addActivityLog = useStore((s) => s.addActivityLog)
-  const profile        = useStore((s) => s.profile)
-  const weight = Number(profile?.weight) || 75
+  const [activeCategory, setActiveCategory] = useState<string|null>(null)
+  const addActivityLog = useStore((s)=>s.addActivityLog)
+  const profile        = useStore((s)=>s.profile)
+  const weight = Number(profile?.weight)||75
 
   const getMET = (sp: SportActivity, i: Intensity) =>
-    i === 'light' ? sp.metLight : i === 'medium' ? sp.metMedium : sp.metIntense
+    i==='light' ? sp.metLight : i==='medium' ? sp.metMedium : sp.metIntense
 
   const calories = sport ? calculateCaloriesBurned(weight, parseInt(duration)||0, getMET(sport, intensity)) : 0
 
   const save = () => {
     if (!sport) return
     const dur = parseInt(duration)||0
-    const log: ActivityLog = { id: uid(), date: today, sport, duration: dur, intensity, caloriesBurned: calculateCaloriesBurned(weight, dur, getMET(sport, intensity)), steps: steps ? parseInt(steps) : undefined, timestamp: Date.now() }
+    const log: ActivityLog = { id:uid(), date:today, sport, duration:dur, intensity, caloriesBurned:calculateCaloriesBurned(weight,dur,getMET(sport,intensity)), steps:steps?parseInt(steps):undefined, timestamp:Date.now() }
     addActivityLog(log)
     toast.success(`${sport.icon} ${sport.name} – ${log.caloriesBurned} kcal verbrannt!`)
     onClose()
   }
 
-  const handleTimerStop = (secs: number) => {
-    setTimerMode(false)
-    setDuration(String(Math.round(secs / 60)))
-  }
-
-  const filtered = activeCategory ? SPORTS_DATABASE.filter((s) => s.category === activeCategory) : SPORTS_DATABASE
+  const filtered = activeCategory ? SPORTS_DATABASE.filter((s)=>s.category===activeCategory) : SPORTS_DATABASE
+  const INTENSITY: { id:Intensity; label:string; color:string }[] = [
+    { id:'light',   label:'🟢 Leicht',  color:'#10b981' },
+    { id:'medium',  label:'🟡 Mittel',  color:'#f59e0b' },
+    { id:'intense', label:'🔴 Intensiv',color:'#ef4444' },
+  ]
 
   return (
     <div className="fixed inset-0 z-50 flex items-end" onClick={onClose}>
-      <div className="sheet-overlay absolute inset-0" />
-      <div className="relative bg-slate-50 w-full max-w-[430px] mx-auto rounded-t-[32px] max-h-[92dvh] overflow-hidden flex flex-col anim-up"
-        onClick={(e) => e.stopPropagation()}>
-        <div className="flex justify-center pt-3 pb-1"><div className="sheet-handle" /></div>
-        <div className="flex items-center justify-between px-5 pb-4 pt-1 flex-shrink-0">
-          <h2 className="text-lg font-black text-slate-900">{sport ? sport.name : 'Sportart wählen'}</h2>
-          <button onClick={onClose} className="w-9 h-9 bg-white rounded-2xl flex items-center justify-center shadow-sm"><X size={18} className="text-slate-600" /></button>
+      <div className="sheet-overlay absolute inset-0"/>
+      <div className="sheet-bg relative w-full max-w-[430px] mx-auto max-h-[93dvh] overflow-hidden flex flex-col anim-up"
+        onClick={(e)=>e.stopPropagation()}>
+        <div className="flex justify-center pt-3 pb-1"><div className="sheet-handle"/></div>
+        <div className="flex items-center justify-between px-5 py-4">
+          <h2 className="text-lg font-black" style={{ color:'var(--text-1)' }}>{sport ? sport.name : 'Sportart wählen'}</h2>
+          <button onClick={onClose} className="glass-sm glass-press w-10 h-10 flex items-center justify-center">
+            <X size={17} style={{ color:'var(--text-2)' }}/>
+          </button>
         </div>
 
-        <div className="flex-1 overflow-y-auto px-5 pb-8">
+        <div className="flex-1 overflow-y-auto overflow-x-hidden px-5 pb-8 space-y-3">
           {!sport ? (
             <>
-              {/* Category filter */}
-              <div className="flex gap-2 overflow-x-auto pb-2 mb-3 -mx-1 px-1">
-                <button onClick={() => setActiveCategory(null)}
-                  className={`flex-shrink-0 px-3.5 py-2 rounded-2xl text-xs font-bold transition ${!activeCategory ? 'bg-blue-500 text-white' : 'bg-white text-slate-600'}`}>Alle</button>
-                {SPORT_CATEGORIES.map((cat) => (
-                  <button key={cat} onClick={() => setActiveCategory(cat)}
-                    className={`flex-shrink-0 px-3.5 py-2 rounded-2xl text-xs font-bold transition whitespace-nowrap ${activeCategory === cat ? 'bg-blue-500 text-white' : 'bg-white text-slate-600'}`}>{cat}</button>
+              <div className="flex gap-2 overflow-x-auto pb-1 -mx-1 px-1" style={{ scrollbarWidth:'none' }}>
+                <button onClick={()=>setActiveCategory(null)}
+                  className="flex-shrink-0 glass-press rounded-2xl px-3 py-2 text-xs font-bold whitespace-nowrap transition-all"
+                  style={!activeCategory ? { background:'var(--gold-dim)', border:'1px solid rgba(245,158,11,0.3)', color:'var(--gold)' }
+                    : { background:'var(--glass)', border:'1px solid var(--glass-border)', color:'var(--text-2)' }}>
+                  Alle
+                </button>
+                {SPORT_CATEGORIES.map((cat)=>(
+                  <button key={cat} onClick={()=>setActiveCategory(cat)}
+                    className="flex-shrink-0 glass-press rounded-2xl px-3 py-2 text-xs font-bold whitespace-nowrap transition-all"
+                    style={activeCategory===cat ? { background:'var(--gold-dim)', border:'1px solid rgba(245,158,11,0.3)', color:'var(--gold)' }
+                      : { background:'var(--glass)', border:'1px solid var(--glass-border)', color:'var(--text-2)' }}>
+                    {cat}
+                  </button>
                 ))}
               </div>
-              {/* Sport grid */}
               <div className="grid grid-cols-3 gap-2">
-                {filtered.map((s) => (
-                  <button key={s.id} onClick={() => setSport(s)}
-                    className="card card-press p-3.5 flex flex-col items-center gap-1.5">
+                {filtered.map((s)=>(
+                  <button key={s.id} onClick={()=>setSport(s)}
+                    className="glass glass-press p-3.5 flex flex-col items-center gap-1.5">
                     <span className="text-3xl">{s.icon}</span>
-                    <p className="text-xs font-bold text-slate-700 text-center leading-tight">{s.name}</p>
+                    <p className="text-xs font-bold text-center leading-tight" style={{ color:'var(--text-1)' }}>{s.name}</p>
                   </button>
                 ))}
               </div>
             </>
           ) : (
-            <div className="space-y-4">
-              {/* Selected sport */}
-              <div className="bg-blue-50 rounded-3xl p-4 flex items-center gap-3">
+            <>
+              <div className="glass p-4 flex items-center gap-3"
+                style={{ background:'rgba(245,158,11,0.05)', borderColor:'rgba(245,158,11,0.15)' }}>
                 <span className="text-4xl">{sport.icon}</span>
                 <div className="flex-1">
-                  <p className="font-black text-slate-900">{sport.name}</p>
-                  <p className="text-xs text-slate-500">{sport.category}</p>
+                  <p className="font-black" style={{ color:'var(--text-1)' }}>{sport.name}</p>
+                  <p className="text-xs" style={{ color:'var(--text-3)' }}>{sport.category}</p>
                 </div>
-                <button onClick={() => setSport(null)} className="text-slate-400"><X size={18} /></button>
+                <button onClick={()=>setSport(null)} className="glass-press p-1">
+                  <X size={16} style={{ color:'var(--text-3)' }}/>
+                </button>
               </div>
 
-              {/* Timer */}
-              {timerMode ? (
-                <Timer onStop={handleTimerStop} />
-              ) : (
+              {timerMode ? <Timer onStop={(s)=>{ setTimerMode(false); setDuration(String(Math.max(1,Math.round(s/60)))) }}/> : (
                 <>
-                  {/* Duration */}
                   <div>
                     <div className="flex items-center justify-between mb-2">
-                      <p className="text-sm font-bold text-slate-700">Dauer (Minuten)</p>
-                      <button onClick={() => setTimerMode(true)}
-                        className="flex items-center gap-1.5 px-3 py-1.5 bg-slate-800 text-white rounded-xl text-xs font-bold">
-                        <Play size={12} />Timer starten
+                      <p className="label">Dauer (Min)</p>
+                      <button onClick={()=>setTimerMode(true)}
+                        className="glass-press text-xs font-bold px-3 py-1.5 rounded-xl flex items-center gap-1"
+                        style={{ background:'rgba(59,130,246,0.1)', border:'1px solid rgba(59,130,246,0.2)', color:'#60a5fa' }}>
+                        <Play size={11}/>Timer
                       </button>
                     </div>
                     <div className="flex gap-2 mb-2">
-                      {[15, 30, 45, 60, 90].map((min) => (
-                        <button key={min} onClick={() => setDuration(String(min))}
-                          className={`flex-1 py-2.5 rounded-2xl text-sm font-bold transition ${duration === String(min) ? 'bg-blue-500 text-white' : 'bg-white text-slate-600'}`}>{min}</button>
+                      {[15,30,45,60,90].map((min)=>(
+                        <button key={min} onClick={()=>setDuration(String(min))}
+                          className="flex-1 py-3 rounded-2xl text-sm font-bold glass-press transition-all"
+                          style={duration===String(min)
+                            ? { background:'var(--grad-gold)', color:'#fff' }
+                            : { background:'var(--glass)', border:'1px solid var(--glass-border)', color:'var(--text-2)' }
+                          }>{min}</button>
                       ))}
                     </div>
-                    <div className="flex items-center bg-white rounded-2xl px-4 py-3 gap-2">
-                      <input type="number" value={duration} onChange={(e) => setDuration(e.target.value)}
-                        className="flex-1 text-base font-bold outline-none bg-transparent text-slate-800" />
-                      <span className="text-slate-400">Minuten</span>
+                    <input type="number" inputMode="numeric" value={duration} onChange={(e)=>setDuration(e.target.value)}
+                      style={{ background:'rgba(255,255,255,0.05)', border:'1px solid rgba(255,255,255,0.08)', borderRadius:16, color:'var(--text-1)', padding:'12px 16px', width:'100%', textAlign:'center', fontSize:18, fontWeight:800 }} />
+                  </div>
+
+                  <div>
+                    <p className="label mb-2">Intensität</p>
+                    <div className="flex gap-2">
+                      {INTENSITY.map((int)=>(
+                        <button key={int.id} onClick={()=>setIntensity(int.id)}
+                          className="flex-1 py-3 rounded-2xl text-xs font-bold glass-press transition-all"
+                          style={intensity===int.id
+                            ? { background:`${int.color}18`, border:`1px solid ${int.color}40`, color:int.color }
+                            : { background:'var(--glass)', border:'1px solid var(--glass-border)', color:'var(--text-3)' }
+                          }>{int.label}</button>
+                      ))}
                     </div>
                   </div>
 
-                  {/* Intensity slider */}
                   <div>
-                    <p className="text-sm font-bold text-slate-700 mb-2">Intensität</p>
-                    <div className="flex gap-2">
-                      {INTENSITY.map((int) => (
-                        <button key={int.id} onClick={() => setIntensity(int.id)}
-                          className={`flex-1 py-3 rounded-2xl text-xs font-bold border transition ${intensity === int.id ? int.color + ' border-current' : 'bg-white text-slate-500 border-transparent'}`}>
-                          {int.label}
-                        </button>
-                      ))}
-                    </div>
+                    <p className="label mb-2">Schritte <span style={{ color:'var(--text-3)', fontWeight:400, textTransform:'none', letterSpacing:0 }}>(optional)</span></p>
+                    <input type="number" inputMode="numeric" value={steps} onChange={(e)=>setSteps(e.target.value)}
+                      placeholder="z.B. 8000"
+                      style={{ background:'rgba(255,255,255,0.05)', border:'1px solid rgba(255,255,255,0.08)', borderRadius:16, color:'var(--text-1)', padding:'12px 16px', width:'100%', fontSize:14, fontWeight:600 }} />
                   </div>
                 </>
               )}
 
-              {/* Steps */}
-              <div>
-                <p className="text-sm font-bold text-slate-700 mb-2">Schritte <span className="font-normal text-slate-400">(optional)</span></p>
-                <div className="flex items-center bg-white rounded-2xl px-4 py-3 gap-2">
-                  <span className="text-xl">👟</span>
-                  <input type="number" value={steps} onChange={(e) => setSteps(e.target.value)}
-                    className="flex-1 text-sm font-medium outline-none bg-transparent text-slate-800" placeholder="z.B. 8000" />
-                </div>
-              </div>
-
               {/* Calories preview */}
-              <div className="bg-orange-50 rounded-3xl p-4 text-center">
-                <p className="text-orange-400 text-sm font-semibold">Geschätzte Verbrennung</p>
-                <p className="text-4xl font-black text-orange-500 mt-1">{calories}</p>
-                <p className="text-orange-400 text-sm">kcal</p>
+              <div className="glass p-5 text-center" style={{ background:'rgba(16,185,129,0.05)', borderColor:'rgba(16,185,129,0.15)' }}>
+                <p className="label mb-1">Geschätzte Verbrennung</p>
+                <p className="text-5xl font-black" style={{ color:'#10b981' }}>{calories}</p>
+                <p className="text-sm mt-1" style={{ color:'var(--text-3)' }}>kcal</p>
               </div>
 
-              <button onClick={save}
-                className="w-full py-4 bg-green-500 rounded-3xl text-white font-black text-base">
+              <button onClick={save} className="btn-gold w-full py-4 text-base" style={{ minHeight:54 }}>
                 Aktivität speichern
               </button>
-            </div>
+            </>
           )}
         </div>
       </div>
@@ -195,61 +194,55 @@ function AddActivitySheet({ onClose }: { onClose: () => void }) {
 
 export default function SportTracker() {
   const [showAdd, setShowAdd] = useState(false)
-  const allActivityLogs = useStore((s) => s.activityLogs)
-  const removeActivityLog = useStore((s) => s.removeActivityLog)
-  const activityLogs = useMemo(() => allActivityLogs.filter((l) => l.date === today), [allActivityLogs])
-  const totalBurned  = useMemo(() => activityLogs.reduce((s, a) => s + a.caloriesBurned, 0), [activityLogs])
-  const totalDuration= useMemo(() => activityLogs.reduce((s, a) => s + a.duration, 0), [activityLogs])
-  const totalSteps   = useMemo(() => activityLogs.reduce((s, a) => s + (a.steps ?? 0), 0), [activityLogs])
-
-  const intLabel: Record<Intensity, string> = { light: '🟢', medium: '🟡', intense: '🔴' }
+  const allActivityLogs = useStore((s)=>s.activityLogs)
+  const removeActivityLog = useStore((s)=>s.removeActivityLog)
+  const activityLogs = useMemo(()=>allActivityLogs.filter((l)=>l.date===today),[allActivityLogs])
+  const totalBurned  = useMemo(()=>activityLogs.reduce((s,a)=>s+a.caloriesBurned,0),[activityLogs])
+  const totalDuration= useMemo(()=>activityLogs.reduce((s,a)=>s+a.duration,0),[activityLogs])
 
   return (
-    <div className="pb-nav anim-fade">
-      <div className="grad-green px-5 pt-safe pb-8 relative overflow-hidden">
-        <div className="absolute -top-16 -right-16 w-56 h-56 rounded-full bg-white/5" />
-        <h1 className="text-white text-2xl font-black mb-1">Sport & Aktivität</h1>
-        <p className="text-green-100 text-sm mb-3">Heute verbrannt</p>
-        <p className="text-white text-5xl font-black mb-1">{totalBurned} <span className="text-2xl text-green-200 font-semibold">kcal</span></p>
-        <div className="flex gap-4 text-green-100 text-sm mt-2">
-          <span>⏱ {totalDuration} Min</span>
-          {totalSteps > 0 && <span>👟 {totalSteps.toLocaleString()}</span>}
-          <span>💪 {activityLogs.length} Aktivitäten</span>
-        </div>
+    <div className="pb-nav anim-fade overflow-x-hidden" style={{ background:'var(--bg)' }}>
+      <div className="pt-safe px-5 pb-6 relative overflow-hidden"
+        style={{ background:'linear-gradient(160deg,var(--bg-2),var(--bg))' }}>
+        <div className="absolute" style={{ top:-40,right:-40,width:200,height:200, background:'radial-gradient(circle,rgba(16,185,129,0.08),transparent 70%)', pointerEvents:'none' }}/>
+        <h1 className="text-2xl font-black mb-1 relative" style={{ color:'var(--text-1)' }}>Sport & Aktivität</h1>
+        <p className="text-sm relative" style={{ color:'var(--text-3)' }}>Heute verbrannt</p>
+        <p className="text-5xl font-black mt-1 relative" style={{ color:'#10b981' }}>
+          {totalBurned} <span className="text-xl font-semibold" style={{ color:'var(--text-3)' }}>kcal</span>
+        </p>
+        {totalDuration>0 && <p className="text-sm mt-1 relative" style={{ color:'var(--text-3)' }}>⏱ {totalDuration} Min · {activityLogs.length} Aktivitäten</p>}
       </div>
 
       <div className="px-4 py-4 space-y-3">
-        {activityLogs.length > 0 ? (
-          <div className="card divide-y divide-slate-50">
-            {activityLogs.map((log) => (
-              <div key={log.id} className="flex items-center gap-3 p-4">
-                <span className="text-2xl">{log.sport.icon}</span>
-                <div className="flex-1">
-                  <p className="text-sm font-bold text-slate-800">{log.sport.name}</p>
-                  <p className="text-xs text-slate-400">
-                    {log.duration} Min {intLabel[log.intensity]}{log.steps ? ` · ${log.steps} 👟` : ''}
-                  </p>
+        {activityLogs.length>0 ? (
+          <div className="glass">
+            {activityLogs.map((log)=>(
+              <div key={log.id} className="flex items-center gap-3 p-4" style={{ borderTop:'1px solid var(--glass-border)' }}>
+                <span className="text-2xl flex-shrink-0">{log.sport.icon}</span>
+                <div className="flex-1" style={{ minWidth:0 }}>
+                  <p className="text-sm font-black" style={{ color:'var(--text-1)' }}>{log.sport.name}</p>
+                  <p className="text-xs" style={{ color:'var(--text-3)' }}>{log.duration} Min · {{ light:'🟢',medium:'🟡',intense:'🔴' }[log.intensity]}</p>
                 </div>
-                <p className="text-sm font-black text-orange-500 mr-2">{log.caloriesBurned} kcal</p>
-                <button onClick={() => removeActivityLog(log.id)} className="text-slate-200 active:text-red-400 p-1"><Trash2 size={15} /></button>
+                <p className="text-sm font-black flex-shrink-0 mr-2" style={{ color:'#10b981' }}>{log.caloriesBurned} kcal</p>
+                <button onClick={()=>removeActivityLog(log.id)} className="glass-press p-1 flex-shrink-0">
+                  <Trash2 size={14} style={{ color:'var(--text-3)' }}/>
+                </button>
               </div>
             ))}
           </div>
         ) : (
-          <div className="card p-8 text-center">
+          <div className="glass p-10 text-center">
             <p className="text-4xl mb-3">🏃</p>
-            <p className="text-sm font-bold text-slate-500">Noch keine Aktivitäten heute</p>
-            <p className="text-xs text-slate-400 mt-1">Füge dein erstes Training hinzu</p>
+            <p className="text-sm font-bold" style={{ color:'var(--text-2)' }}>Noch keine Aktivitäten heute</p>
           </div>
         )}
 
-        <button onClick={() => setShowAdd(true)}
-          className="w-full py-4 bg-green-500 rounded-3xl text-white font-black text-base flex items-center justify-center gap-2">
-          <Plus size={20} />Aktivität hinzufügen
+        <button onClick={()=>setShowAdd(true)} className="btn-gold w-full py-4 text-base flex items-center justify-center gap-2" style={{ minHeight:54 }}>
+          <Plus size={20}/>Aktivität hinzufügen
         </button>
       </div>
 
-      {showAdd && <AddActivitySheet onClose={() => setShowAdd(false)} />}
+      {showAdd && <AddSheet onClose={()=>setShowAdd(false)}/>}
     </div>
   )
 }
