@@ -26,13 +26,14 @@ export default function Navigation() {
               className="flex flex-col items-center gap-1 py-1.5 px-4 rounded-2xl transition-all duration-200 relative"
               style={{ minWidth: 56 }}
             >
-              {/* Active glow background */}
+              {/* Active gold glow background */}
               {active && (
                 <div
                   className="absolute inset-0 rounded-2xl"
                   style={{
-                    background: 'rgba(245,158,11,0.08)',
-                    border: '1px solid rgba(245,158,11,0.15)',
+                    background: 'rgba(245,158,11,0.1)',
+                    border: '1px solid rgba(245,158,11,0.25)',
+                    boxShadow: '0 0 16px rgba(245,158,11,0.15)',
                   }}
                 />
               )}
@@ -40,7 +41,7 @@ export default function Navigation() {
                 <Icon
                   size={22}
                   strokeWidth={active ? 2.5 : 1.7}
-                  style={{ color: active ? '#f59e0b' : '#475569', transition: 'color 0.2s ease' }}
+                  style={{ color: active ? '#f59e0b' : '#444444', transition: 'color 0.2s ease' }}
                 />
                 {/* Gold dot indicator */}
                 {active && (
@@ -52,7 +53,7 @@ export default function Navigation() {
               </div>
               <span
                 className="text-[10px] font-semibold relative"
-                style={{ color: active ? '#f59e0b' : '#475569', transition: 'color 0.2s ease' }}
+                style={{ color: active ? '#f59e0b' : '#444444', transition: 'color 0.2s ease' }}
               >
                 {label}
               </span>

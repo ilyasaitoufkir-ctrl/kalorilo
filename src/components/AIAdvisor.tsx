@@ -176,7 +176,7 @@ export default function AIAdvisor() {
     <div className="flex flex-col overflow-x-hidden" style={{ height:'100dvh', background:'var(--bg)', paddingBottom:'calc(110px + max(env(safe-area-inset-bottom),20px))' }}>
 
       {/* Header */}
-      <div className="pt-safe px-5 pb-4 flex-shrink-0" style={{ background:'linear-gradient(160deg,var(--bg-2),var(--bg))' }}>
+      <div className="pt-safe px-5 pb-4 flex-shrink-0" style={{ background:'#000', borderBottom:'1px solid #1a1a1a' }}>
         <h1 className="text-2xl font-black mb-3" style={{ color:'var(--text-1)' }}>🤖 KI-Berater</h1>
         <div className="flex gap-1.5 p-1.5 rounded-2xl" style={{ background:'rgba(255,255,255,0.04)', border:'1px solid rgba(255,255,255,0.06)' }}>
           {TABS.map((t)=>(

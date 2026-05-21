@@ -22,17 +22,17 @@ function CalorieRing({ consumed, target, size = 220 }: { consumed: number; targe
   const id = 'ringGrad'
 
   return (
-    <svg width={size} height={size} className="ring-base" style={{ filter: 'drop-shadow(0 0 18px rgba(245,158,11,0.25))' }}>
+    <svg width={size} height={size} className="ring-base" style={{ filter: 'drop-shadow(0 0 24px rgba(245,158,11,0.35))' }}>
       <defs>
         <linearGradient id={id} x1="0%" y1="0%" x2="100%" y2="0%">
-          <stop offset="0%"   stopColor="#f59e0b" />
-          <stop offset="50%"  stopColor="#3b82f6" />
-          <stop offset="100%" stopColor="#10b981" />
+          <stop offset="0%"   stopColor="#fbbf24" />
+          <stop offset="50%"  stopColor="#f59e0b" />
+          <stop offset="100%" stopColor="#d97706" />
         </linearGradient>
       </defs>
       {/* Track */}
       <circle cx={size/2} cy={size/2} r={r} fill="none"
-        stroke="rgba(255,255,255,0.06)" strokeWidth={stroke} />
+        stroke="rgba(255,255,255,0.04)" strokeWidth={stroke} />
       {/* Progress */}
       <circle cx={size/2} cy={size/2} r={r} fill="none"
         stroke={`url(#${id})`} strokeWidth={stroke}
@@ -155,12 +155,12 @@ export default function Dashboard() {
 
       {/* ── Hero Header ──────────────────────────────────────────── */}
       <div className="relative overflow-hidden pt-safe px-5 pb-6"
-        style={{ background: 'linear-gradient(160deg, var(--bg-2) 0%, var(--bg) 100%)' }}>
+        style={{ background: 'linear-gradient(160deg, #0a0a0a 0%, #000000 100%)' }}>
 
-        {/* Subtle glow orb */}
+        {/* Gold glow orb */}
         <div className="absolute" style={{
-          top: -60, right: -60, width: 220, height: 220,
-          background: 'radial-gradient(circle, rgba(245,158,11,0.08) 0%, transparent 70%)',
+          top: -60, right: -60, width: 280, height: 280,
+          background: 'radial-gradient(circle, rgba(245,158,11,0.1) 0%, transparent 65%)',
           pointerEvents: 'none',
         }} />
 

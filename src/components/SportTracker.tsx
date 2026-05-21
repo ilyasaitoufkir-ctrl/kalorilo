@@ -203,7 +203,7 @@ export default function SportTracker() {
   return (
     <div className="pb-nav anim-fade overflow-x-hidden" style={{ background:'var(--bg)' }}>
       <div className="pt-safe px-5 pb-6 relative overflow-hidden"
-        style={{ background:'linear-gradient(160deg,var(--bg-2),var(--bg))' }}>
+        style={{ background:'#000', borderBottom:'1px solid #1a1a1a' }}>
         <div className="absolute" style={{ top:-40,right:-40,width:200,height:200, background:'radial-gradient(circle,rgba(16,185,129,0.08),transparent 70%)', pointerEvents:'none' }}/>
         <h1 className="text-2xl font-black mb-1 relative" style={{ color:'var(--text-1)' }}>Sport & Aktivität</h1>
         <p className="text-sm relative" style={{ color:'var(--text-3)' }}>Heute verbrannt</p>

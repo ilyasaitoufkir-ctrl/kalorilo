@@ -68,7 +68,7 @@ export default function Profile() {
   return (
     <div className="pb-nav anim-fade overflow-x-hidden" style={{ background:'var(--bg)' }}>
       {/* Header */}
-      <div className="pt-safe px-5 pb-5 relative overflow-hidden" style={{ background:'linear-gradient(160deg,var(--bg-2),var(--bg))' }}>
+      <div className="pt-safe px-5 pb-5 relative overflow-hidden" style={{ background:'#000', borderBottom:'1px solid #1a1a1a' }}>
         <div className="absolute" style={{ top:-40,right:-40,width:200,height:200,background:'radial-gradient(circle,rgba(245,158,11,0.06),transparent 70%)',pointerEvents:'none' }}/>
         <h1 className="text-2xl font-black relative" style={{ color:'var(--text-1)' }}>
           {storeProfile?.name ? `Hallo, ${storeProfile.name.split(' ')[0]}!` : 'Profil & Einstellungen'}

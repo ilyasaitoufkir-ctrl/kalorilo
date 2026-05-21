@@ -481,7 +481,7 @@ export default function FoodTracker() {
   return (
     <div className="pb-nav anim-fade overflow-x-hidden" style={{ background:'var(--bg)' }}>
       {/* Header */}
-      <div className="pt-safe px-5 pb-5" style={{ background:'linear-gradient(160deg,var(--bg-2),var(--bg))' }}>
+      <div className="pt-safe px-5 pb-5" style={{ background:'#000', borderBottom:'1px solid #1a1a1a' }}>
         <h1 className="text-2xl font-black mb-1" style={{ color:'var(--text-1)' }}>Essen tracken</h1>
         <p className="text-sm mb-4" style={{ color:'var(--text-3)' }}>Heute: {Math.round(totalCals)} kcal</p>
         <div className="flex gap-2">
