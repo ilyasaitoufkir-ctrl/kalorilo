@@ -30,7 +30,9 @@ export const SPORTS_DATABASE: SportActivity[] = [
   { id: 'sp27', name: 'Handball', icon: '🤾', metLight: 5.0, metMedium: 8.0, metIntense: 10.0, category: 'Mannschaft' },
   { id: 'sp28', name: 'Golf', icon: '⛳', metLight: 3.5, metMedium: 4.3, metIntense: 5.0, category: 'Präzision' },
   { id: 'sp29', name: 'Springseil', icon: '🪢', metLight: 8.0, metMedium: 10.0, metIntense: 13.0, category: 'Ausdauer' },
-  { id: 'sp30', name: 'Hometrainer', icon: '🛞', metLight: 3.5, metMedium: 5.5, metIntense: 8.0, category: 'Ausdauer' },
+  { id: 'sp30', name: 'Hometrainer',      icon: '🛞', metLight: 3.5, metMedium: 5.5, metIntense: 8.0,  category: 'Ausdauer'   },
+  { id: 'sp31', name: 'Padel Tennis',     icon: '🏓', metLight: 5.0, metMedium: 7.0, metIntense: 9.0,  category: 'Rückschlag' },
+  { id: 'sp32', name: 'Kettlebell Training', icon: '🏋️', metLight: 5.0, metMedium: 8.0, metIntense: 12.0, category: 'Kraft', kettlebell: true },
 ]
 
 export function calculateCaloriesBurned(
@@ -38,7 +40,17 @@ export function calculateCaloriesBurned(
   durationMin: number,
   met: number
 ): number {
-  return Math.round((met * 3.5 * weightKg * durationMin) / (200))
+  return Math.round((met * 3.5 * weightKg * durationMin) / 200)
 }
+
+/**
+ * Kettlebell weight factor – heavier KB = more calories
+ * 16 kg is the base (factor 1.0), 32 kg = +20%
+ */
+export function kettlebellFactor(kbKg: number): number {
+  return Math.max(0.80, 1.0 + (kbKg - 16) * 0.0125)
+}
+
+export const KETTLEBELL_WEIGHTS = [8, 12, 16, 20, 24, 32]
 
 export const SPORT_CATEGORIES = [...new Set(SPORTS_DATABASE.map((s) => s.category))]

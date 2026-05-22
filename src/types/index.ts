@@ -54,6 +54,7 @@ export interface SportActivity {
   metMedium: number
   metIntense: number
   category: string
+  kettlebell?: boolean   // shows kettlebell weight selector
 }
 
 export interface ActivityLog {

@@ -1,7 +1,7 @@
 import { useState, useMemo, useEffect, useRef } from 'react'
 import { Trash2, X, Play, Square, Plus } from 'lucide-react'
 import { useStore } from '../store/useStore'
-import { SPORTS_DATABASE, calculateCaloriesBurned, SPORT_CATEGORIES } from '../data/sportsDatabase'
+import { SPORTS_DATABASE, calculateCaloriesBurned, SPORT_CATEGORIES, kettlebellFactor, KETTLEBELL_WEIGHTS } from '../data/sportsDatabase'
 import { formatDate, uid } from '../utils/calculations'
 import type { ActivityLog, Intensity, SportActivity } from '../types'
 import toast from 'react-hot-toast'
@@ -43,8 +43,9 @@ function AddSheet({ onClose }: { onClose: ()=>void }) {
   const [duration, setDuration] = useState('30')
   const [intensity, setIntensity] = useState<Intensity>('medium')
   const [steps, setSteps]       = useState('')
-  const [timerMode, setTimerMode] = useState(false)
+  const [timerMode, setTimerMode]   = useState(false)
   const [activeCategory, setActiveCategory] = useState<string|null>(null)
+  const [kbWeight, setKbWeight]     = useState(16)   // kettlebell kg
   const addActivityLog = useStore((s)=>s.addActivityLog)
   const profile        = useStore((s)=>s.profile)
   const weight = Number(profile?.weight)||75
@@ -52,14 +53,19 @@ function AddSheet({ onClose }: { onClose: ()=>void }) {
   const getMET = (sp: SportActivity, i: Intensity) =>
     i==='light' ? sp.metLight : i==='medium' ? sp.metMedium : sp.metIntense
 
-  const calories = sport ? calculateCaloriesBurned(weight, parseInt(duration)||0, getMET(sport, intensity)) : 0
+  const baseCalories = sport ? calculateCaloriesBurned(weight, parseInt(duration)||0, getMET(sport, intensity)) : 0
+  const calories = sport?.kettlebell
+    ? Math.round(baseCalories * kettlebellFactor(kbWeight))
+    : baseCalories
 
   const save = () => {
     if (!sport) return
     const dur = parseInt(duration)||0
-    const log: ActivityLog = { id:uid(), date:today, sport, duration:dur, intensity, caloriesBurned:calculateCaloriesBurned(weight,dur,getMET(sport,intensity)), steps:steps?parseInt(steps):undefined, timestamp:Date.now() }
+    const baseCal = calculateCaloriesBurned(weight, dur, getMET(sport, intensity))
+    const finalCal = sport.kettlebell ? Math.round(baseCal * kettlebellFactor(kbWeight)) : baseCal
+    const log: ActivityLog = { id:uid(), date:today, sport, duration:dur, intensity, caloriesBurned:finalCal, steps:steps?parseInt(steps):undefined, timestamp:Date.now() }
     addActivityLog(log)
-    toast.success(`${sport.icon} ${sport.name} – ${log.caloriesBurned} kcal verbrannt!`)
+    toast.success(`${sport.icon} ${sport.name} – ${finalCal} kcal verbrannt!`)
     onClose()
   }
 
@@ -164,6 +170,31 @@ function AddSheet({ onClose }: { onClose: ()=>void }) {
                       ))}
                     </div>
                   </div>
+
+                  {/* ── Kettlebell weight selector (only for KB training) ── */}
+                  {sport?.kettlebell && (
+                    <div>
+                      <p className="label mb-2">
+                        Kettlebell Gewicht
+                        <span className="ml-2 text-xs font-bold" style={{ color:'var(--gold)', textTransform:'none', letterSpacing:0 }}>
+                          {kbWeight}kg · Faktor ×{kettlebellFactor(kbWeight).toFixed(2)}
+                        </span>
+                      </p>
+                      <div className="flex gap-2 flex-wrap">
+                        {KETTLEBELL_WEIGHTS.map((kg) => (
+                          <button key={kg} onClick={() => setKbWeight(kg)}
+                            className="flex-1 py-3 rounded-2xl text-sm font-bold glass-press transition-all"
+                            style={kbWeight === kg
+                              ? { background:'var(--grad-gold)', color:'#000', minWidth:44 }
+                              : { background:'rgba(255,255,255,0.05)', border:'1px solid rgba(255,255,255,0.08)', color:'var(--text-2)', minWidth:44 }
+                            }>{kg}kg</button>
+                        ))}
+                      </div>
+                      <p className="text-xs mt-1.5" style={{ color:'var(--text-3)' }}>
+                        16kg = Basis · 32kg = +20% mehr Kalorien
+                      </p>
+                    </div>
+                  )}
 
                   <div>
                     <p className="label mb-2">Schritte <span style={{ color:'var(--text-3)', fontWeight:400, textTransform:'none', letterSpacing:0 }}>(optional)</span></p>
