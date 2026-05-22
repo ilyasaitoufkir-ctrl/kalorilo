@@ -70,6 +70,8 @@ export default function Dashboard() {
   const activityLogs   = useStore((s) => s.activityLogs)
   const waterLogs      = useStore((s) => s.waterLogs)
   const whoopData      = useStore((s) => s.whoopData)
+  const whoopExtended  = useStore((s) => s.whoopExtended)
+  const whoopTokens    = useStore((s) => s.whoopTokens)
   const cheatDays      = useStore((s) => s.cheatDays)
   const stepsToday     = useStore((s) => s.stepsToday)
   const setStepsToday  = useStore((s) => s.setStepsToday)
@@ -309,29 +311,94 @@ export default function Dashboard() {
           </div>
         </div>
 
-        {/* Whoop */}
-        {whoopData && (
-          <div className="glass p-4" style={{ background: 'rgba(17,24,39,0.8)' }}>
+        {/* ── Whoop Widget ── */}
+        {(whoopData || whoopTokens) && (
+          <div className="glass p-4" style={{ background: '#0a0a0a', border: '1px solid #1e1e1e' }}>
             <div className="flex items-center gap-2 mb-3">
               <span className="text-base">⌚</span>
               <p className="text-sm font-bold" style={{ color: 'var(--text-1)' }}>Whoop</p>
-              <span className="text-xs ml-auto" style={{ color: 'var(--text-3)' }}>{whoopData.date}</span>
+              {whoopTokens && (
+                <span className="text-[10px] px-2 py-0.5 rounded-full font-bold ml-1"
+                  style={{ background:'rgba(16,185,129,0.15)', color:'#10b981' }}>Live</span>
+              )}
+              {whoopData && <span className="text-xs ml-auto" style={{ color: 'var(--text-3)' }}>{whoopData.date}</span>}
             </div>
-            <div className="grid grid-cols-4 gap-2">
-              {[
-                { l:'Recovery', v:`${whoopData.recovery}%`,  c: whoopData.recovery>66?'#10b981':whoopData.recovery>33?'#f59e0b':'#ef4444' },
-                { l:'HRV',      v:`${whoopData.hrv}ms`,      c:'#60a5fa' },
-                { l:'Schlaf',   v:`${whoopData.sleepQuality}%`, c:'#a78bfa' },
-                { l:'Strain',   v:`${Number(whoopData.strain).toFixed(1)}`, c:'#fb923c' },
-              ].map((item) => (
-                <div key={item.l} className="rounded-2xl p-2.5 text-center"
-                  style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.06)' }}>
-                  <p className="text-[10px] mb-0.5" style={{ color: 'var(--text-3)' }}>{item.l}</p>
-                  <p className="text-sm font-black" style={{ color: item.c }}>{item.v}</p>
+
+            {whoopData ? (
+              <>
+                <div className="grid grid-cols-4 gap-2 mb-2">
+                  {[
+                    { l:'Recovery', v:`${whoopData.recovery}%`,  c: whoopData.recovery>66?'#10b981':whoopData.recovery>33?'#f59e0b':'#ef4444' },
+                    { l:'HRV',      v:`${whoopData.hrv}ms`,      c:'#60a5fa' },
+                    { l:'Schlaf',   v:`${whoopData.sleepQuality}%`, c:'#a78bfa' },
+                    { l:'Strain',   v:`${Number(whoopData.strain).toFixed(1)}`, c:'#fb923c' },
+                  ].map((item) => (
+                    <div key={item.l} className="rounded-2xl p-2.5 text-center"
+                      style={{ background: '#111', border: '1px solid #222' }}>
+                      <p className="text-[10px] mb-0.5" style={{ color: 'var(--text-3)' }}>{item.l}</p>
+                      <p className="text-sm font-black" style={{ color: item.c }}>{item.v}</p>
+                    </div>
+                  ))}
                 </div>
-              ))}
-            </div>
+
+                {/* Extended data row */}
+                {whoopExtended && (
+                  <div className="flex gap-2 text-xs mt-1">
+                    {whoopExtended.sleepDuration > 0 && (
+                      <span className="px-2 py-1 rounded-xl font-semibold"
+                        style={{ background:'rgba(167,139,250,0.1)', color:'#a78bfa' }}>
+                        😴 {whoopExtended.sleepDuration}h Schlaf
+                      </span>
+                    )}
+                    {whoopExtended.caloriesBurned > 0 && (
+                      <span className="px-2 py-1 rounded-xl font-semibold"
+                        style={{ background:'rgba(251,146,60,0.1)', color:'#fb923c' }}>
+                        🔥 {whoopExtended.caloriesBurned} kcal Aktivität
+                      </span>
+                    )}
+                  </div>
+                )}
+
+                {/* Recovery advice */}
+                {whoopData.recovery < 34 && (
+                  <div className="mt-2 rounded-2xl px-3 py-2"
+                    style={{ background:'rgba(239,68,68,0.08)', border:'1px solid rgba(239,68,68,0.15)' }}>
+                    <p className="text-xs font-bold" style={{ color:'#ef4444' }}>
+                      ⚠️ Niedrige Recovery – leichteres Training & -200 kcal Ziel empfohlen
+                    </p>
+                  </div>
+                )}
+                {whoopData.recovery > 66 && (
+                  <div className="mt-2 rounded-2xl px-3 py-2"
+                    style={{ background:'rgba(16,185,129,0.08)', border:'1px solid rgba(16,185,129,0.15)' }}>
+                    <p className="text-xs font-bold" style={{ color:'#10b981' }}>
+                      💪 Hohe Recovery – bereit für intensives Training & +150 kcal
+                    </p>
+                  </div>
+                )}
+              </>
+            ) : (
+              <button onClick={() => setActiveTab('profile')}
+                className="w-full py-3 rounded-2xl text-sm font-bold glass-press"
+                style={{ background:'rgba(245,158,11,0.08)', border:'1px solid rgba(245,158,11,0.15)', color:'var(--gold)' }}>
+                Whoop-Daten laden →
+              </button>
+            )}
           </div>
+        )}
+
+        {/* Whoop connect prompt (not yet connected) */}
+        {!whoopData && !whoopTokens && (
+          <button onClick={() => setActiveTab('profile')}
+            className="glass glass-press p-4 w-full flex items-center gap-3 text-left">
+            <div className="w-11 h-11 rounded-2xl flex items-center justify-center text-xl flex-shrink-0"
+              style={{ background:'rgba(255,255,255,0.04)', border:'1px solid #222' }}>⌚</div>
+            <div className="flex-1" style={{ minWidth:0 }}>
+              <p className="text-sm font-black" style={{ color:'var(--text-1)' }}>Whoop verbinden</p>
+              <p className="text-xs" style={{ color:'var(--text-3)' }}>Recovery & Schlaf automatisch importieren</p>
+            </div>
+            <ChevronRight size={16} style={{ color:'var(--text-3)', flexShrink:0 }}/>
+          </button>
         )}
 
         {/* Stats row */}

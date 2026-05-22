@@ -1,7 +1,8 @@
 import { useState } from 'react'
-import { Save, Key, ExternalLink, Bell, ChevronRight } from 'lucide-react'
+import { Save, Key, ExternalLink, Bell, ChevronRight, Unlink, RefreshCw, Loader } from 'lucide-react'
 import { useStore } from '../store/useStore'
 import { getBMI, getBMICategory } from '../utils/calculations'
+import { buildAuthUrl, syncWhoopData, refreshAccessToken } from '../lib/whoop'
 import type { UserProfile, Gender, ActivityLevel, Goal } from '../types'
 import toast from 'react-hot-toast'
 
@@ -25,23 +26,27 @@ const inputStyle = {
 } as const
 
 export default function Profile() {
-  const storeProfile  = useStore((s) => s.profile)
-  const setProfile    = useStore((s) => s.setProfile)
-  const apiKeys       = useStore((s) => s.apiKeys)
-  const setApiKeys    = useStore((s) => s.setApiKeys)
-  const reminders     = useStore((s) => s.reminders)
-  const setReminders  = useStore((s) => s.setReminders)
+  const storeProfile   = useStore((s) => s.profile)
+  const setProfile     = useStore((s) => s.setProfile)
+  const apiKeys        = useStore((s) => s.apiKeys)
+  const setApiKeys     = useStore((s) => s.setApiKeys)
+  const reminders      = useStore((s) => s.reminders)
+  const setReminders   = useStore((s) => s.setReminders)
   const getDailyCalorieTarget = useStore((s) => s.getDailyCalorieTarget)
-  const whoopData     = useStore((s) => s.whoopData)
-  const setWhoopData  = useStore((s) => s.setWhoopData)
-  const darkMode      = useStore((s) => s.darkMode)
-  const setDarkMode   = useStore((s) => s.setDarkMode)
-  const setActiveTab  = useStore((s) => s.setActiveTab)
+  const whoopData      = useStore((s) => s.whoopData)
+  const setWhoopData   = useStore((s) => s.setWhoopData)
+  const whoopTokens    = useStore((s) => s.whoopTokens)
+  const clearWhoopTokens = useStore((s) => s.clearWhoopTokens)
+  const setWhoopTokens = useStore((s) => s.setWhoopTokens)
+  const darkMode       = useStore((s) => s.darkMode)
+  const setDarkMode    = useStore((s) => s.setDarkMode)
+  const setActiveTab   = useStore((s) => s.setActiveTab)
 
   const [section, setSection] = useState<'profile'|'goals'|'apikeys'|'appearance'|'whoop'|'reminders'>('profile')
   const [form, setForm] = useState<Partial<UserProfile>>(storeProfile ?? { name:'',age:25,weight:75,height:175,gender:'male',activityLevel:'moderate',goal:'lose',targetWeight:70,targetWeeks:12 })
   const [keys, setKeys] = useState(apiKeys)
   const [whoopForm, setWhoopForm] = useState({ recovery:'',hrv:'',restingHR:'',sleepQuality:'',strain:'' })
+  const [whoopSyncing, setWhoopSyncing] = useState(false)
 
   const target = getDailyCalorieTarget()
   const bmi    = form.weight && form.height ? getBMI(Number(form.weight), Number(form.height)) : null
@@ -51,7 +56,7 @@ export default function Profile() {
     setProfile(form as UserProfile); toast.success('Gespeichert! ✅')
   }
   const saveKeys = () => { setApiKeys(keys); toast.success('API Keys gespeichert!') }
-  const saveWhoop = () => {
+  const saveWhoopManual = () => {
     setWhoopData({ recovery:parseFloat(whoopForm.recovery)||0, hrv:parseFloat(whoopForm.hrv)||0, restingHR:parseFloat(whoopForm.restingHR)||0, sleepQuality:parseFloat(whoopForm.sleepQuality)||0, strain:parseFloat(whoopForm.strain)||0, date:new Date().toISOString().split('T')[0] })
     toast.success('Whoop-Daten gespeichert!')
   }
@@ -274,46 +279,176 @@ export default function Profile() {
         {/* Whoop */}
         {section==='whoop' && (
           <div className="space-y-3">
-            <div className="glass p-4" style={{ background:'rgba(17,24,40,0.9)' }}>
-              <p className="font-black mb-1" style={{ color:'var(--text-1)' }}>⌚ Whoop Daten manuell eingeben</p>
-              <p className="text-sm" style={{ color:'var(--text-3)' }}>Werte aus der Whoop App übertragen</p>
+            {/* ── OAuth2 Connect ── */}
+            <div className="glass p-5">
+              <div className="flex items-center gap-3 mb-4">
+                <div className="w-12 h-12 rounded-2xl flex items-center justify-center text-2xl flex-shrink-0"
+                  style={{ background:'rgba(255,255,255,0.06)', border:'1px solid #333' }}>⌚</div>
+                <div>
+                  <p className="font-black" style={{ color:'var(--text-1)' }}>Whoop API Verbindung</p>
+                  <p className="text-xs mt-0.5" style={{ color: whoopTokens ? '#10b981' : 'var(--text-3)' }}>
+                    {whoopTokens ? '✅ Verbunden – Daten werden automatisch synchronisiert' : 'Nicht verbunden'}
+                  </p>
+                </div>
+              </div>
+
+              {whoopTokens ? (
+                <div className="space-y-2">
+                  {/* Sync now button */}
+                  <button
+                    onClick={async () => {
+                      if (!keys.whoopClientId || !keys.whoopClientSecret) { toast.error('Client ID/Secret fehlt'); return }
+                      setWhoopSyncing(true)
+                      try {
+                        let tokens = whoopTokens
+                        if (tokens.expiresAt - Date.now() < 5 * 60 * 1000) {
+                          tokens = await refreshAccessToken(tokens, keys.whoopClientId, keys.whoopClientSecret)
+                          setWhoopTokens(tokens)
+                        }
+                        const data = await syncWhoopData(tokens.accessToken)
+                        setWhoopData({ recovery: data.recovery, hrv: data.hrv, restingHR: data.restingHR, sleepQuality: data.sleepQuality, strain: data.strain, date: data.date })
+                        toast.success(`Whoop synchronisiert! Recovery: ${data.recovery}%`)
+                      } catch (e) { toast.error(e instanceof Error ? e.message : 'Sync-Fehler', { duration: 5000 }) }
+                      setWhoopSyncing(false)
+                    }}
+                    disabled={whoopSyncing}
+                    className="w-full py-3.5 rounded-2xl font-bold text-sm flex items-center justify-center gap-2 glass-press disabled:opacity-50"
+                    style={{ background:'rgba(16,185,129,0.1)', border:'1px solid rgba(16,185,129,0.25)', color:'#10b981', minHeight:48 }}>
+                    {whoopSyncing ? <><Loader size={15} className="animate-spin"/>Synchronisiert…</> : <><RefreshCw size={15}/>Jetzt synchronisieren</>}
+                  </button>
+
+                  {/* Disconnect */}
+                  <button onClick={() => { clearWhoopTokens(); toast.success('Whoop getrennt') }}
+                    className="w-full py-3 rounded-2xl font-bold text-sm flex items-center justify-center gap-2 glass-press"
+                    style={{ background:'rgba(239,68,68,0.08)', border:'1px solid rgba(239,68,68,0.2)', color:'#ef4444', minHeight:48 }}>
+                    <Unlink size={15}/>Whoop trennen
+                  </button>
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  {/* Require Client ID + Secret first */}
+                  <div className="rounded-2xl p-3" style={{ background:'rgba(245,158,11,0.08)', border:'1px solid rgba(245,158,11,0.15)' }}>
+                    <p className="text-xs font-semibold" style={{ color:'var(--gold)' }}>
+                      💡 Trage zuerst Client ID und Secret ein (unten), dann verbinden.
+                    </p>
+                  </div>
+                  <button
+                    onClick={() => {
+                      const id = keys.whoopClientId || apiKeys.whoopClientId
+                      if (!id) { toast.error('Whoop Client ID fehlt – bitte unten eintragen'); return }
+                      const url = buildAuthUrl(id, Math.random().toString(36).slice(2))
+                      window.location.href = url
+                    }}
+                    className="btn-gold w-full py-4 flex items-center justify-center gap-2 text-sm" style={{ minHeight:52 }}>
+                    ⌚ Mit Whoop verbinden
+                  </button>
+                </div>
+              )}
             </div>
-            <div className="glass p-4 grid grid-cols-2 gap-3">
+
+            {/* ── Whoop Developer Credentials ── */}
+            <div className="glass p-4 space-y-3">
+              <div className="flex items-center justify-between">
+                <p className="label">Whoop Developer Zugangsdaten</p>
+                <a href="https://developer.whoop.com" target="_blank" rel="noopener noreferrer"
+                  className="text-xs font-bold flex items-center gap-1" style={{ color:'var(--gold)' }}>
+                  Developer Console <ExternalLink size={10}/>
+                </a>
+              </div>
               {[
-                { key:'recovery',     label:'Recovery (%)',       placeholder:'0–100' },
-                { key:'hrv',          label:'HRV (ms)',           placeholder:'z.B. 65' },
-                { key:'restingHR',    label:'Ruhepuls (bpm)',     placeholder:'z.B. 52' },
-                { key:'sleepQuality', label:'Schlafqualität (%)', placeholder:'0–100' },
-              ].map((f)=>(
-                <div key={f.key}>
+                { k:'whoopClientId' as const,     label:'Client ID' },
+                { k:'whoopClientSecret' as const, label:'Client Secret' },
+              ].map((f) => (
+                <div key={f.k}>
                   <p className="label mb-1.5">{f.label}</p>
-                  <input type="number" inputMode="decimal"
-                    value={whoopForm[f.key as keyof typeof whoopForm]}
-                    onChange={(e)=>setWhoopForm({...whoopForm,[f.key]:e.target.value})}
-                    style={inputStyle} placeholder={f.placeholder}/>
+                  <input
+                    type={f.k === 'whoopClientSecret' ? 'password' : 'text'}
+                    value={keys[f.k]}
+                    onChange={(e) => setKeys({ ...keys, [f.k]: e.target.value })}
+                    style={inputStyle} placeholder={f.k === 'whoopClientId' ? 'abc123...' : '••••••••'}
+                  />
                 </div>
               ))}
-              <div className="col-span-2">
-                <p className="label mb-1.5">Strain (0–21)</p>
-                <input type="number" inputMode="decimal" step="0.1" value={whoopForm.strain}
-                  onChange={(e)=>setWhoopForm({...whoopForm,strain:e.target.value})}
-                  style={inputStyle} placeholder="z.B. 8.5"/>
+              <div className="rounded-2xl p-3" style={{ background:'rgba(255,255,255,0.03)', border:'1px solid #1a1a1a' }}>
+                <p className="text-xs" style={{ color:'var(--text-3)' }}>
+                  Redirect URI für Whoop Developer Console:
+                </p>
+                <p className="text-xs font-mono mt-1" style={{ color:'var(--gold)' }}>
+                  https://kalorilo.vercel.app/whoop-callback
+                </p>
               </div>
+              <button onClick={() => { setApiKeys(keys); toast.success('Gespeichert!') }}
+                className="btn-gold w-full py-3 text-sm flex items-center justify-center gap-2" style={{ minHeight:48 }}>
+                <Key size={14}/>Zugangsdaten speichern
+              </button>
             </div>
+
+            {/* ── Current Whoop Data ── */}
             {whoopData && (
-              <div className="glass p-4 grid grid-cols-4 gap-2">
-                {[{l:'Recovery',v:`${whoopData.recovery}%`},{l:'HRV',v:`${whoopData.hrv}ms`},{l:'Schlaf',v:`${whoopData.sleepQuality}%`},{l:'Strain',v:`${Number(whoopData.strain).toFixed(1)}`}].map((item)=>(
-                  <div key={item.l} className="rounded-2xl py-3 text-center" style={{ background:'var(--glass)' }}>
-                    <p className="text-sm font-black" style={{ color:'var(--text-1)' }}>{item.v}</p>
-                    <p className="text-[10px]" style={{ color:'var(--text-3)' }}>{item.l}</p>
+              <div className="glass p-4">
+                <p className="label mb-3">Letzte Sync-Daten · {whoopData.date}</p>
+                <div className="grid grid-cols-4 gap-2">
+                  {[
+                    { l:'Recovery', v:`${whoopData.recovery}%`,  c: whoopData.recovery>66?'#10b981':whoopData.recovery>33?'#f59e0b':'#ef4444' },
+                    { l:'HRV',      v:`${whoopData.hrv}ms`,      c:'#60a5fa' },
+                    { l:'Schlaf',   v:`${whoopData.sleepQuality}%`, c:'#a78bfa' },
+                    { l:'Strain',   v:`${Number(whoopData.strain).toFixed(1)}`, c:'#fb923c' },
+                  ].map((item) => (
+                    <div key={item.l} className="rounded-2xl py-3 text-center" style={{ background:'#0a0a0a', border:'1px solid #1a1a1a' }}>
+                      <p className="text-sm font-black" style={{ color:item.c }}>{item.v}</p>
+                      <p className="text-[10px]" style={{ color:'var(--text-3)' }}>{item.l}</p>
+                    </div>
+                  ))}
+                </div>
+                {whoopData.recovery < 34 && (
+                  <div className="mt-3 rounded-2xl px-3 py-2" style={{ background:'rgba(239,68,68,0.1)', border:'1px solid rgba(239,68,68,0.2)' }}>
+                    <p className="text-xs font-bold" style={{ color:'#ef4444' }}>
+                      ⚠️ Niedrige Recovery – Kalorienziel automatisch um 200 kcal reduziert
+                    </p>
                   </div>
-                ))}
+                )}
+                {whoopData.recovery > 66 && (
+                  <div className="mt-3 rounded-2xl px-3 py-2" style={{ background:'rgba(16,185,129,0.1)', border:'1px solid rgba(16,185,129,0.2)' }}>
+                    <p className="text-xs font-bold" style={{ color:'#10b981' }}>
+                      💪 Hohe Recovery – Kalorienziel um 150 kcal erhöht
+                    </p>
+                  </div>
+                )}
               </div>
             )}
-            <button onClick={saveWhoop} className="w-full py-4 rounded-2xl font-black flex items-center justify-center gap-2"
-              style={{ background:'rgba(17,24,40,0.9)', border:'1px solid rgba(255,255,255,0.08)', color:'var(--text-1)', minHeight:52 }}>
-              ⌚ Whoop-Daten speichern
-            </button>
+
+            {/* ── Fallback: Manual Entry ── */}
+            <details className="glass p-4">
+              <summary className="text-sm font-bold cursor-pointer" style={{ color:'var(--text-2)' }}>
+                ✏️ Manuell eingeben (ohne API)
+              </summary>
+              <div className="mt-3 grid grid-cols-2 gap-3">
+                {[
+                  { key:'recovery',     label:'Recovery (%)',    placeholder:'0–100' },
+                  { key:'hrv',          label:'HRV (ms)',        placeholder:'65' },
+                  { key:'restingHR',    label:'Ruhepuls (bpm)',  placeholder:'52' },
+                  { key:'sleepQuality', label:'Schlaf (%)',      placeholder:'0–100' },
+                ].map((f) => (
+                  <div key={f.key}>
+                    <p className="label mb-1.5">{f.label}</p>
+                    <input type="number" inputMode="decimal"
+                      value={whoopForm[f.key as keyof typeof whoopForm]}
+                      onChange={(e) => setWhoopForm({ ...whoopForm, [f.key]: e.target.value })}
+                      style={inputStyle} placeholder={f.placeholder}/>
+                  </div>
+                ))}
+                <div className="col-span-2">
+                  <p className="label mb-1.5">Strain (0–21)</p>
+                  <input type="number" inputMode="decimal" step="0.1" value={whoopForm.strain}
+                    onChange={(e) => setWhoopForm({ ...whoopForm, strain: e.target.value })}
+                    style={inputStyle} placeholder="8.5"/>
+                </div>
+              </div>
+              <button onClick={saveWhoopManual}
+                className="btn-gold w-full mt-3 py-3 text-sm" style={{ minHeight:48 }}>
+                Speichern
+              </button>
+            </details>
           </div>
         )}
 

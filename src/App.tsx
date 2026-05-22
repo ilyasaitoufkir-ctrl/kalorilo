@@ -2,6 +2,7 @@ import { useRef } from 'react'
 import { Toaster } from 'react-hot-toast'
 import { useStore } from './store/useStore'
 import { useDarkMode } from './hooks/useDarkMode'
+import { useWhoopSync } from './hooks/useWhoopSync'
 import { tryInitFromConfig } from './lib/firebase'
 import Navigation from './components/Navigation'
 import Dashboard from './components/Dashboard'
@@ -12,6 +13,7 @@ import Statistics from './components/Statistics'
 import Profile from './components/Profile'
 import Friends from './components/Friends'
 import Onboarding from './components/Onboarding'
+import WhoopCallback from './components/WhoopCallback'
 import ErrorBoundary from './components/ErrorBoundary'
 import type { TabId } from './types'
 
@@ -24,6 +26,7 @@ function MainApp() {
   const firebaseConfig = useStore((s) => s.firebaseConfig)
 
   useDarkMode()
+  useWhoopSync()   // Auto-sync Whoop data in background
   if (firebaseConfig?.apiKey) tryInitFromConfig(firebaseConfig)
 
   const touchStartX = useRef(0)
@@ -75,23 +78,25 @@ function MainApp() {
 }
 
 export default function App() {
+  // Handle Whoop OAuth2 callback route
+  const isWhoopCallback = window.location.pathname.includes('whoop-callback')
+
   return (
     <ErrorBoundary>
-      <MainApp />
+      {isWhoopCallback ? <WhoopCallback /> : <MainApp />}
       <Toaster
         position="top-center"
         toastOptions={{
           duration: 2800,
           style: {
             borderRadius: '16px',
-            background: 'rgba(17,24,40,0.95)',
-            color: '#f1f5f9',
-            border: '1px solid rgba(255,255,255,0.08)',
+            background: '#111',
+            color: '#fff',
+            border: '1px solid #222',
             fontSize: '14px',
             fontWeight: '600',
             padding: '12px 18px',
-            backdropFilter: 'blur(20px)',
-            boxShadow: '0 8px 32px rgba(0,0,0,0.5)',
+            boxShadow: '0 8px 32px rgba(0,0,0,0.8)',
           },
         }}
       />

@@ -21,6 +21,13 @@ interface AppState {
   healthCalories: number
   setHealthCalories: (cal: number) => void
 
+  // Whoop OAuth2 tokens
+  whoopTokens: { accessToken: string; refreshToken: string; expiresAt: number } | null
+  setWhoopTokens: (t: { accessToken: string; refreshToken: string; expiresAt: number }) => void
+  clearWhoopTokens: () => void
+  // Extended sync data (sleep duration, burned cals from Whoop)
+  whoopExtended: { sleepDuration: number; caloriesBurned: number; date: string } | null
+
   // Social / Groups
   userId: string
   firebaseConfig: { apiKey: string; authDomain: string; projectId: string; storageBucket: string; messagingSenderId: string; appId: string } | null
@@ -118,6 +125,11 @@ export const useStore = create<AppState>()(
       setStepsToday: (steps) => set({ stepsToday: steps }),
       healthCalories: 0,
       setHealthCalories: (cal) => set({ healthCalories: cal }),
+
+      whoopTokens: null,
+      setWhoopTokens: (t) => set({ whoopTokens: t }),
+      clearWhoopTokens: () => set({ whoopTokens: null }),
+      whoopExtended: null,
 
       userId: crypto.randomUUID ? crypto.randomUUID() : Math.random().toString(36).slice(2),
       firebaseConfig: null,
@@ -228,19 +240,27 @@ export const useStore = create<AppState>()(
       },
 
       getDailyCalorieTarget: () => {
-        const { profile } = get()
+        const { profile, whoopData } = get()
         if (!profile) return 2000
         const { age, weight, height, gender, activityLevel, goal, targetWeight, targetWeeks } = profile
-        // Mifflin-St Jeor
+        // Mifflin-St Jeor BMR
         const bmr = gender === 'male'
           ? 10 * weight + 6.25 * height - 5 * age + 5
           : 10 * weight + 6.25 * height - 5 * age - 161
         const activityMultipliers = { sedentary: 1.2, light: 1.375, moderate: 1.55, active: 1.725, very_active: 1.9 }
         const tdee = bmr * activityMultipliers[activityLevel]
         const weeklyDelta = (weight - targetWeight) * 7700 / (targetWeeks || 12)
-        if (goal === 'lose') return Math.max(1200, Math.round(tdee - weeklyDelta / 7))
-        if (goal === 'gain') return Math.round(tdee + Math.abs(weeklyDelta) / 7)
-        return Math.round(tdee)
+        let base = 0
+        if (goal === 'lose') base = Math.max(1200, Math.round(tdee - weeklyDelta / 7))
+        else if (goal === 'gain') base = Math.round(tdee + Math.abs(weeklyDelta) / 7)
+        else base = Math.round(tdee)
+        // Whoop recovery adjustment: low recovery → rest, high → can push
+        if (whoopData?.recovery) {
+          const r = whoopData.recovery
+          if (r < 34) base = Math.max(1200, base - 200)   // rest day
+          else if (r > 66) base = base + 150               // high recovery
+        }
+        return base
       },
     }),
     {
@@ -262,6 +282,8 @@ export const useStore = create<AppState>()(
         darkMode: state.darkMode,
         stepsToday: state.stepsToday,
         healthCalories: state.healthCalories,
+        whoopTokens: state.whoopTokens,
+        whoopExtended: state.whoopExtended,
         userId: state.userId,
         firebaseConfig: state.firebaseConfig,
         groupIds: state.groupIds,
