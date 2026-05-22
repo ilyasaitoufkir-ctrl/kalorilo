@@ -6,6 +6,7 @@ import { formatDate, uid, imageToBase64 } from '../utils/calculations'
 import { fetchByBarcode, analyzePlate, correctPlateAnalysis, searchUSDA, getAINutrients } from '../utils/api'
 import { useVoice } from '../hooks/useVoice'
 import VoiceInput from './VoiceInput'
+import BarcodeScanner from './BarcodeScanner'
 import type { FoodItem, MealType } from '../types'
 import toast from 'react-hot-toast'
 
@@ -33,9 +34,10 @@ function AddSheet({ mealType, onClose }: { mealType: MealType; onClose: () => vo
   const [amount, setAmount]     = useState('100')
   const [loading, setLoading]   = useState(false)
   const [correcting, setCorrecting] = useState(false)
-  const [barcodeVal, setBarcodeVal]     = useState('')
+  const [barcodeVal, setBarcodeVal]       = useState('')
   const [barcodeStatus, setBarcodeStatus] = useState<'idle'|'found'|'notfound'>('idle')
   const [productNameSuggestion, setProductNameSuggestion] = useState('')
+  const [showCameraScanner, setShowCameraScanner] = useState(false)
   const [photoResult, setPhotoResult] = useState<PhotoResult|null>(null)
   const [lastCorrection, setLastCorrection] = useState('')
   const [manualForm, setManualForm] = useState({ name:'', cal:'', protein:'', fat:'', carbs:'' })
@@ -69,6 +71,29 @@ function AddSheet({ mealType, onClose }: { mealType: MealType; onClose: () => vo
     setLoading(false)
     if (f) { pick(f); setBarcodeStatus('found') }
     else   { setBarcodeStatus('notfound') }
+  }
+
+  // Called when ZXing camera scanner detects a barcode
+  const handleCameraScan = async (code: string) => {
+    setShowCameraScanner(false)
+    setBarcodeVal(code)
+    setBarcodeStatus('idle')
+    setLoading(true)
+    toast.loading(`Suche Produkt ${code}…`, { id: 'barcode-lookup' })
+    let f = await fetchByBarcode(code)
+    if (!f) f = await searchUSDA(code)
+    setLoading(false)
+    toast.dismiss('barcode-lookup')
+    if (f) {
+      pick(f)
+      setBarcodeStatus('found')
+      setView('barcode')     // show the result view
+      toast.success(`✅ ${f.name}`)
+    } else {
+      setBarcodeStatus('notfound')
+      setView('barcode')
+      toast.error('Produkt nicht gefunden – manuell eingeben?')
+    }
   }
 
   const handleAISuggestNutrients = async () => {
@@ -127,6 +152,15 @@ function AddSheet({ mealType, onClose }: { mealType: MealType; onClose: () => vo
   const btnStyle   = { minHeight: 50 } as const
 
   return (
+    <>
+    {/* ── Camera Barcode Scanner overlay ── */}
+    {showCameraScanner && (
+      <BarcodeScanner
+        onDetected={handleCameraScan}
+        onClose={() => setShowCameraScanner(false)}
+      />
+    )}
+
     <div className="fixed inset-0 z-50 flex items-end" onClick={onClose}>
       <div className="sheet-overlay absolute inset-0" />
       <div className="sheet-bg relative w-full max-w-[430px] mx-auto max-h-[93dvh] overflow-hidden flex flex-col anim-up"
@@ -170,10 +204,10 @@ function AddSheet({ mealType, onClose }: { mealType: MealType; onClose: () => vo
 
               {/* Options */}
               {[
-                { icon:Search,   label:'Lebensmittel suchen',  sub:'100+ Einträge + Marken',     action:()=>setView('search'),  color:'#3b82f6' },
-                { icon:ScanLine, label:'Barcode scannen',       sub:'Open Food Facts – 3 Mio.',   action:()=>setView('barcode'), color:'#10b981' },
-                { icon:Camera,   label:'KI-Teller-Foto',        sub:'Claude AI analysiert',        action:()=>setView('photo'),   color:'#8b5cf6' },
-                { icon:PenLine,  label:'Manuell eintragen',     sub:'Eigene Kalorien & Makros',    action:()=>setView('manual'),  color:'#f59e0b' },
+                { icon:Search,   label:'Lebensmittel suchen',  sub:'100+ Einträge + Marken',            action:()=>setView('search'),             color:'#3b82f6' },
+                { icon:ScanLine, label:'Barcode-Kamera',        sub:'Kamera öffnet sich direkt',          action:()=>setShowCameraScanner(true),    color:'#10b981' },
+                { icon:Camera,   label:'KI-Teller-Foto',        sub:'Claude AI analysiert',               action:()=>setView('photo'),              color:'#8b5cf6' },
+                { icon:PenLine,  label:'Manuell eintragen',     sub:'Eigene Kalorien & Makros',           action:()=>setView('manual'),             color:'#f59e0b' },
               ].map((opt) => (
                 <button key={opt.label} onClick={opt.action} style={btnStyle}
                   className="w-full glass glass-press p-4 flex items-center gap-4 text-left">
@@ -306,11 +340,32 @@ function AddSheet({ mealType, onClose }: { mealType: MealType; onClose: () => vo
           {/* Barcode */}
           {view === 'barcode' && (
             <div className="space-y-3">
-              <div className="glass p-3" style={{ background:'rgba(16,185,129,0.06)', borderColor:'rgba(16,185,129,0.15)' }}>
-                <p className="text-xs font-semibold" style={{ color:'var(--text-2)' }}>
-                  🔍 Sucht in <strong>Open Food Facts</strong> (3 Mio. Produkte) + <strong>USDA FoodData Central</strong>
-                </p>
+              {/* Camera scan button */}
+              <button onClick={() => setShowCameraScanner(true)}
+                className="w-full py-5 rounded-3xl flex items-center justify-center gap-3 glass-press"
+                style={{ background:'rgba(16,185,129,0.1)', border:'2px solid rgba(16,185,129,0.3)' }}>
+                <ScanLine size={28} style={{ color:'#10b981' }}/>
+                <div className="text-left">
+                  <p className="font-black text-sm" style={{ color:'var(--text-1)' }}>Kamera-Scanner öffnen</p>
+                  <p className="text-xs" style={{ color:'var(--text-3)' }}>Halte Barcode vor die Kamera</p>
+                </div>
+              </button>
+
+              {/* Status indicator */}
+              {loading && (
+                <div className="flex items-center justify-center gap-2 py-2">
+                  <Loader size={16} className="animate-spin" style={{ color:'#10b981' }}/>
+                  <span className="text-sm" style={{ color:'var(--text-2)' }}>Produkt wird gesucht…</span>
+                </div>
+              )}
+
+              {/* Divider */}
+              <div className="flex items-center gap-3">
+                <div className="flex-1 h-px" style={{ background:'#222' }}/>
+                <span className="text-xs font-semibold" style={{ color:'var(--text-3)' }}>oder manuell</span>
+                <div className="flex-1 h-px" style={{ background:'#222' }}/>
               </div>
+
               <div className="flex gap-2">
                 <input type="number" inputMode="numeric" value={barcodeVal}
                   onChange={(e)=>{ setBarcodeVal(e.target.value); setBarcodeStatus('idle') }}
@@ -462,6 +517,7 @@ function AddSheet({ mealType, onClose }: { mealType: MealType; onClose: () => vo
         </div>
       </div>
     </div>
+    </>
   )
 }
 
