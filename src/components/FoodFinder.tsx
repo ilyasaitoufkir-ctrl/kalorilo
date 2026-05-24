@@ -114,14 +114,29 @@ function fmtDist(m: number) {
 
 async function fetchNearby(lat: number, lng: number, radius: number): Promise<{ restaurants: Restaurant[]; rawCount: number }> {
   const query = `[out:json][timeout:25];(node["amenity"="restaurant"](around:${radius},${lat},${lng});node["amenity"="cafe"](around:${radius},${lat},${lng});node["amenity"="fast_food"](around:${radius},${lat},${lng}););out body;`
-  const url   = `https://overpass-api.de/api/interpreter?data=${encodeURIComponent(query)}`
 
-  console.log('[FoodFinder] Overpass GET →', url)
+  // overpass-api.de hat derzeit 406-Probleme — kumi.systems Mirror funktioniert
+  const MIRRORS = [
+    'https://overpass.kumi.systems/api/interpreter',
+    'https://overpass-api.de/api/interpreter',
+  ]
 
-  const res = await fetch(url)
-  console.log('[FoodFinder] Overpass status:', res.status)
+  let res: Response | null = null
+  let lastErr = ''
+  for (const base of MIRRORS) {
+    try {
+      console.log('[FoodFinder] Versuche Mirror:', base)
+      res = await fetch(`${base}?data=${encodeURIComponent(query)}`)
+      if (res.ok) break
+      lastErr = `HTTP ${res.status} von ${base}`
+      console.warn('[FoodFinder]', lastErr)
+    } catch (e) {
+      lastErr = `Netzwerkfehler bei ${base}: ${e}`
+      console.warn('[FoodFinder]', lastErr)
+    }
+  }
 
-  if (!res.ok) throw new Error(`Overpass HTTP ${res.status}`)
+  if (!res || !res.ok) throw new Error(lastErr || 'Alle Overpass-Server nicht erreichbar')
 
   const data = await res.json()
   console.log('[FoodFinder] Overpass elements:', data.elements?.length ?? 0)
