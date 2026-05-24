@@ -3,7 +3,7 @@ import { persist } from 'zustand/middleware'
 import type {
   UserProfile, FoodLog, ActivityLog, WeightEntry, WaterLog,
   CustomRecipe, AIMessage, WhoopData, ApiKeys, Reminder,
-  CheatDay, BeforeAfterPhoto, WeeklyPlan, TabId, DailyStats
+  CheatDay, BeforeAfterPhoto, WeeklyPlan, TabId, DailyStats, RunSession
 } from '../types'
 
 interface AppState {
@@ -94,6 +94,11 @@ interface AppState {
   // Weekly plans
   weeklyPlans: WeeklyPlan[]
   addWeeklyPlan: (plan: WeeklyPlan) => void
+
+  // Run sessions
+  runSessions: RunSession[]
+  addRunSession: (session: RunSession) => void
+  removeRunSession: (id: string) => void
 
   // Selectors
   getFoodLogsForDate: (date: string) => FoodLog[]
@@ -199,6 +204,10 @@ export const useStore = create<AppState>()(
       weeklyPlans: [],
       addWeeklyPlan: (plan) => set((s) => ({ weeklyPlans: [plan, ...s.weeklyPlans.slice(0, 4)] })),
 
+      runSessions: [],
+      addRunSession: (session) => set((s) => ({ runSessions: [session, ...s.runSessions] })),
+      removeRunSession: (id) => set((s) => ({ runSessions: s.runSessions.filter((r) => r.id !== id) })),
+
       getFoodLogsForDate: (date) => get().foodLogs.filter((l) => l.date === date),
       getActivityLogsForDate: (date) => get().activityLogs.filter((l) => l.date === date),
 
@@ -300,6 +309,7 @@ export const useStore = create<AppState>()(
         cheatDays: state.cheatDays,
         beforeAfterPhotos: state.beforeAfterPhotos,
         weeklyPlans: state.weeklyPlans,
+        runSessions: state.runSessions,
       }),
     }
   )

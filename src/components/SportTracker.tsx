@@ -3,11 +3,16 @@ import { Trash2, X, Play, Square, Plus } from 'lucide-react'
 import { useStore } from '../store/useStore'
 import { SPORTS_DATABASE, calculateCaloriesBurned, SPORT_CATEGORIES, kettlebellFactor, KETTLEBELL_WEIGHTS } from '../data/sportsDatabase'
 import { formatDate, uid } from '../utils/calculations'
-import type { ActivityLog, Intensity, SportActivity } from '../types'
+import { useRunTracker } from '../hooks/useRunTracker'
+import RunActiveScreen from './RunActiveScreen'
+import RunSummary from './RunSummary'
+import RunHistory from './RunHistory'
+import type { ActivityLog, Intensity, SportActivity, RunSession } from '../types'
 import toast from 'react-hot-toast'
 
 const today = formatDate()
 
+// ── Timer sub-component ────────────────────────────────────────────────────
 function Timer({ onStop }: { onStop: (s: number) => void }) {
   const [seconds, setSeconds] = useState(0)
   const [running, setRunning] = useState(true)
@@ -38,6 +43,7 @@ function Timer({ onStop }: { onStop: (s: number) => void }) {
   )
 }
 
+// ── Activity add sheet ─────────────────────────────────────────────────────
 function AddSheet({ onClose }: { onClose: ()=>void }) {
   const [sport, setSport]       = useState<SportActivity|null>(null)
   const [duration, setDuration] = useState('30')
@@ -45,7 +51,7 @@ function AddSheet({ onClose }: { onClose: ()=>void }) {
   const [steps, setSteps]       = useState('')
   const [timerMode, setTimerMode]   = useState(false)
   const [activeCategory, setActiveCategory] = useState<string|null>(null)
-  const [kbWeight, setKbWeight]     = useState(16)   // kettlebell kg
+  const [kbWeight, setKbWeight]     = useState(16)
   const addActivityLog = useStore((s)=>s.addActivityLog)
   const profile        = useStore((s)=>s.profile)
   const weight = Number(profile?.weight)||75
@@ -171,7 +177,6 @@ function AddSheet({ onClose }: { onClose: ()=>void }) {
                     </div>
                   </div>
 
-                  {/* ── Kettlebell weight selector (only for KB training) ── */}
                   {sport?.kettlebell && (
                     <div>
                       <p className="label mb-2">
@@ -190,9 +195,6 @@ function AddSheet({ onClose }: { onClose: ()=>void }) {
                             }>{kg}kg</button>
                         ))}
                       </div>
-                      <p className="text-xs mt-1.5" style={{ color:'var(--text-3)' }}>
-                        16kg = Basis · 32kg = +20% mehr Kalorien
-                      </p>
                     </div>
                   )}
 
@@ -205,7 +207,6 @@ function AddSheet({ onClose }: { onClose: ()=>void }) {
                 </>
               )}
 
-              {/* Calories preview */}
               <div className="glass p-5 text-center" style={{ background:'rgba(16,185,129,0.05)', borderColor:'rgba(16,185,129,0.15)' }}>
                 <p className="label mb-1">Geschätzte Verbrennung</p>
                 <p className="text-5xl font-black" style={{ color:'#10b981' }}>{calories}</p>
@@ -223,17 +224,97 @@ function AddSheet({ onClose }: { onClose: ()=>void }) {
   )
 }
 
-export default function SportTracker() {
-  const [showAdd, setShowAdd] = useState(false)
-  const allActivityLogs = useStore((s)=>s.activityLogs)
-  const removeActivityLog = useStore((s)=>s.removeActivityLog)
-  const activityLogs = useMemo(()=>allActivityLogs.filter((l)=>l.date===today),[allActivityLogs])
-  const totalBurned  = useMemo(()=>activityLogs.reduce((s,a)=>s+a.caloriesBurned,0),[activityLogs])
-  const totalDuration= useMemo(()=>activityLogs.reduce((s,a)=>s+a.duration,0),[activityLogs])
+// ── Main SportTracker ──────────────────────────────────────────────────────
+type SportTab = 'activities' | 'runs'
 
+export default function SportTracker() {
+  const [tab, setTab]           = useState<SportTab>('activities')
+  const [showAdd, setShowAdd]   = useState(false)
+  const [savedSession, setSavedSession] = useState<RunSession | null>(null)
+
+  const allActivityLogs  = useStore(s => s.activityLogs)
+  const removeActivityLog = useStore(s => s.removeActivityLog)
+  const addActivityLog   = useStore(s => s.addActivityLog)
+  const addRunSession    = useStore(s => s.addRunSession)
+  const profile          = useStore(s => s.profile)
+  const weight           = Number(profile?.weight) || 75
+
+  const activityLogs  = useMemo(() => allActivityLogs.filter(l => l.date === today), [allActivityLogs])
+  const totalBurned   = useMemo(() => activityLogs.reduce((s, a) => s + a.caloriesBurned, 0), [activityLogs])
+  const totalDuration = useMemo(() => activityLogs.reduce((s, a) => s + a.duration, 0), [activityLogs])
+
+  const run = useRunTracker(weight)
+
+  // When run finishes, build a RunSession and show summary
+  const handleRunFinish = () => {
+    run.finish()
+    if (run.distance < 0.05) {
+      toast.error('Lauf zu kurz – mindestens 50 m erforderlich.')
+      run.reset()
+      return
+    }
+    const bestPace = run.splits.length > 0 ? Math.min(...run.splits.map(s => s.pace)) : run.avgPace
+    const logId = uid()
+
+    // Save as ActivityLog so calories appear in dashboard
+    const runningActivity = SPORTS_DATABASE.find(s => s.name === 'Laufen') ?? {
+      id: 'run', name: 'Laufen', icon: '🏃', metLight: 7, metMedium: 9.8, metIntense: 12.8, category: 'Ausdauer',
+    }
+    addActivityLog({
+      id: logId,
+      date: today,
+      sport: runningActivity,
+      duration: Math.round(run.elapsed / 60),
+      intensity: 'medium',
+      caloriesBurned: run.calories,
+      timestamp: Date.now(),
+    })
+
+    const session: RunSession = {
+      id: uid(),
+      date: today,
+      startTime: Date.now() - run.elapsed * 1000,
+      endTime: Date.now(),
+      duration: run.elapsed,
+      distance: run.distance,
+      route: run.route,
+      splits: run.splits,
+      avgPace: run.avgPace,
+      bestPace,
+      elevationGain: run.elevationGain,
+      caloriesBurned: run.calories,
+      activityLogId: logId,
+    }
+    addRunSession(session)
+    setSavedSession(session)
+  }
+
+  const handleSummaryDone = () => {
+    setSavedSession(null)
+    run.reset()
+    setTab('runs')
+  }
+
+  // ── Render: fullscreen during run ──
+  if (run.status === 'running' || run.status === 'paused') {
+    return (
+      <RunActiveScreen
+        run={{ ...run, finish: handleRunFinish }}
+      />
+    )
+  }
+
+  // ── Render: post-run summary ──
+  if (savedSession) {
+    return <RunSummary session={savedSession} onDone={handleSummaryDone} />
+  }
+
+  // ── Render: normal sport tab ──
   return (
     <div className="pb-nav anim-fade overflow-x-hidden" style={{ background:'var(--bg)' }}>
-      <div className="pt-safe px-5 pb-6 relative overflow-hidden"
+
+      {/* Header */}
+      <div className="pt-safe px-5 pb-5 relative overflow-hidden"
         style={{ background:'#000', borderBottom:'1px solid #1a1a1a' }}>
         <div className="absolute" style={{ top:-40,right:-40,width:200,height:200, background:'radial-gradient(circle,rgba(16,185,129,0.08),transparent 70%)', pointerEvents:'none' }}/>
         <h1 className="text-2xl font-black mb-1 relative" style={{ color:'var(--text-1)' }}>Sport & Aktivität</h1>
@@ -241,39 +322,82 @@ export default function SportTracker() {
         <p className="text-5xl font-black mt-1 relative" style={{ color:'#10b981' }}>
           {totalBurned} <span className="text-xl font-semibold" style={{ color:'var(--text-3)' }}>kcal</span>
         </p>
-        {totalDuration>0 && <p className="text-sm mt-1 relative" style={{ color:'var(--text-3)' }}>⏱ {totalDuration} Min · {activityLogs.length} Aktivitäten</p>}
+        {totalDuration > 0 && (
+          <p className="text-sm mt-1 relative" style={{ color:'var(--text-3)' }}>
+            ⏱ {totalDuration} Min · {activityLogs.length} Aktivitäten
+          </p>
+        )}
       </div>
 
-      <div className="px-4 py-4 space-y-3">
-        {activityLogs.length>0 ? (
-          <div className="glass">
-            {activityLogs.map((log)=>(
-              <div key={log.id} className="flex items-center gap-3 p-4" style={{ borderTop:'1px solid var(--glass-border)' }}>
-                <span className="text-2xl flex-shrink-0">{log.sport.icon}</span>
-                <div className="flex-1" style={{ minWidth:0 }}>
-                  <p className="text-sm font-black" style={{ color:'var(--text-1)' }}>{log.sport.name}</p>
-                  <p className="text-xs" style={{ color:'var(--text-3)' }}>{log.duration} Min · {{ light:'🟢',medium:'🟡',intense:'🔴' }[log.intensity]}</p>
-                </div>
-                <p className="text-sm font-black flex-shrink-0 mr-2" style={{ color:'#10b981' }}>{log.caloriesBurned} kcal</p>
-                <button onClick={()=>removeActivityLog(log.id)} className="glass-press p-1 flex-shrink-0">
-                  <Trash2 size={14} style={{ color:'var(--text-3)' }}/>
-                </button>
-              </div>
-            ))}
-          </div>
-        ) : (
-          <div className="glass p-10 text-center">
-            <p className="text-4xl mb-3">🏃</p>
-            <p className="text-sm font-bold" style={{ color:'var(--text-2)' }}>Noch keine Aktivitäten heute</p>
-          </div>
-        )}
-
-        <button onClick={()=>setShowAdd(true)} className="btn-gold w-full py-4 text-base flex items-center justify-center gap-2" style={{ minHeight:54 }}>
-          <Plus size={20}/>Aktivität hinzufügen
+      {/* ── BIG Run Start Button ── */}
+      <div className="px-4 pt-4">
+        <button
+          onClick={() => run.start()}
+          className="w-full flex items-center justify-center gap-3 rounded-3xl font-black text-lg"
+          style={{
+            paddingTop: 20, paddingBottom: 20,
+            background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
+            boxShadow: '0 8px 32px rgba(16,185,129,0.35)',
+            color: '#fff',
+            border: 'none',
+          }}>
+          <span style={{ fontSize: 28 }}>🏃</span>
+          Lauf starten
         </button>
       </div>
 
-      {showAdd && <AddSheet onClose={()=>setShowAdd(false)}/>}
+      {/* Tab switcher */}
+      <div className="flex gap-2 px-4 pt-4">
+        {([['activities', 'Aktivitäten'], ['runs', 'Läufe 🗺']] as const).map(([id, label]) => (
+          <button
+            key={id}
+            onClick={() => setTab(id)}
+            className="flex-1 py-2.5 rounded-2xl text-sm font-bold transition-all"
+            style={tab === id
+              ? { background:'var(--gold-dim)', border:'1px solid rgba(245,158,11,0.3)', color:'var(--gold)' }
+              : { background:'var(--glass)', border:'1px solid var(--glass-border)', color:'var(--text-3)' }}>
+            {label}
+          </button>
+        ))}
+      </div>
+
+      {/* Tab content */}
+      <div className="px-4 py-4 space-y-3">
+        {tab === 'activities' ? (
+          <>
+            {activityLogs.length > 0 ? (
+              <div className="glass">
+                {activityLogs.map((log) => (
+                  <div key={log.id} className="flex items-center gap-3 p-4" style={{ borderTop:'1px solid var(--glass-border)' }}>
+                    <span className="text-2xl flex-shrink-0">{log.sport.icon}</span>
+                    <div className="flex-1" style={{ minWidth:0 }}>
+                      <p className="text-sm font-black" style={{ color:'var(--text-1)' }}>{log.sport.name}</p>
+                      <p className="text-xs" style={{ color:'var(--text-3)' }}>{log.duration} Min · {{ light:'🟢',medium:'🟡',intense:'🔴' }[log.intensity]}</p>
+                    </div>
+                    <p className="text-sm font-black flex-shrink-0 mr-2" style={{ color:'#10b981' }}>{log.caloriesBurned} kcal</p>
+                    <button onClick={()=>removeActivityLog(log.id)} className="glass-press p-1 flex-shrink-0">
+                      <Trash2 size={14} style={{ color:'var(--text-3)' }}/>
+                    </button>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="glass p-10 text-center">
+                <p className="text-4xl mb-3">💪</p>
+                <p className="text-sm font-bold" style={{ color:'var(--text-2)' }}>Noch keine Aktivitäten heute</p>
+              </div>
+            )}
+
+            <button onClick={() => setShowAdd(true)} className="btn-gold w-full py-4 text-base flex items-center justify-center gap-2" style={{ minHeight:54 }}>
+              <Plus size={20}/>Aktivität hinzufügen
+            </button>
+          </>
+        ) : (
+          <RunHistory />
+        )}
+      </div>
+
+      {showAdd && <AddSheet onClose={() => setShowAdd(false)} />}
     </div>
   )
 }
