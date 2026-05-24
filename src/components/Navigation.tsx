@@ -22,7 +22,7 @@ export default function Navigation() {
           return (
             <button
               key={id}
-              onClick={() => setActiveTab(id)}
+              onClick={() => { setActiveTab(id); navigator.vibrate?.(8) }}
               className="flex flex-col items-center gap-1 py-1.5 px-4 rounded-2xl transition-all duration-200 relative"
               style={{ minWidth: 56 }}
             >

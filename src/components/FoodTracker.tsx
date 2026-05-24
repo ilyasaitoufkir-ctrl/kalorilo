@@ -553,7 +553,7 @@ export default function FoodTracker() {
         <button
           onClick={() => setShowFinder(true)}
           className="w-full flex items-center justify-center gap-2 rounded-2xl font-bold text-sm"
-          style={{ height: 44, background: 'rgba(16,185,129,0.1)', border: '1px solid rgba(16,185,129,0.25)', color: '#10b981' }}
+          style={{ height: 50, background: 'rgba(16,185,129,0.1)', border: '1px solid rgba(16,185,129,0.25)', color: '#10b981' }}
         >
           <span>📍</span> Food in der Nähe
         </button>

@@ -103,8 +103,8 @@ export default function Statistics() {
 
   const inputStyle = { background:'rgba(255,255,255,0.05)', border:'1px solid rgba(255,255,255,0.08)', borderRadius:16, color:'var(--text-1)', padding:'13px 16px', width:'100%', fontSize:14, fontWeight:600 } as const
 
-  const tooltipStyle = { background:'rgba(17,24,40,0.95)', border:'1px solid rgba(255,255,255,0.08)', borderRadius:12, color:'#f1f5f9', fontSize:12 }
-  const axisStyle    = { fontSize:10, fill:'#475569', fontWeight:600 }
+  const tooltipStyle = { background:'#111111', border:'1px solid #222222', borderRadius:12, color:'#ffffff', fontSize:12 }
+  const axisStyle    = { fontSize:10, fill:'#555555', fontWeight:600 }
 
   const TABS = [
     { id:'week'   as const, label:'📊 Woche'  },

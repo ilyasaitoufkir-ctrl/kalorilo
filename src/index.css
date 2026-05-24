@@ -258,6 +258,8 @@ input:focus, textarea:focus { border-color: rgba(245,158,11,0.4); }
 @keyframes scaleIn    { from { transform: scale(0.94); opacity: 0 } to { transform: scale(1); opacity: 1 } }
 @keyframes pulseSoft  { 0%,100% { opacity: 1 } 50% { opacity: 0.5 } }
 @keyframes glowPulse  { 0%,100% { box-shadow: 0 0 20px rgba(245,158,11,0.15) } 50% { box-shadow: 0 0 35px rgba(245,158,11,0.35) } }
+/* Used by RunMap GPS live-position dot */
+@keyframes pulse      { 0%,100% { transform: scale(1); opacity: 1 } 50% { transform: scale(1.6); opacity: 0 } }
 
 .anim-up    { animation: slideUp  0.35s cubic-bezier(0.16,1,0.3,1) both; }
 .anim-fade  { animation: fadeIn   0.25s ease both; }

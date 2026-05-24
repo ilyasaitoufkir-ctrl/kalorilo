@@ -42,8 +42,8 @@ function MainApp() {
     if (Math.abs(dx) > 70 && dy < 50) {
       const idx = TAB_ORDER.indexOf(activeTab as TabId)
       if (idx === -1) return
-      if (dx < 0 && idx < TAB_ORDER.length - 1) setActiveTab(TAB_ORDER[idx + 1])
-      if (dx > 0 && idx > 0) setActiveTab(TAB_ORDER[idx - 1])
+      if (dx < 0 && idx < TAB_ORDER.length - 1) { setActiveTab(TAB_ORDER[idx + 1]); navigator.vibrate?.(8) }
+      if (dx > 0 && idx > 0) { setActiveTab(TAB_ORDER[idx - 1]); navigator.vibrate?.(8) }
     }
   }
   const handleTap = (e: React.MouseEvent) => {
