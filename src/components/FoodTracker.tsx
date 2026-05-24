@@ -9,6 +9,7 @@ import VoiceInput from './VoiceInput'
 import BarcodeScanner from './BarcodeScanner'
 import type { FoodItem, MealType } from '../types'
 import toast from 'react-hot-toast'
+import FoodFinder from './FoodFinder'
 
 const today = formatDate()
 
@@ -525,6 +526,7 @@ function AddSheet({ mealType, onClose }: { mealType: MealType; onClose: () => vo
 export default function FoodTracker() {
   const [addingMeal, setAddingMeal]     = useState<MealType|null>(null)
   const [expandedMeal, setExpandedMeal] = useState<MealType>('breakfast')
+  const [showFinder, setShowFinder]     = useState(false)
   const allFoodLogs  = useStore((s) => s.foodLogs)
   const removeFoodLog = useStore((s) => s.removeFoodLog)
 
@@ -540,7 +542,7 @@ export default function FoodTracker() {
       <div className="pt-safe px-5 pb-5" style={{ background:'#000', borderBottom:'1px solid #1a1a1a' }}>
         <h1 className="text-2xl font-black mb-1" style={{ color:'var(--text-1)' }}>Essen tracken</h1>
         <p className="text-sm mb-4" style={{ color:'var(--text-3)' }}>Heute: {Math.round(totalCals)} kcal</p>
-        <div className="flex gap-2">
+        <div className="flex gap-2 mb-3">
           {[{ l:'Eiweiß',c:'#3b82f6',v:Math.round(totalProt)},{l:'Kohlenhydrate',c:'#f59e0b',v:Math.round(totalCarbs)},{l:'Fett',c:'#ef4444',v:Math.round(totalFat)}].map((m)=>(
             <div key={m.l} className="flex-1 glass-sm py-2.5 text-center" style={{ minWidth:0 }}>
               <p className="text-base font-black" style={{ color:m.c }}>{m.v}g</p>
@@ -548,6 +550,13 @@ export default function FoodTracker() {
             </div>
           ))}
         </div>
+        <button
+          onClick={() => setShowFinder(true)}
+          className="w-full flex items-center justify-center gap-2 rounded-2xl font-bold text-sm"
+          style={{ height: 44, background: 'rgba(16,185,129,0.1)', border: '1px solid rgba(16,185,129,0.25)', color: '#10b981' }}
+        >
+          <span>📍</span> Food in der Nähe
+        </button>
       </div>
 
       <div className="px-4 py-4 space-y-3">
@@ -601,6 +610,7 @@ export default function FoodTracker() {
       </div>
 
       {addingMeal && <AddSheet mealType={addingMeal} onClose={()=>setAddingMeal(null)} />}
+      {showFinder && <FoodFinder onClose={() => setShowFinder(false)} />}
     </div>
   )
 }
