@@ -5,9 +5,6 @@ import 'leaflet/dist/leaflet.css'
 import { useStore } from '../store/useStore'
 import toast from 'react-hot-toast'
 
-// Google Places API key from Vite env (VITE_GOOGLE_PLACES_KEY in Vercel)
-const GOOGLE_KEY = import.meta.env.VITE_GOOGLE_PLACES_KEY as string | undefined
-
 // ── Types ─────────────────────────────────────────────────────────────────
 
 interface Restaurant {
@@ -19,11 +16,10 @@ interface Restaurant {
   address?: string
   openingHours?: string
   website?: string
-  healthScore: number    // 1–10
+  healthScore: number
   healthLabel: string
   healthTags: string[]
-  distance: number       // metres
-  rating?: number        // Google rating 1–5
+  distance: number
 }
 
 // ── Category filters ──────────────────────────────────────────────────────
@@ -45,45 +41,52 @@ function matchCat(r: Restaurant, cat: string): boolean {
   const n = r.name.toLowerCase()
   const t = r.healthTags.join(' ').toLowerCase()
   switch (cat) {
-    case 'salad':    return c.includes('salad')   || n.includes('salad')  || n.includes('bowl')   || t.includes('salat')
-    case 'sushi':    return c.includes('sushi')   || c.includes('japanese')
-    case 'smoothie': return c.includes('juice')   || n.includes('smoothie') || n.includes('juice') || n.includes('saft') || c.includes('juice bar')
-    case 'vegan':    return t.includes('vegan')   || c.includes('vegan')
-    case 'protein':  return r.healthScore >= 7    && !c.includes('pizza') && !c.includes('burger')
-    case 'wrap':     return c.includes('kebab')   || c.includes('wrap')   || c.includes('turkish') || n.includes('wrap') || n.includes('burrito')
-    case 'asian':    return c.includes('japanese')|| c.includes('thai')   || c.includes('chinese') || c.includes('vietnamese') || c.includes('sushi') || c.includes('asian')
+    case 'salad':    return c.includes('salad')    || n.includes('salad')   || n.includes('bowl')    || t.includes('salat')
+    case 'sushi':    return c.includes('sushi')    || c.includes('japanese')
+    case 'smoothie': return c.includes('juice')    || n.includes('smoothie')|| n.includes('juice')   || n.includes('saft')
+    case 'vegan':    return t.includes('vegan')    || c.includes('vegan')   || c.includes('vegetarian')
+    case 'protein':  return r.healthScore >= 7     && !c.includes('pizza')  && !c.includes('burger')
+    case 'wrap':     return c.includes('kebab')    || c.includes('turkish') || n.includes('wrap')    || n.includes('burrito')
+    case 'asian':    return c.includes('japanese') || c.includes('thai')    || c.includes('chinese') || c.includes('vietnamese') || c.includes('sushi')
     default:         return true
   }
 }
 
 // ── Health scoring ────────────────────────────────────────────────────────
 
-function scoreName(name: string, cuisine: string): { score: number; label: string; tags: string[] } {
-  const n = name.toLowerCase()
-  const c = cuisine.toLowerCase()
+function scoreRestaurant(name: string, tags: Record<string, string>): { score: number; label: string; tags: string[] } {
+  const c  = (tags.cuisine ?? tags.amenity ?? '').toLowerCase()
+  const n  = name.toLowerCase()
+  const isVegan = tags['diet:vegan'] === 'yes'        || c.includes('vegan')
+  const isVeg   = tags['diet:vegetarian'] === 'yes'   || c.includes('vegetarian')
+
   let score = 5
   const hTags: string[] = []
 
-  if      (c.includes('sushi') || c.includes('japanese'))               { score = 8; hTags.push('🐟 Sushi') }
-  else if (c.includes('thai'))                                           { score = 7; hTags.push('🍜 Thai') }
-  else if (c.includes('vietnamese'))                                     { score = 7; hTags.push('🍜 Vietnamesisch') }
-  else if (c.includes('mediterranean') || c.includes('greek'))          { score = 7; hTags.push('🫒 Mediterran') }
-  else if (c.includes('indian'))                                         { score = 6; hTags.push('🍛 Indisch') }
-  else if (c.includes('burger') || c.includes('american'))              { score = 3; hTags.push('🍔 Burger') }
-  else if (c.includes('pizza') || c.includes('italian'))                { score = 4; hTags.push('🍕 Pizza') }
-  else if (c.includes('kebab') || c.includes('turkish'))                { score = 5; hTags.push('🥙 Döner') }
-  else if (c.includes('sandwich'))                                       { score = 6; hTags.push('🥪 Sandwich') }
-  else if (c.includes('juice') || c.includes('juice bar') || c.includes('smoothie')) { score = 9; hTags.push('🥤 Juice Bar') }
-  else if (c.includes('vegan'))                                         { score = 9; hTags.push('🌱 Vegan') }
-  else if (c.includes('vegetarian'))                                    { score = 8; hTags.push('🌱 Veggie') }
-  else if (c.includes('salad'))                                         { score = 8; hTags.push('🥗 Salat') }
+  if      (c.includes('sushi') || c.includes('japanese'))        { score = 8; hTags.push('🐟 Sushi') }
+  else if (c.includes('thai'))                                    { score = 7; hTags.push('🍜 Thai') }
+  else if (c.includes('vietnamese'))                              { score = 7; hTags.push('🍜 Vietnamesisch') }
+  else if (c.includes('mediterranean') || c.includes('greek'))   { score = 7; hTags.push('🫒 Mediterran') }
+  else if (c.includes('indian'))                                  { score = 6; hTags.push('🍛 Indisch') }
+  else if (c.includes('burger') || c.includes('american'))       { score = 3; hTags.push('🍔 Burger') }
+  else if (c.includes('pizza'))                                   { score = 4; hTags.push('🍕 Pizza') }
+  else if (c.includes('kebab') || c.includes('turkish'))         { score = 5; hTags.push('🥙 Döner') }
+  else if (c.includes('sandwich'))                                { score = 6; hTags.push('🥪 Sandwich') }
+  else if (c.includes('juice_bar') || c.includes('juice bar'))   { score = 9; hTags.push('🥤 Juice Bar') }
+  else if (c.includes('salad'))                                   { score = 8; hTags.push('🥗 Salat') }
 
-  if (n.includes('salad') || n.includes('bowl') || n.includes('fresh'))     { score = Math.max(score, 8); if (!hTags.some(t => t.includes('Salat'))) hTags.push('🥗 Salat') }
-  if (n.includes('smoothie') || n.includes('juice') || n.includes('saft'))  { score = Math.max(score, 9); if (!hTags.some(t => t.includes('Smoothie') || t.includes('Juice'))) hTags.push('🥤 Smoothie') }
-  if (n.includes('fit') || n.includes('health') || n.includes('lean') || n.includes('clean')) { score = Math.max(score, 8); hTags.push('💪 Fitness') }
-  if (n.includes('wrap') || n.includes('burrito'))                          { score = Math.max(score, 6); hTags.push('🥙 Wrap') }
-  if (n.includes('vegan'))                                                   { score = Math.max(score, 9); if (!hTags.includes('🌱 Vegan')) hTags.push('🌱 Vegan') }
-  if (n.includes('mcdonalds') || n.includes("mcdonald's") || n.includes('burger king') || n.includes('kfc')) { score = 2 }
+  if (n.includes('salad') || n.includes('bowl') || n.includes('fresh'))
+    { score = Math.max(score, 8); if (!hTags.some(t => t.includes('Salat'))) hTags.push('🥗 Salat') }
+  if (n.includes('smoothie') || n.includes('juice') || n.includes('saft'))
+    { score = Math.max(score, 9); hTags.push('🥤 Smoothie') }
+  if (n.includes('fit') || n.includes('health') || n.includes('lean') || n.includes('clean'))
+    { score = Math.max(score, 8); hTags.push('💪 Fitness') }
+  if (n.includes('wrap') || n.includes('burrito'))
+    { score = Math.max(score, 6); hTags.push('🥙 Wrap') }
+  if (isVegan) { score = Math.max(score, 9); if (!hTags.includes('🌱 Vegan'))  hTags.push('🌱 Vegan') }
+  if (isVeg)   { score = Math.max(score, 7); if (!hTags.includes('🌱 Veggie')) hTags.push('🌱 Veggie') }
+  if (n.includes('mcdonalds') || n.includes("mcdonald's") || n.includes('burger king') || n.includes('kfc'))
+    { score = 2 }
 
   const label = score >= 8 ? '✅ Sehr gesund' : score >= 6 ? '👍 Gesund' : score >= 4 ? '⚠️ Mittel' : '❌ Ungesund'
   return { score, label, tags: [...new Set(hTags)] }
@@ -100,7 +103,7 @@ function haversineM(lat1: number, lon1: number, lat2: number, lon2: number) {
   const φ1 = lat1 * Math.PI / 180, φ2 = lat2 * Math.PI / 180
   const Δφ = (lat2 - lat1) * Math.PI / 180
   const Δλ = (lon2 - lon1) * Math.PI / 180
-  const a = Math.sin(Δφ / 2) ** 2 + Math.cos(φ1) * Math.cos(φ2) * Math.sin(Δλ / 2) ** 2
+  const a  = Math.sin(Δφ / 2) ** 2 + Math.cos(φ1) * Math.cos(φ2) * Math.sin(Δλ / 2) ** 2
   return Math.round(R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a)))
 }
 
@@ -108,119 +111,65 @@ function fmtDist(m: number) {
   return m < 1000 ? `${m} m` : `${(m / 1000).toFixed(1)} km`
 }
 
-// ── Google Places API (New) ───────────────────────────────────────────────
-// Uses the REST Places API v1 which supports browser CORS
-
-async function fetchNearbyGoogle(lat: number, lng: number, radius: number, key: string): Promise<Restaurant[]> {
-  const res = await fetch('https://places.googleapis.com/v1/places:searchNearby', {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'X-Goog-Api-Key': key,
-      'X-Goog-FieldMask': [
-        'places.id',
-        'places.displayName',
-        'places.formattedAddress',
-        'places.location',
-        'places.types',
-        'places.primaryType',
-        'places.primaryTypeDisplayName',
-        'places.regularOpeningHours',
-        'places.websiteUri',
-        'places.rating',
-        'places.userRatingCount',
-        'places.businessStatus',
-      ].join(','),
-    },
-    body: JSON.stringify({
-      includedTypes: ['restaurant', 'cafe', 'meal_takeaway', 'bakery', 'juice_bar', 'fast_food_restaurant'],
-      maxResultCount: 20,
-      locationRestriction: {
-        circle: {
-          center: { latitude: lat, longitude: lng },
-          radius: Math.min(radius, 50000),
-        },
-      },
-      rankPreference: 'DISTANCE',
-    }),
-  })
-
-  if (!res.ok) {
-    const err = await res.json().catch(() => ({}))
-    const msg = (err as any)?.error?.message ?? `Google Places API Fehler (${res.status})`
-    throw new Error(msg)
-  }
-
-  const data = await res.json()
-  if (!data.places || data.places.length === 0) return []
-
-  return (data.places as any[])
-    .filter(p => p.businessStatus !== 'CLOSED_PERMANENTLY')
-    .map(p => {
-      const name    = p.displayName?.text ?? 'Unbekannt'
-      const cuisine = (p.primaryTypeDisplayName?.text ?? p.primaryType ?? '').replace(/_/g, ' ')
-      const { score, label, tags } = scoreName(name, cuisine + ' ' + (p.types ?? []).join(' '))
-      return {
-        id: p.id,
-        name,
-        lat: p.location.latitude,
-        lng: p.location.longitude,
-        cuisine,
-        address: p.formattedAddress,
-        openingHours: p.regularOpeningHours?.weekdayDescriptions?.[0],
-        website: p.websiteUri,
-        healthScore: score,
-        healthLabel: label,
-        healthTags: tags,
-        distance: haversineM(lat, lng, p.location.latitude, p.location.longitude),
-        rating: p.rating,
-      } satisfies Restaurant
-    })
-    .sort((a, b) => a.distance - b.distance)
-}
-
-// ── Overpass API (fallback when no Google key) ────────────────────────────
-
-async function fetchNearbyOverpass(lat: number, lng: number, radius: number): Promise<Restaurant[]> {
-  const q = `[out:json][timeout:25];(node[amenity=restaurant](around:${radius},${lat},${lng});node[amenity=cafe](around:${radius},${lat},${lng});node[amenity=fast_food](around:${radius},${lat},${lng}););out body;`
-  const res = await fetch('https://overpass-api.de/api/interpreter', {
-    method: 'POST',
-    body: q,
-    signal: AbortSignal.timeout(28000),
-  })
-  if (!res.ok) throw new Error('Overpass API nicht erreichbar')
-  const data = await res.json()
-  return (data.elements as any[])
-    .filter(el => el.tags?.name)
-    .map(el => {
-      const cuisine = el.tags.cuisine ?? el.tags.amenity ?? ''
-      const { score, label, tags } = scoreName(el.tags.name, cuisine)
-      return {
-        id: String(el.id),
-        name: el.tags.name,
-        lat: el.lat,
-        lng: el.lon,
-        cuisine,
-        address: el.tags['addr:street']
-          ? `${el.tags['addr:street']} ${el.tags['addr:housenumber'] ?? ''}`.trim()
-          : undefined,
-        openingHours: el.tags.opening_hours,
-        website: el.tags.website ?? el.tags['contact:website'],
-        healthScore: score,
-        healthLabel: label,
-        healthTags: tags,
-        distance: haversineM(lat, lng, el.lat, el.lon),
-      } satisfies Restaurant
-    })
-    .sort((a, b) => a.distance - b.distance)
-    .slice(0, 50)
-}
+// ── Overpass API (OpenStreetMap, CORS-safe, no key needed) ────────────────
 
 async function fetchNearby(lat: number, lng: number, radius: number): Promise<Restaurant[]> {
-  if (GOOGLE_KEY?.trim()) {
-    return fetchNearbyGoogle(lat, lng, radius, GOOGLE_KEY)
+  // Single combined query — faster than multiple requests
+  const query = `
+[out:json][timeout:30];
+(
+  node["amenity"="restaurant"](around:${radius},${lat},${lng});
+  node["amenity"="cafe"](around:${radius},${lat},${lng});
+  node["amenity"="fast_food"](around:${radius},${lat},${lng});
+  node["amenity"="juice_bar"](around:${radius},${lat},${lng});
+  node["amenity"="food_court"](around:${radius},${lat},${lng});
+);
+out body;
+  `.trim()
+
+  const controller = new AbortController()
+  const timer = setTimeout(() => controller.abort(), 30000)
+
+  let res: Response
+  try {
+    res = await fetch('https://overpass-api.de/api/interpreter', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body: `data=${encodeURIComponent(query)}`,
+      signal: controller.signal,
+    })
+  } finally {
+    clearTimeout(timer)
   }
-  return fetchNearbyOverpass(lat, lng, radius)
+
+  if (!res.ok) throw new Error(`Overpass API Fehler (${res.status})`)
+
+  const data = await res.json()
+  const elements: any[] = data.elements ?? []
+
+  return elements
+    .filter(el => el.tags?.name)
+    .map(el => {
+      const { score, label, tags } = scoreRestaurant(el.tags.name, el.tags)
+      return {
+        id:           String(el.id),
+        name:         el.tags.name,
+        lat:          el.lat,
+        lng:          el.lon,
+        cuisine:      el.tags.cuisine ?? el.tags.amenity ?? '',
+        address:      el.tags['addr:street']
+                        ? `${el.tags['addr:street']} ${el.tags['addr:housenumber'] ?? ''}`.trim()
+                        : undefined,
+        openingHours: el.tags.opening_hours,
+        website:      el.tags.website ?? el.tags['contact:website'],
+        healthScore:  score,
+        healthLabel:  label,
+        healthTags:   tags,
+        distance:     haversineM(lat, lng, el.lat, el.lon),
+      } satisfies Restaurant
+    })
+    .sort((a, b) => a.distance - b.distance)
+    .slice(0, 60)
 }
 
 // ── AI tip (Claude) ───────────────────────────────────────────────────────
@@ -259,21 +208,21 @@ interface Props { onClose: () => void }
 
 export default function FoodFinder({ onClose }: Props) {
   const [restaurants, setRestaurants] = useState<Restaurant[]>([])
-  const [pos, setPos]         = useState<{ lat: number; lng: number } | null>(null)
-  const [loading, setLoading] = useState(true)
-  const [gpsErr, setGpsErr]   = useState<string | null>(null)
-  const [apiErr, setApiErr]   = useState<string | null>(null)
-  const [cat, setCat]         = useState('all')
-  const [radius, setRadius]   = useState(1000)
+  const [pos, setPos]           = useState<{ lat: number; lng: number } | null>(null)
+  const [loading, setLoading]   = useState(true)
+  const [gpsErr, setGpsErr]     = useState<string | null>(null)
+  const [apiErr, setApiErr]     = useState<string | null>(null)
+  const [cat, setCat]           = useState('all')
+  const [radius, setRadius]     = useState(1000)
   const [selected, setSelected] = useState<Restaurant | null>(null)
   const [listOpen, setListOpen] = useState(true)
-  const [aiTip, setAiTip]    = useState('')
+  const [aiTip, setAiTip]       = useState('')
   const [aiLoading, setAiLoading] = useState(false)
-  const [usingFallback, setUsingFallback] = useState(false)
 
-  const apiKey = useStore(s => s.apiKeys.anthropic)
-  const profile = useStore(s => s.profile)
-  const goalLabel = profile?.goal === 'lose' ? 'Gewicht verlieren' : profile?.goal === 'gain' ? 'Muskeln aufbauen' : 'Gewicht halten'
+  const apiKey   = useStore(s => s.apiKeys.anthropic)
+  const profile  = useStore(s => s.profile)
+  const goalLabel = profile?.goal === 'lose' ? 'Gewicht verlieren'
+    : profile?.goal === 'gain' ? 'Muskeln aufbauen' : 'Gewicht halten'
 
   const mapDivRef      = useRef<HTMLDivElement>(null)
   const mapRef         = useRef<L.Map | null>(null)
@@ -282,14 +231,14 @@ export default function FoodFinder({ onClose }: Props) {
 
   const filtered = useMemo(() => restaurants.filter(r => matchCat(r, cat)), [restaurants, cat])
 
-  // ── Step 1: GPS position ────────────────────────────────────────────────
+  // ── GPS ────────────────────────────────────────────────────────────────
   useEffect(() => {
     if (!navigator.geolocation) {
       setGpsErr('GPS ist auf diesem Gerät nicht verfügbar.')
       setLoading(false)
       return
     }
-    const id = navigator.geolocation.getCurrentPosition(
+    navigator.geolocation.getCurrentPosition(
       gp => setPos({ lat: gp.coords.latitude, lng: gp.coords.longitude }),
       err => {
         const msgs: Record<number, string> = {
@@ -302,36 +251,20 @@ export default function FoodFinder({ onClose }: Props) {
       },
       { enableHighAccuracy: true, timeout: 20000, maximumAge: 30000 },
     )
-    return () => void id
   }, [])
 
-  // ── Step 2: load restaurants ────────────────────────────────────────────
+  // ── Load restaurants when position or radius changes ───────────────────
   useEffect(() => {
     if (!pos) return
     setLoading(true)
     setApiErr(null)
     setAiTip('')
-    setUsingFallback(false)
-
     fetchNearby(pos.lat, pos.lng, radius)
-      .then(r => {
-        setRestaurants(r)
-        setUsingFallback(!GOOGLE_KEY?.trim())
-        setLoading(false)
-      })
-      .catch(err => {
-        const msg = err instanceof Error ? err.message : 'Unbekannter Fehler'
-        // If Google key is set but failed, show the actual error
-        if (GOOGLE_KEY?.trim()) {
-          setApiErr(`Google Places: ${msg}`)
-        } else {
-          setApiErr(`Restaurants konnten nicht geladen werden: ${msg}`)
-        }
-        setLoading(false)
-      })
+      .then(r  => { setRestaurants(r); setLoading(false) })
+      .catch(e  => { setApiErr(e instanceof Error ? e.message : 'Laden fehlgeschlagen'); setLoading(false) })
   }, [pos?.lat, pos?.lng, radius])
 
-  // ── Init Leaflet map ────────────────────────────────────────────────────
+  // ── Init Leaflet map ───────────────────────────────────────────────────
   useEffect(() => {
     if (!mapDivRef.current || mapRef.current) return
     const map = L.map(mapDivRef.current, { zoomControl: false, attributionControl: false })
@@ -344,7 +277,7 @@ export default function FoodFinder({ onClose }: Props) {
     return () => { map.remove(); mapRef.current = null; markerLayerRef.current = null }
   }, [])
 
-  // ── User position dot ───────────────────────────────────────────────────
+  // ── User position dot ──────────────────────────────────────────────────
   useEffect(() => {
     if (!mapRef.current || !pos) return
     const icon = L.divIcon({
@@ -359,35 +292,36 @@ export default function FoodFinder({ onClose }: Props) {
     }
   }, [pos])
 
-  // ── Restaurant pins ─────────────────────────────────────────────────────
+  // ── Restaurant pins ────────────────────────────────────────────────────
   useEffect(() => {
     const layer = markerLayerRef.current
     if (!mapRef.current || !layer) return
     layer.clearLayers()
     filtered.forEach(r => {
-      const color = scoreColor(r.healthScore)
-      const isSelected = r.id === selected?.id
+      const color      = scoreColor(r.healthScore)
+      const isSel      = r.id === selected?.id
+      const sz         = isSel ? 40 : 32
       const icon = L.divIcon({
         html: `
-          <div style="position:relative;width:${isSelected ? 40 : 32}px;height:${isSelected ? 40 : 32}px">
+          <div style="position:relative;width:${sz}px;height:${sz}px">
             <div style="
               width:100%;height:100%;
               background:${color};
-              border:${isSelected ? '3px' : '2px'} solid #fff;
+              border:${isSel ? '3px' : '2px'} solid #fff;
               border-radius:50% 50% 50% 0;
               transform:rotate(-45deg);
-              box-shadow:0 3px 12px rgba(0,0,0,0.5)${isSelected ? ',0 0 0 4px ' + color + '40' : ''};
+              box-shadow:0 3px 12px rgba(0,0,0,0.5)${isSel ? ',0 0 0 4px ' + color + '40' : ''};
               display:flex;align-items:center;justify-content:center;
             ">
-              <div style="transform:rotate(45deg);font-size:${isSelected ? 16 : 13}px">
+              <div style="transform:rotate(45deg);font-size:${isSel ? 16 : 13}px">
                 ${r.healthScore >= 8 ? '🥗' : r.healthScore >= 6 ? '🍽' : r.healthScore >= 4 ? '🍟' : '🍔'}
               </div>
             </div>
           </div>
         `,
-        iconSize: [isSelected ? 40 : 32, isSelected ? 40 : 32],
-        iconAnchor: [isSelected ? 20 : 16, isSelected ? 40 : 32],
-        className: '',
+        iconSize:   [sz, sz],
+        iconAnchor: [sz / 2, sz],
+        className:  '',
       })
       L.marker([r.lat, r.lng], { icon })
         .addTo(layer)
@@ -399,7 +333,7 @@ export default function FoodFinder({ onClose }: Props) {
     })
   }, [filtered, selected])
 
-  // ── AI recommendation ───────────────────────────────────────────────────
+  // ── AI recommendation ──────────────────────────────────────────────────
   const loadAiTip = async () => {
     if (!apiKey?.trim()) { toast.error('Kein Anthropic API Key (Profil → API Keys)'); return }
     if (restaurants.length === 0) return
@@ -411,25 +345,18 @@ export default function FoodFinder({ onClose }: Props) {
     finally { setAiLoading(false) }
   }
 
-  const openNav = (r: Restaurant) => {
+  const openNav = (r: Restaurant) =>
     window.open(`https://www.google.com/maps/dir/?api=1&destination=${r.lat},${r.lng}`, '_blank')
-  }
 
   const reload = () => {
     if (!pos) return
     setLoading(true)
     setApiErr(null)
     setAiTip('')
-    setUsingFallback(false)
     fetchNearby(pos.lat, pos.lng, radius)
-      .then(r => { setRestaurants(r); setUsingFallback(!GOOGLE_KEY?.trim()); setLoading(false) })
-      .catch(err => {
-        setApiErr(err instanceof Error ? err.message : 'Laden fehlgeschlagen')
-        setLoading(false)
-      })
+      .then(r  => { setRestaurants(r); setLoading(false) })
+      .catch(e  => { setApiErr(e instanceof Error ? e.message : 'Laden fehlgeschlagen'); setLoading(false) })
   }
-
-  const dataSource = GOOGLE_KEY?.trim() ? '📍 Google Places' : '📍 OpenStreetMap'
 
   return (
     <div className="fixed inset-0 z-[100] flex flex-col" style={{ background: '#000' }}>
@@ -448,9 +375,9 @@ export default function FoodFinder({ onClose }: Props) {
           <p style={{ fontSize: 11, color: '#555', marginTop: 1 }}>
             {loading
               ? (pos ? 'Lade Restaurants…' : 'GPS wird ermittelt…')
-              : gpsErr ? gpsErr
-              : apiErr ? 'Fehler beim Laden'
-              : `${filtered.length} von ${restaurants.length} · ${dataSource}`}
+              : gpsErr  ? gpsErr
+              : apiErr  ? 'Fehler beim Laden'
+              : `${filtered.length} von ${restaurants.length} Restaurants`}
           </p>
         </div>
         <div className="flex items-center gap-2">
@@ -484,7 +411,8 @@ export default function FoodFinder({ onClose }: Props) {
       </div>
 
       {/* ── Category filter bar ── */}
-      <div className="flex gap-2 px-4 py-2.5 overflow-x-auto" style={{ scrollbarWidth: 'none', background: '#0a0a0a', borderBottom: '1px solid #141414' }}>
+      <div className="flex gap-2 px-4 py-2.5 overflow-x-auto"
+        style={{ scrollbarWidth: 'none', background: '#0a0a0a', borderBottom: '1px solid #141414' }}>
         {CATS.map(c => (
           <button key={c.id} onClick={() => setCat(c.id)}
             className="flex-shrink-0 flex items-center gap-1.5 px-3 py-1.5 rounded-2xl text-xs font-bold glass-press"
@@ -497,9 +425,9 @@ export default function FoodFinder({ onClose }: Props) {
       </div>
 
       {/* ── Map ── */}
-      <div className="relative" style={{ flex: listOpen ? '0 0 42%' : '1', minHeight: 200, transition: 'flex 0.3s ease' }}>
+      <div className="relative"
+        style={{ flex: listOpen ? '0 0 42%' : '1', minHeight: 200, transition: 'flex 0.3s ease' }}>
 
-        {/* Loading overlay */}
         {loading && (
           <div className="absolute inset-0 z-10 flex flex-col items-center justify-center gap-3"
             style={{ background: 'rgba(0,0,0,0.85)', backdropFilter: 'blur(4px)' }}>
@@ -510,7 +438,6 @@ export default function FoodFinder({ onClose }: Props) {
           </div>
         )}
 
-        {/* GPS or API error full overlay */}
         {(gpsErr || apiErr) && !loading && (
           <div className="absolute inset-0 z-10 flex flex-col items-center justify-center gap-4 px-8"
             style={{ background: '#080808' }}>
@@ -518,28 +445,20 @@ export default function FoodFinder({ onClose }: Props) {
             <p className="text-center font-bold text-sm" style={{ color: '#ef4444', lineHeight: 1.6 }}>
               {gpsErr ?? apiErr}
             </p>
-            {!gpsErr && (
+            {gpsErr && (
+              <p className="text-center text-xs" style={{ color: '#555', lineHeight: 1.6 }}>
+                Bitte Standort-Berechtigung in den Browser-Einstellungen erlauben und neu laden.
+              </p>
+            )}
+            {apiErr && (
               <button onClick={reload} className="btn-gold px-6 py-3 text-sm rounded-2xl">
                 Erneut versuchen
               </button>
-            )}
-            {gpsErr && (
-              <p className="text-center text-xs" style={{ color: '#555', lineHeight: 1.6 }}>
-                Bitte erlaube den Standortzugriff in den Browser-Einstellungen und lade die Seite neu.
-              </p>
             )}
           </div>
         )}
 
         <div ref={mapDivRef} style={{ width: '100%', height: '100%' }} />
-
-        {/* Fallback hint badge */}
-        {usingFallback && !loading && restaurants.length > 0 && (
-          <div className="absolute top-2 left-3 z-10 px-2.5 py-1 rounded-xl text-xs font-bold"
-            style={{ background: 'rgba(0,0,0,0.7)', border: '1px solid rgba(245,158,11,0.3)', color: '#f59e0b', backdropFilter: 'blur(6px)' }}>
-            OpenStreetMap · <span style={{ color: '#555' }}>Google Key für mehr Daten</span>
-          </div>
-        )}
 
         {/* Zoom controls */}
         <div className="absolute right-3 bottom-3 flex flex-col gap-1.5 z-10">
@@ -554,7 +473,8 @@ export default function FoodFinder({ onClose }: Props) {
             </button>
           ))}
           {pos && (
-            <button onClick={() => mapRef.current?.setView([pos.lat, pos.lng], 15, { animate: true })}
+            <button
+              onClick={() => mapRef.current?.setView([pos.lat, pos.lng], 15, { animate: true })}
               className="w-9 h-9 rounded-xl flex items-center justify-center"
               style={{ background: 'rgba(59,130,246,0.8)', border: '1px solid rgba(59,130,246,0.4)', backdropFilter: 'blur(8px)', fontSize: 18 }}>
               🎯
@@ -587,10 +507,13 @@ export default function FoodFinder({ onClose }: Props) {
         </div>
       )}
 
-      {/* ── Bottom restaurant list ── */}
-      <div style={{ background: '#0a0a0a', borderTop: '1px solid #141414', display: 'flex', flexDirection: 'column', flex: listOpen ? '1' : '0 0 48px', minHeight: 48, overflow: 'hidden', transition: 'flex 0.3s ease' }}>
-
-        {/* Sheet handle */}
+      {/* ── Bottom list ── */}
+      <div style={{
+        background: '#0a0a0a', borderTop: '1px solid #141414',
+        display: 'flex', flexDirection: 'column',
+        flex: listOpen ? '1' : '0 0 48px', minHeight: 48,
+        overflow: 'hidden', transition: 'flex 0.3s ease',
+      }}>
         <button className="flex items-center justify-between px-4 py-3 w-full flex-shrink-0"
           onClick={() => setListOpen(v => !v)}>
           <div className="flex items-center gap-2">
@@ -611,10 +534,10 @@ export default function FoodFinder({ onClose }: Props) {
             : <ChevronUp   size={18} style={{ color: '#555' }} />}
         </button>
 
-        {/* Scrollable list */}
-        <div className="overflow-y-auto flex-1" style={{ paddingBottom: 'max(env(safe-area-inset-bottom), 16px)' }}>
+        <div className="overflow-y-auto flex-1"
+          style={{ paddingBottom: 'max(env(safe-area-inset-bottom), 16px)' }}>
 
-          {/* Selected restaurant detail */}
+          {/* Selected detail card */}
           {selected && listOpen && (
             <div className="mx-4 mb-3 glass rounded-2xl overflow-hidden"
               style={{ background: 'rgba(16,185,129,0.04)', border: `1px solid ${scoreColor(selected.healthScore)}30` }}>
@@ -622,17 +545,13 @@ export default function FoodFinder({ onClose }: Props) {
                 <div className="w-12 h-12 rounded-2xl flex flex-col items-center justify-center flex-shrink-0"
                   style={{ background: `${scoreColor(selected.healthScore)}18`, border: `1.5px solid ${scoreColor(selected.healthScore)}40` }}>
                   <p style={{ fontSize: 16, fontWeight: 900, color: scoreColor(selected.healthScore), lineHeight: 1 }}>{selected.healthScore}</p>
-                  <p style={{ fontSize: 8, color: scoreColor(selected.healthScore), fontWeight: 700 }}>/10</p>
+                  <p style={{ fontSize: 8,  fontWeight: 700,  color: scoreColor(selected.healthScore) }}>/10</p>
                 </div>
                 <div className="flex-1" style={{ minWidth: 0 }}>
                   <p className="font-black text-base truncate" style={{ color: '#fff' }}>{selected.name}</p>
                   <p className="text-xs mt-0.5" style={{ color: scoreColor(selected.healthScore) }}>{selected.healthLabel}</p>
-                  {selected.rating && (
-                    <p className="text-xs mt-0.5" style={{ color: '#888' }}>
-                      ⭐ {selected.rating.toFixed(1)} · {selected.cuisine}
-                    </p>
-                  )}
-                  {selected.address && <p className="text-xs mt-1" style={{ color: '#555' }}>{selected.address}</p>}
+                  {selected.cuisine && <p className="text-xs mt-0.5" style={{ color: '#666' }}>{selected.cuisine}</p>}
+                  {selected.address     && <p className="text-xs mt-1" style={{ color: '#555' }}>{selected.address}</p>}
                   {selected.openingHours && (
                     <p className="text-xs mt-1" style={{ color: '#555' }}>🕐 {selected.openingHours.split(';')[0]}</p>
                   )}
@@ -670,31 +589,28 @@ export default function FoodFinder({ onClose }: Props) {
             </div>
           )}
 
-          {/* List */}
+          {/* Restaurant list */}
           {filtered.map((r, i) => (
             <div key={r.id}
               className="flex items-center gap-3 px-4 py-3 cursor-pointer active:opacity-70"
               style={{
-                borderTop: i > 0 ? '1px solid #141414' : 'none',
+                borderTop:  i > 0 ? '1px solid #141414' : 'none',
                 background: selected?.id === r.id ? 'rgba(16,185,129,0.04)' : 'transparent',
               }}
               onClick={() => {
                 setSelected(r === selected ? null : r)
                 if (r !== selected) mapRef.current?.setView([r.lat, r.lng], 17, { animate: true })
               }}>
-
               <div className="w-11 h-11 rounded-2xl flex flex-col items-center justify-center flex-shrink-0"
                 style={{ background: `${scoreColor(r.healthScore)}18`, border: `1.5px solid ${scoreColor(r.healthScore)}35` }}>
                 <p style={{ fontSize: 15, fontWeight: 900, color: scoreColor(r.healthScore), lineHeight: 1 }}>{r.healthScore}</p>
-                <p style={{ fontSize: 7, color: scoreColor(r.healthScore), fontWeight: 700 }}>/10</p>
+                <p style={{ fontSize: 7, fontWeight: 700, color: scoreColor(r.healthScore) }}>/10</p>
               </div>
-
               <div className="flex-1" style={{ minWidth: 0 }}>
                 <p className="font-black text-sm truncate" style={{ color: '#fff' }}>{r.name}</p>
                 <p className="text-xs mt-0.5 truncate" style={{ color: '#555' }}>
                   {r.healthLabel} · <span style={{ color: '#777' }}>{fmtDist(r.distance)}</span>
-                  {r.rating && <> · ⭐ {r.rating.toFixed(1)}</>}
-                  {r.cuisine && !r.rating && <> · {r.cuisine}</>}
+                  {r.cuisine && <> · {r.cuisine}</>}
                 </p>
                 {r.healthTags.length > 0 && (
                   <p className="text-xs mt-0.5 truncate" style={{ color: '#444' }}>
@@ -702,7 +618,6 @@ export default function FoodFinder({ onClose }: Props) {
                   </p>
                 )}
               </div>
-
               <button
                 onClick={e => { e.stopPropagation(); openNav(r) }}
                 className="w-9 h-9 rounded-2xl flex items-center justify-center flex-shrink-0"
@@ -716,13 +631,11 @@ export default function FoodFinder({ onClose }: Props) {
             <div className="py-10 text-center px-6">
               <p style={{ fontSize: 36, marginBottom: 8 }}>🔍</p>
               <p style={{ color: '#555', fontSize: 14 }}>
-                Keine Restaurants für diese Kategorie im {radius < 1000 ? `${radius}m` : `${radius / 1000}km`} Umkreis gefunden.
+                Keine Restaurants im {radius < 1000 ? `${radius}m` : `${radius / 1000}km`} Umkreis gefunden.
               </p>
-              {!GOOGLE_KEY?.trim() && (
-                <p className="mt-2" style={{ color: '#444', fontSize: 12 }}>
-                  Tipp: Mit Google Places API findest du mehr Restaurants.
-                </p>
-              )}
+              <p className="mt-2" style={{ color: '#444', fontSize: 12 }}>
+                Versuche einen größeren Umkreis.
+              </p>
             </div>
           )}
         </div>
