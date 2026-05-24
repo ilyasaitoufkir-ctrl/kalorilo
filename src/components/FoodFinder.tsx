@@ -54,49 +54,48 @@ function matchCat(r: Restaurant, cat: string): boolean {
 
 // ── Health scoring ────────────────────────────────────────────────────────
 
-function scoreRestaurant(name: string, tags: Record<string, string>): { score: number; label: string; tags: string[] } {
-  const c  = (tags.cuisine ?? tags.amenity ?? '').toLowerCase()
-  const n  = name.toLowerCase()
-  const isVegan = tags['diet:vegan'] === 'yes'        || c.includes('vegan')
-  const isVeg   = tags['diet:vegetarian'] === 'yes'   || c.includes('vegetarian')
+function scoreRestaurant(name: string, tags: Record<string, string>): { score: number; label: string; htags: string[] } {
+  const c      = (tags.cuisine ?? tags.amenity ?? '').toLowerCase()
+  const n      = name.toLowerCase()
+  const isVegan = tags['diet:vegan'] === 'yes'       || c.includes('vegan')
+  const isVeg   = tags['diet:vegetarian'] === 'yes'  || c.includes('vegetarian')
 
   let score = 5
-  const hTags: string[] = []
+  const htags: string[] = []
 
-  if      (c.includes('sushi') || c.includes('japanese'))        { score = 8; hTags.push('🐟 Sushi') }
-  else if (c.includes('thai'))                                    { score = 7; hTags.push('🍜 Thai') }
-  else if (c.includes('vietnamese'))                              { score = 7; hTags.push('🍜 Vietnamesisch') }
-  else if (c.includes('mediterranean') || c.includes('greek'))   { score = 7; hTags.push('🫒 Mediterran') }
-  else if (c.includes('indian'))                                  { score = 6; hTags.push('🍛 Indisch') }
-  else if (c.includes('burger') || c.includes('american'))       { score = 3; hTags.push('🍔 Burger') }
-  else if (c.includes('pizza'))                                   { score = 4; hTags.push('🍕 Pizza') }
-  else if (c.includes('kebab') || c.includes('turkish'))         { score = 5; hTags.push('🥙 Döner') }
-  else if (c.includes('sandwich'))                                { score = 6; hTags.push('🥪 Sandwich') }
-  else if (c.includes('juice_bar') || c.includes('juice bar'))   { score = 9; hTags.push('🥤 Juice Bar') }
-  else if (c.includes('salad'))                                   { score = 8; hTags.push('🥗 Salat') }
+  if      (c.includes('sushi') || c.includes('japanese'))       { score = 8; htags.push('🐟 Sushi') }
+  else if (c.includes('thai'))                                   { score = 7; htags.push('🍜 Thai') }
+  else if (c.includes('vietnamese'))                             { score = 7; htags.push('🍜 Vietnamesisch') }
+  else if (c.includes('mediterranean') || c.includes('greek'))  { score = 7; htags.push('🫒 Mediterran') }
+  else if (c.includes('indian'))                                 { score = 6; htags.push('🍛 Indisch') }
+  else if (c.includes('burger') || c.includes('american'))      { score = 3; htags.push('🍔 Burger') }
+  else if (c.includes('pizza'))                                  { score = 4; htags.push('🍕 Pizza') }
+  else if (c.includes('kebab') || c.includes('turkish'))        { score = 5; htags.push('🥙 Döner') }
+  else if (c.includes('sandwich'))                               { score = 6; htags.push('🥪 Sandwich') }
+  else if (c.includes('juice_bar') || c.includes('juice bar'))  { score = 9; htags.push('🥤 Juice Bar') }
+  else if (c.includes('salad'))                                  { score = 8; htags.push('🥗 Salat') }
 
   if (n.includes('salad') || n.includes('bowl') || n.includes('fresh'))
-    { score = Math.max(score, 8); if (!hTags.some(t => t.includes('Salat'))) hTags.push('🥗 Salat') }
+    { score = Math.max(score, 8); if (!htags.some(t => t.includes('Salat'))) htags.push('🥗 Salat') }
   if (n.includes('smoothie') || n.includes('juice') || n.includes('saft'))
-    { score = Math.max(score, 9); hTags.push('🥤 Smoothie') }
+    { score = Math.max(score, 9); htags.push('🥤 Smoothie') }
   if (n.includes('fit') || n.includes('health') || n.includes('lean') || n.includes('clean'))
-    { score = Math.max(score, 8); hTags.push('💪 Fitness') }
+    { score = Math.max(score, 8); htags.push('💪 Fitness') }
   if (n.includes('wrap') || n.includes('burrito'))
-    { score = Math.max(score, 6); hTags.push('🥙 Wrap') }
-  if (isVegan) { score = Math.max(score, 9); if (!hTags.includes('🌱 Vegan'))  hTags.push('🌱 Vegan') }
-  if (isVeg)   { score = Math.max(score, 7); if (!hTags.includes('🌱 Veggie')) hTags.push('🌱 Veggie') }
-  if (n.includes('mcdonalds') || n.includes("mcdonald's") || n.includes('burger king') || n.includes('kfc'))
-    { score = 2 }
+    { score = Math.max(score, 6); htags.push('🥙 Wrap') }
+  if (isVegan) { score = Math.max(score, 9); if (!htags.includes('🌱 Vegan'))  htags.push('🌱 Vegan') }
+  if (isVeg)   { score = Math.max(score, 7); if (!htags.includes('🌱 Veggie')) htags.push('🌱 Veggie') }
+  if (n.includes('mcdonalds') || n.includes("mcdonald's") || n.includes('burger king') || n.includes('kfc')) { score = 2 }
 
   const label = score >= 8 ? '✅ Sehr gesund' : score >= 6 ? '👍 Gesund' : score >= 4 ? '⚠️ Mittel' : '❌ Ungesund'
-  return { score, label, tags: [...new Set(hTags)] }
+  return { score, label, htags: [...new Set(htags)] }
 }
 
 function scoreColor(s: number) {
   return s >= 8 ? '#10b981' : s >= 6 ? '#f59e0b' : s >= 4 ? '#f97316' : '#ef4444'
 }
 
-// ── Distance helpers ──────────────────────────────────────────────────────
+// ── Haversine ─────────────────────────────────────────────────────────────
 
 function haversineM(lat1: number, lon1: number, lat2: number, lon2: number) {
   const R = 6371000
@@ -111,46 +110,28 @@ function fmtDist(m: number) {
   return m < 1000 ? `${m} m` : `${(m / 1000).toFixed(1)} km`
 }
 
-// ── Overpass API (OpenStreetMap, CORS-safe, no key needed) ────────────────
+// ── Overpass GET (kein CORS-Problem) ─────────────────────────────────────
 
-async function fetchNearby(lat: number, lng: number, radius: number): Promise<Restaurant[]> {
-  // Single combined query — faster than multiple requests
-  const query = `
-[out:json][timeout:30];
-(
-  node["amenity"="restaurant"](around:${radius},${lat},${lng});
-  node["amenity"="cafe"](around:${radius},${lat},${lng});
-  node["amenity"="fast_food"](around:${radius},${lat},${lng});
-  node["amenity"="juice_bar"](around:${radius},${lat},${lng});
-  node["amenity"="food_court"](around:${radius},${lat},${lng});
-);
-out body;
-  `.trim()
+async function fetchNearby(lat: number, lng: number, radius: number): Promise<{ restaurants: Restaurant[]; rawCount: number }> {
+  const query = `[out:json][timeout:25];(node["amenity"="restaurant"](around:${radius},${lat},${lng});node["amenity"="cafe"](around:${radius},${lat},${lng});node["amenity"="fast_food"](around:${radius},${lat},${lng}););out body;`
+  const url   = `https://overpass-api.de/api/interpreter?data=${encodeURIComponent(query)}`
 
-  const controller = new AbortController()
-  const timer = setTimeout(() => controller.abort(), 30000)
+  console.log('[FoodFinder] Overpass GET →', url)
 
-  let res: Response
-  try {
-    res = await fetch('https://overpass-api.de/api/interpreter', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-      body: `data=${encodeURIComponent(query)}`,
-      signal: controller.signal,
-    })
-  } finally {
-    clearTimeout(timer)
-  }
+  const res = await fetch(url)
+  console.log('[FoodFinder] Overpass status:', res.status)
 
-  if (!res.ok) throw new Error(`Overpass API Fehler (${res.status})`)
+  if (!res.ok) throw new Error(`Overpass HTTP ${res.status}`)
 
   const data = await res.json()
-  const elements: any[] = data.elements ?? []
+  console.log('[FoodFinder] Overpass elements:', data.elements?.length ?? 0)
 
-  return elements
+  const rawCount = (data.elements ?? []).length
+
+  const restaurants: Restaurant[] = (data.elements as any[])
     .filter(el => el.tags?.name)
     .map(el => {
-      const { score, label, tags } = scoreRestaurant(el.tags.name, el.tags)
+      const { score, label, htags } = scoreRestaurant(el.tags.name, el.tags)
       return {
         id:           String(el.id),
         name:         el.tags.name,
@@ -164,20 +145,21 @@ out body;
         website:      el.tags.website ?? el.tags['contact:website'],
         healthScore:  score,
         healthLabel:  label,
-        healthTags:   tags,
+        healthTags:   htags,
         distance:     haversineM(lat, lng, el.lat, el.lon),
       } satisfies Restaurant
     })
     .sort((a, b) => a.distance - b.distance)
     .slice(0, 60)
+
+  return { restaurants, rawCount }
 }
 
 // ── AI tip (Claude) ───────────────────────────────────────────────────────
 
 async function getAiTip(restaurants: Restaurant[], goal: string, apiKey: string): Promise<string> {
-  const top5 = restaurants
-    .slice(0, 5)
-    .map(r => `${r.name} (${r.cuisine || 'Restaurant'}, Gesund-Score: ${r.healthScore}/10)`)
+  const top5 = restaurants.slice(0, 5)
+    .map(r => `${r.name} (${r.cuisine || 'Restaurant'}, Score: ${r.healthScore}/10)`)
     .join(', ')
   const res = await fetch('https://api.anthropic.com/v1/messages', {
     method: 'POST',
@@ -192,7 +174,7 @@ async function getAiTip(restaurants: Restaurant[], goal: string, apiKey: string)
       max_tokens: 180,
       messages: [{
         role: 'user',
-        content: `Mein Ernährungsziel: ${goal}. Umliegende Restaurants: ${top5}. Gib eine persönliche Empfehlung in 2 Sätzen auf Deutsch. Nenne konkrete Restaurantnamen. Nur den Text, ohne Einleitung.`,
+        content: `Mein Ziel: ${goal}. Restaurants: ${top5}. Gib eine Empfehlung in 2 Sätzen auf Deutsch. Nur Text, keine Einleitung.`,
       }],
     }),
   })
@@ -207,17 +189,25 @@ const RADII = [500, 1000, 2000, 5000]
 interface Props { onClose: () => void }
 
 export default function FoodFinder({ onClose }: Props) {
+  // Core data
   const [restaurants, setRestaurants] = useState<Restaurant[]>([])
   const [pos, setPos]           = useState<{ lat: number; lng: number } | null>(null)
   const [loading, setLoading]   = useState(true)
+
+  // Debug state — visible in the app
+  const [debugLog, setDebugLog] = useState<string[]>([])
   const [gpsErr, setGpsErr]     = useState<string | null>(null)
   const [apiErr, setApiErr]     = useState<string | null>(null)
+  const [rawCount, setRawCount] = useState<number | null>(null)
+
+  // UI
   const [cat, setCat]           = useState('all')
   const [radius, setRadius]     = useState(1000)
   const [selected, setSelected] = useState<Restaurant | null>(null)
   const [listOpen, setListOpen] = useState(true)
   const [aiTip, setAiTip]       = useState('')
   const [aiLoading, setAiLoading] = useState(false)
+  const [showDebug, setShowDebug] = useState(false)
 
   const apiKey   = useStore(s => s.apiKeys.anthropic)
   const profile  = useStore(s => s.profile)
@@ -231,40 +221,68 @@ export default function FoodFinder({ onClose }: Props) {
 
   const filtered = useMemo(() => restaurants.filter(r => matchCat(r, cat)), [restaurants, cat])
 
+  const addLog = (msg: string) => {
+    console.log('[FoodFinder]', msg)
+    setDebugLog(prev => [...prev.slice(-9), msg])
+  }
+
   // ── GPS ────────────────────────────────────────────────────────────────
   useEffect(() => {
+    addLog('GPS anfordern…')
     if (!navigator.geolocation) {
-      setGpsErr('GPS ist auf diesem Gerät nicht verfügbar.')
+      const msg = 'navigator.geolocation nicht verfügbar'
+      addLog('FEHLER: ' + msg)
+      setGpsErr(msg)
       setLoading(false)
       return
     }
     navigator.geolocation.getCurrentPosition(
-      gp => setPos({ lat: gp.coords.latitude, lng: gp.coords.longitude }),
+      gp => {
+        const { latitude: lat, longitude: lng, accuracy } = gp.coords
+        addLog(`GPS OK: ${lat.toFixed(5)}, ${lng.toFixed(5)} (±${Math.round(accuracy)}m)`)
+        setPos({ lat, lng })
+      },
       err => {
         const msgs: Record<number, string> = {
-          1: 'GPS-Zugriff verweigert – bitte Standort-Berechtigung erteilen.',
-          2: 'GPS-Signal nicht verfügbar. Bitte ins Freie gehen.',
-          3: 'GPS-Zeitüberschreitung. Bitte ins Freie gehen und erneut versuchen.',
+          1: 'Zugriff verweigert – Standort-Berechtigung erteilen.',
+          2: 'Position nicht verfügbar.',
+          3: 'Zeitüberschreitung – ins Freie gehen.',
         }
-        setGpsErr(msgs[err.code] ?? `GPS-Fehler (Code ${err.code})`)
+        const msg = msgs[err.code] ?? `GPS Fehler Code ${err.code}`
+        addLog('GPS FEHLER: ' + msg)
+        setGpsErr(msg)
         setLoading(false)
       },
       { enableHighAccuracy: true, timeout: 20000, maximumAge: 30000 },
     )
   }, [])
 
-  // ── Load restaurants when position or radius changes ───────────────────
+  // ── Load restaurants ───────────────────────────────────────────────────
   useEffect(() => {
     if (!pos) return
     setLoading(true)
     setApiErr(null)
     setAiTip('')
+    setRawCount(null)
+    addLog(`Overpass anfragen: ${pos.lat.toFixed(5)}, ${pos.lng.toFixed(5)}, r=${radius}m`)
+
     fetchNearby(pos.lat, pos.lng, radius)
-      .then(r  => { setRestaurants(r); setLoading(false) })
-      .catch(e  => { setApiErr(e instanceof Error ? e.message : 'Laden fehlgeschlagen'); setLoading(false) })
+      .then(({ restaurants: r, rawCount: rc }) => {
+        addLog(`Overpass OK: ${rc} Elemente → ${r.length} mit Namen`)
+        setRawCount(rc)
+        setRestaurants(r)
+        setLoading(false)
+        if (r.length === 0) addLog('Keine Restaurants mit Namen gefunden!')
+      })
+      .catch(e => {
+        const msg = e instanceof Error ? e.message : String(e)
+        addLog('API FEHLER: ' + msg)
+        setApiErr(msg)
+        setLoading(false)
+      })
   }, [pos?.lat, pos?.lng, radius])
 
-  // ── Init Leaflet map ───────────────────────────────────────────────────
+  // ── Leaflet map ────────────────────────────────────────────────────────
   useEffect(() => {
     if (!mapDivRef.current || mapRef.current) return
     const map = L.map(mapDivRef.current, { zoomControl: false, attributionControl: false })
@@ -277,7 +295,7 @@ export default function FoodFinder({ onClose }: Props) {
     return () => { map.remove(); mapRef.current = null; markerLayerRef.current = null }
   }, [])
 
-  // ── User position dot ──────────────────────────────────────────────────
+  // ── User dot ───────────────────────────────────────────────────────────
   useEffect(() => {
     if (!mapRef.current || !pos) return
     const icon = L.divIcon({
@@ -298,42 +316,33 @@ export default function FoodFinder({ onClose }: Props) {
     if (!mapRef.current || !layer) return
     layer.clearLayers()
     filtered.forEach(r => {
-      const color      = scoreColor(r.healthScore)
-      const isSel      = r.id === selected?.id
-      const sz         = isSel ? 40 : 32
-      const icon = L.divIcon({
+      const color = scoreColor(r.healthScore)
+      const isSel = r.id === selected?.id
+      const sz    = isSel ? 40 : 32
+      const icon  = L.divIcon({
         html: `
           <div style="position:relative;width:${sz}px;height:${sz}px">
             <div style="
-              width:100%;height:100%;
-              background:${color};
+              width:100%;height:100%;background:${color};
               border:${isSel ? '3px' : '2px'} solid #fff;
-              border-radius:50% 50% 50% 0;
-              transform:rotate(-45deg);
+              border-radius:50% 50% 50% 0;transform:rotate(-45deg);
               box-shadow:0 3px 12px rgba(0,0,0,0.5)${isSel ? ',0 0 0 4px ' + color + '40' : ''};
-              display:flex;align-items:center;justify-content:center;
-            ">
+              display:flex;align-items:center;justify-content:center;">
               <div style="transform:rotate(45deg);font-size:${isSel ? 16 : 13}px">
                 ${r.healthScore >= 8 ? '🥗' : r.healthScore >= 6 ? '🍽' : r.healthScore >= 4 ? '🍟' : '🍔'}
               </div>
             </div>
-          </div>
-        `,
-        iconSize:   [sz, sz],
-        iconAnchor: [sz / 2, sz],
-        className:  '',
+          </div>`,
+        iconSize: [sz, sz], iconAnchor: [sz / 2, sz], className: '',
       })
-      L.marker([r.lat, r.lng], { icon })
-        .addTo(layer)
-        .on('click', () => {
-          setSelected(r)
-          setListOpen(true)
-          mapRef.current?.setView([r.lat, r.lng], 17, { animate: true, duration: 0.5 })
-        })
+      L.marker([r.lat, r.lng], { icon }).addTo(layer).on('click', () => {
+        setSelected(r); setListOpen(true)
+        mapRef.current?.setView([r.lat, r.lng], 17, { animate: true, duration: 0.5 })
+      })
     })
   }, [filtered, selected])
 
-  // ── AI recommendation ──────────────────────────────────────────────────
+  // ── AI tip ─────────────────────────────────────────────────────────────
   const loadAiTip = async () => {
     if (!apiKey?.trim()) { toast.error('Kein Anthropic API Key (Profil → API Keys)'); return }
     if (restaurants.length === 0) return
@@ -350,12 +359,14 @@ export default function FoodFinder({ onClose }: Props) {
 
   const reload = () => {
     if (!pos) return
-    setLoading(true)
-    setApiErr(null)
-    setAiTip('')
+    setLoading(true); setApiErr(null); setAiTip(''); setRawCount(null)
+    addLog(`Reload: r=${radius}m`)
     fetchNearby(pos.lat, pos.lng, radius)
-      .then(r  => { setRestaurants(r); setLoading(false) })
-      .catch(e  => { setApiErr(e instanceof Error ? e.message : 'Laden fehlgeschlagen'); setLoading(false) })
+      .then(({ restaurants: r, rawCount: rc }) => {
+        addLog(`Reload OK: ${rc} → ${r.length}`)
+        setRawCount(rc); setRestaurants(r); setLoading(false)
+      })
+      .catch(e => { setApiErr(e instanceof Error ? e.message : String(e)); setLoading(false) })
   }
 
   return (
@@ -363,24 +374,27 @@ export default function FoodFinder({ onClose }: Props) {
 
       {/* ── Header ── */}
       <div className="flex items-center justify-between px-4"
-        style={{
-          paddingTop: 'max(env(safe-area-inset-top), 14px)',
-          paddingBottom: 10,
-          background: 'rgba(0,0,0,0.94)',
-          backdropFilter: 'blur(12px)',
-          borderBottom: '1px solid #1a1a1a',
-        }}>
+        style={{ paddingTop: 'max(env(safe-area-inset-top), 14px)', paddingBottom: 10,
+          background: 'rgba(0,0,0,0.94)', backdropFilter: 'blur(12px)', borderBottom: '1px solid #1a1a1a' }}>
         <div>
           <h2 className="font-black text-lg" style={{ color: '#fff' }}>📍 Food in der Nähe</h2>
           <p style={{ fontSize: 11, color: '#555', marginTop: 1 }}>
             {loading
               ? (pos ? 'Lade Restaurants…' : 'GPS wird ermittelt…')
-              : gpsErr  ? gpsErr
-              : apiErr  ? 'Fehler beim Laden'
+              : gpsErr  ? '❌ ' + gpsErr
+              : apiErr  ? '❌ ' + apiErr
               : `${filtered.length} von ${restaurants.length} Restaurants`}
           </p>
         </div>
         <div className="flex items-center gap-2">
+          {/* Debug toggle */}
+          <button onClick={() => setShowDebug(v => !v)}
+            className="w-9 h-9 rounded-full flex items-center justify-center text-xs font-black"
+            style={{ background: showDebug ? 'rgba(245,158,11,0.2)' : 'rgba(255,255,255,0.06)',
+              border: showDebug ? '1px solid rgba(245,158,11,0.4)' : '1px solid rgba(255,255,255,0.08)',
+              color: showDebug ? '#f59e0b' : '#666' }}>
+            🔍
+          </button>
           {!loading && pos && !gpsErr && (
             <button onClick={reload}
               className="w-9 h-9 rounded-full flex items-center justify-center"
@@ -396,6 +410,31 @@ export default function FoodFinder({ onClose }: Props) {
         </div>
       </div>
 
+      {/* ── Debug panel ── */}
+      {showDebug && (
+        <div className="px-4 py-3" style={{ background: '#0d0d0d', borderBottom: '1px solid #1a1a1a' }}>
+          <p className="text-xs font-black mb-2" style={{ color: '#f59e0b' }}>🔍 Debug</p>
+          <div className="space-y-0.5">
+            <p className="text-xs font-mono" style={{ color: pos ? '#10b981' : '#ef4444' }}>
+              GPS: {pos ? `${pos.lat.toFixed(5)}, ${pos.lng.toFixed(5)}` : gpsErr ?? 'warte…'}
+            </p>
+            {rawCount !== null && (
+              <p className="text-xs font-mono" style={{ color: '#60a5fa' }}>
+                Overpass: {rawCount} Elemente → {restaurants.length} Restaurants
+              </p>
+            )}
+            {apiErr && (
+              <p className="text-xs font-mono" style={{ color: '#ef4444' }}>API: {apiErr}</p>
+            )}
+            <div className="mt-2 space-y-0.5">
+              {debugLog.map((l, i) => (
+                <p key={i} className="text-xs font-mono" style={{ color: '#555' }}>{l}</p>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* ── Radius selector ── */}
       <div className="flex gap-2 px-4 py-2.5" style={{ background: '#0a0a0a', borderBottom: '1px solid #141414' }}>
         <span style={{ fontSize: 12, color: '#555', fontWeight: 700, lineHeight: '28px', flexShrink: 0 }}>Umkreis:</span>
@@ -410,7 +449,7 @@ export default function FoodFinder({ onClose }: Props) {
         ))}
       </div>
 
-      {/* ── Category filter bar ── */}
+      {/* ── Category filter ── */}
       <div className="flex gap-2 px-4 py-2.5 overflow-x-auto"
         style={{ scrollbarWidth: 'none', background: '#0a0a0a', borderBottom: '1px solid #141414' }}>
         {CATS.map(c => (
@@ -435,6 +474,11 @@ export default function FoodFinder({ onClose }: Props) {
             <p style={{ color: '#888', fontSize: 14 }}>
               {pos ? 'Lade Restaurants…' : 'GPS wird ermittelt…'}
             </p>
+            {pos && (
+              <p style={{ color: '#444', fontSize: 11, fontFamily: 'monospace' }}>
+                {pos.lat.toFixed(5)}, {pos.lng.toFixed(5)}
+              </p>
+            )}
           </div>
         )}
 
@@ -447,7 +491,7 @@ export default function FoodFinder({ onClose }: Props) {
             </p>
             {gpsErr && (
               <p className="text-center text-xs" style={{ color: '#555', lineHeight: 1.6 }}>
-                Bitte Standort-Berechtigung in den Browser-Einstellungen erlauben und neu laden.
+                Standort-Berechtigung im Browser erlauben, dann neu laden.
               </p>
             )}
             {apiErr && (
@@ -460,6 +504,15 @@ export default function FoodFinder({ onClose }: Props) {
 
         <div ref={mapDivRef} style={{ width: '100%', height: '100%' }} />
 
+        {/* GPS-Koordinaten Badge (immer sichtbar wenn pos bekannt) */}
+        {pos && !loading && (
+          <div className="absolute top-2 left-3 z-10 px-2.5 py-1 rounded-xl text-xs font-mono"
+            style={{ background: 'rgba(0,0,0,0.7)', border: '1px solid rgba(16,185,129,0.3)',
+              color: '#10b981', backdropFilter: 'blur(6px)' }}>
+            📍 {pos.lat.toFixed(4)}, {pos.lng.toFixed(4)}
+          </div>
+        )}
+
         {/* Zoom controls */}
         <div className="absolute right-3 bottom-3 flex flex-col gap-1.5 z-10">
           {[
@@ -468,15 +521,16 @@ export default function FoodFinder({ onClose }: Props) {
           ].map(btn => (
             <button key={btn.label} onClick={btn.fn}
               className="w-9 h-9 rounded-xl flex items-center justify-center font-black text-base"
-              style={{ background: 'rgba(0,0,0,0.7)', border: '1px solid rgba(255,255,255,0.1)', color: '#fff', backdropFilter: 'blur(8px)' }}>
+              style={{ background: 'rgba(0,0,0,0.7)', border: '1px solid rgba(255,255,255,0.1)',
+                color: '#fff', backdropFilter: 'blur(8px)' }}>
               {btn.label}
             </button>
           ))}
           {pos && (
-            <button
-              onClick={() => mapRef.current?.setView([pos.lat, pos.lng], 15, { animate: true })}
+            <button onClick={() => mapRef.current?.setView([pos.lat, pos.lng], 15, { animate: true })}
               className="w-9 h-9 rounded-xl flex items-center justify-center"
-              style={{ background: 'rgba(59,130,246,0.8)', border: '1px solid rgba(59,130,246,0.4)', backdropFilter: 'blur(8px)', fontSize: 18 }}>
+              style={{ background: 'rgba(59,130,246,0.8)', border: '1px solid rgba(59,130,246,0.4)',
+                backdropFilter: 'blur(8px)', fontSize: 18 }}>
               🎯
             </button>
           )}
@@ -502,7 +556,7 @@ export default function FoodFinder({ onClose }: Props) {
             style={{ background: 'rgba(245,158,11,0.08)', border: '1px solid rgba(245,158,11,0.2)', color: '#f59e0b' }}>
             {aiLoading
               ? <><Loader2 size={14} className="animate-spin" />KI analysiert…</>
-              : <>✨ KI-Empfehlung für mein Ziel ({goalLabel})</>}
+              : <>✨ KI-Empfehlung ({goalLabel})</>}
           </button>
         </div>
       )}
@@ -537,7 +591,6 @@ export default function FoodFinder({ onClose }: Props) {
         <div className="overflow-y-auto flex-1"
           style={{ paddingBottom: 'max(env(safe-area-inset-bottom), 16px)' }}>
 
-          {/* Selected detail card */}
           {selected && listOpen && (
             <div className="mx-4 mb-3 glass rounded-2xl overflow-hidden"
               style={{ background: 'rgba(16,185,129,0.04)', border: `1px solid ${scoreColor(selected.healthScore)}30` }}>
@@ -545,13 +598,13 @@ export default function FoodFinder({ onClose }: Props) {
                 <div className="w-12 h-12 rounded-2xl flex flex-col items-center justify-center flex-shrink-0"
                   style={{ background: `${scoreColor(selected.healthScore)}18`, border: `1.5px solid ${scoreColor(selected.healthScore)}40` }}>
                   <p style={{ fontSize: 16, fontWeight: 900, color: scoreColor(selected.healthScore), lineHeight: 1 }}>{selected.healthScore}</p>
-                  <p style={{ fontSize: 8,  fontWeight: 700,  color: scoreColor(selected.healthScore) }}>/10</p>
+                  <p style={{ fontSize: 8, fontWeight: 700, color: scoreColor(selected.healthScore) }}>/10</p>
                 </div>
                 <div className="flex-1" style={{ minWidth: 0 }}>
                   <p className="font-black text-base truncate" style={{ color: '#fff' }}>{selected.name}</p>
                   <p className="text-xs mt-0.5" style={{ color: scoreColor(selected.healthScore) }}>{selected.healthLabel}</p>
                   {selected.cuisine && <p className="text-xs mt-0.5" style={{ color: '#666' }}>{selected.cuisine}</p>}
-                  {selected.address     && <p className="text-xs mt-1" style={{ color: '#555' }}>{selected.address}</p>}
+                  {selected.address && <p className="text-xs mt-1" style={{ color: '#555' }}>{selected.address}</p>}
                   {selected.openingHours && (
                     <p className="text-xs mt-1" style={{ color: '#555' }}>🕐 {selected.openingHours.split(';')[0]}</p>
                   )}
@@ -589,7 +642,6 @@ export default function FoodFinder({ onClose }: Props) {
             </div>
           )}
 
-          {/* Restaurant list */}
           {filtered.map((r, i) => (
             <div key={r.id}
               className="flex items-center gap-3 px-4 py-3 cursor-pointer active:opacity-70"
@@ -631,11 +683,13 @@ export default function FoodFinder({ onClose }: Props) {
             <div className="py-10 text-center px-6">
               <p style={{ fontSize: 36, marginBottom: 8 }}>🔍</p>
               <p style={{ color: '#555', fontSize: 14 }}>
-                Keine Restaurants im {radius < 1000 ? `${radius}m` : `${radius / 1000}km`} Umkreis gefunden.
+                Keine Restaurants im {radius < 1000 ? `${radius}m` : `${radius / 1000}km`} Umkreis.
               </p>
-              <p className="mt-2" style={{ color: '#444', fontSize: 12 }}>
-                Versuche einen größeren Umkreis.
-              </p>
+              <p className="mt-1" style={{ color: '#444', fontSize: 12 }}>Größeren Umkreis versuchen.</p>
+              <button onClick={() => setShowDebug(true)} className="mt-3 text-xs px-3 py-1.5 rounded-xl"
+                style={{ background: 'rgba(245,158,11,0.08)', border: '1px solid rgba(245,158,11,0.2)', color: '#f59e0b' }}>
+                🔍 Debug anzeigen
+              </button>
             </div>
           )}
         </div>
