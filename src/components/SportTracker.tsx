@@ -279,6 +279,7 @@ export default function SportTracker() {
       distance: run.distance,
       route: run.route,
       splits: run.splits,
+      kmMarkers: run.kmMarkers,
       avgPace: run.avgPace,
       bestPace,
       elevationGain: run.elevationGain,

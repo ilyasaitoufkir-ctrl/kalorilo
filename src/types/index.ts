@@ -167,6 +167,11 @@ export interface KmSplit {
   time: number   // cumulative elapsed seconds at this marker
 }
 
+export interface KmMarker {
+  km: number
+  point: GeoPoint
+}
+
 export interface RunSession {
   id: string
   date: string
@@ -176,6 +181,7 @@ export interface RunSession {
   distance: number       // km
   route: GeoPoint[]
   splits: KmSplit[]
+  kmMarkers: KmMarker[]
   avgPace: number        // seconds/km
   bestPace: number       // seconds/km (fastest split)
   elevationGain: number  // meters
