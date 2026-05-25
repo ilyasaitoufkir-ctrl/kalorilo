@@ -575,7 +575,7 @@ export default function FoodFinder({ onClose }: Props) {
 
         {/* Cards */}
         <div className="px-3 py-2 space-y-2.5"
-          style={{ paddingBottom: 'max(env(safe-area-inset-bottom), 20px)' }}>
+          style={{ paddingBottom: 'calc(max(env(safe-area-inset-bottom), 20px) + 32px)' }}>
           {filtered.map(r => {
             const color  = scoreColor(r.healthScore)
             const isSel  = selected?.id === r.id

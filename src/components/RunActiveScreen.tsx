@@ -314,7 +314,7 @@ export default function RunActiveScreen({ run, goal }: Props) {
 
         {/* Control buttons */}
         <div className="flex gap-3 px-4 pt-3"
-          style={{ paddingBottom: 'max(env(safe-area-inset-bottom), 18px)' }}>
+          style={{ paddingBottom: 'max(env(safe-area-inset-bottom), 28px)' }}>
           {isPaused ? (
             <button onClick={run.resume}
               className="flex-1 flex items-center justify-center gap-2 rounded-2xl font-black glass-press"

@@ -48,7 +48,7 @@ export default function Onboarding() {
   const inputStyle = { background:'rgba(255,255,255,0.07)', border:'1px solid rgba(255,255,255,0.12)', borderRadius:18, color:'#f1f5f9', padding:'16px', width:'100%', fontSize:16, fontWeight:600, outline:'none' } as const
 
   return (
-    <div className="min-h-dvh flex flex-col overflow-x-hidden" style={{ background:'var(--bg)' }}>
+    <div className="h-dvh flex flex-col overflow-y-auto overflow-x-hidden" style={{ background:'var(--bg)' }}>
       {/* Background orb */}
       <div className="fixed" style={{ top:-100, left:'50%', transform:'translateX(-50%)', width:500, height:500, background:'radial-gradient(circle,rgba(245,158,11,0.06) 0%,transparent 70%)', pointerEvents:'none', zIndex:0 }}/>
 

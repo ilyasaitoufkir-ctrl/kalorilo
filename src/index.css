@@ -101,6 +101,10 @@ body {
 .pb-nav   { padding-bottom: calc(110px + max(env(safe-area-inset-bottom), 20px)); }
 /* For flex scroll containers inside full-height screens */
 .scroll-pb { padding-bottom: calc(110px + max(env(safe-area-inset-bottom), 20px)); }
+/* Enable momentum scrolling on iOS for all overflow-y-auto containers */
+.overflow-y-auto, .overflow-y-scroll {
+  -webkit-overflow-scrolling: touch;
+}
 
 /* ── Scrollbar ──────────────────────────────────────────────────────────── */
 ::-webkit-scrollbar { width: 0; height: 0; }
