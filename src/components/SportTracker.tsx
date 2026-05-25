@@ -330,7 +330,7 @@ export default function SportTracker() {
 
   // ── Render: normal sport tab ──
   return (
-    <div className="pb-nav anim-fade overflow-x-hidden" style={{ background:'var(--bg)' }}>
+    <div className="h-dvh overflow-y-auto overflow-x-hidden pb-nav anim-fade" style={{ background:'var(--bg)' }}>
 
       {/* Header */}
       <div className="pt-safe px-5 pb-5 relative overflow-hidden"

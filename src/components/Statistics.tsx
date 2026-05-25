@@ -114,7 +114,7 @@ export default function Statistics() {
   ]
 
   return (
-    <div className="pb-nav anim-fade overflow-x-hidden" style={{ background:'var(--bg)' }}>
+    <div className="h-dvh overflow-y-auto overflow-x-hidden pb-nav anim-fade" style={{ background:'var(--bg)' }}>
       <div className="pt-safe px-5 pb-5 relative overflow-hidden" style={{ background:'#000', borderBottom:'1px solid #1a1a1a' }}>
         <div className="absolute" style={{ top:-40,right:-40,width:200,height:200,background:'radial-gradient(circle,rgba(245,158,11,0.06),transparent 70%)',pointerEvents:'none' }}/>
         <h1 className="text-2xl font-black mb-3 relative" style={{ color:'var(--text-1)' }}>Statistiken</h1>

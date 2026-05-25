@@ -537,7 +537,7 @@ export default function FoodTracker() {
   const totalFat   = useMemo(()=>foodLogs.reduce((s,f)=>s+(f.macros?.fat??0),0),[foodLogs])
 
   return (
-    <div className="pb-nav anim-fade overflow-x-hidden" style={{ background:'var(--bg)' }}>
+    <div className="h-dvh overflow-y-auto overflow-x-hidden pb-nav anim-fade" style={{ background:'var(--bg)' }}>
       {/* Header */}
       <div className="pt-safe px-5 pb-5" style={{ background:'#000', borderBottom:'1px solid #1a1a1a' }}>
         <h1 className="text-2xl font-black mb-1" style={{ color:'var(--text-1)' }}>Essen tracken</h1>

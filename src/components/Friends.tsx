@@ -435,7 +435,7 @@ export default function Friends() {
   }
 
   return (
-    <div className="pb-nav anim-fade" style={{ background: 'var(--bg)' }}>
+    <div className="h-dvh overflow-y-auto overflow-x-hidden pb-nav anim-fade" style={{ background: 'var(--bg)' }}>
       {/* Header */}
       <div className="grad-blue px-5 pt-safe pb-5 relative overflow-hidden">
         <div className="absolute -top-16 -right-16 w-56 h-56 rounded-full bg-white/5" />
