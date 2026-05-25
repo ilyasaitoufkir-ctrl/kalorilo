@@ -4,6 +4,7 @@ import { useStore } from '../store/useStore'
 import { SPORTS_DATABASE, calculateCaloriesBurned, SPORT_CATEGORIES, kettlebellFactor, KETTLEBELL_WEIGHTS } from '../data/sportsDatabase'
 import { formatDate, uid } from '../utils/calculations'
 import { useRunTracker } from '../hooks/useRunTracker'
+import RunStartScreen from './RunStartScreen'
 import RunActiveScreen from './RunActiveScreen'
 import RunSummary from './RunSummary'
 import RunHistory from './RunHistory'
@@ -228,8 +229,10 @@ function AddSheet({ onClose }: { onClose: ()=>void }) {
 type SportTab = 'activities' | 'runs'
 
 export default function SportTracker() {
-  const [tab, setTab]           = useState<SportTab>('activities')
-  const [showAdd, setShowAdd]   = useState(false)
+  const [tab, setTab]               = useState<SportTab>('activities')
+  const [showAdd, setShowAdd]       = useState(false)
+  const [showRunStart, setShowRunStart] = useState(false)
+  const [runGoal, setRunGoal]       = useState<{ type: 'distance' | 'time'; value: number } | undefined>()
   const [savedSession, setSavedSession] = useState<RunSession | null>(null)
 
   const allActivityLogs  = useStore(s => s.activityLogs)
@@ -296,11 +299,26 @@ export default function SportTracker() {
     setTab('runs')
   }
 
+  // ── Render: run start screen ──
+  if (showRunStart) {
+    return (
+      <RunStartScreen
+        onCancel={() => setShowRunStart(false)}
+        onStart={(goal) => {
+          setRunGoal(goal)
+          setShowRunStart(false)
+          run.start()
+        }}
+      />
+    )
+  }
+
   // ── Render: fullscreen during run ──
   if (run.status === 'running' || run.status === 'paused') {
     return (
       <RunActiveScreen
         run={{ ...run, finish: handleRunFinish }}
+        goal={runGoal}
       />
     )
   }
@@ -333,7 +351,7 @@ export default function SportTracker() {
       {/* ── BIG Run Start Button ── */}
       <div className="px-4 pt-4">
         <button
-          onClick={() => run.start()}
+          onClick={() => setShowRunStart(true)}
           className="w-full flex items-center justify-center gap-3 rounded-3xl font-black text-lg"
           style={{
             paddingTop: 20, paddingBottom: 20,

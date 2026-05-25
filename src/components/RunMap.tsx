@@ -31,19 +31,19 @@ export default function RunMap({ route, kmMarkers = [], showFullRoute = false, s
     const map = L.map(containerRef.current, {
       zoomControl: false,
       attributionControl: false,
-      dragging: showFullRoute,   // allow panning in summary; lock during live run
+      dragging: showFullRoute,
       scrollWheelZoom: false,
     })
 
-    // CartoDB dark tiles – matches app's dark theme perfectly
+    // CartoDB dark tiles
     L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
       maxZoom: 20,
       subdomains: 'abcd',
     }).addTo(map)
 
-    // Route line: gold for summary review, blue for live tracking
+    // Route line: gold always (Kalorilo brand color)
     polyRef.current = L.polyline([], {
-      color: showFullRoute ? '#f59e0b' : '#3b82f6',
+      color: '#f59e0b',
       weight: showFullRoute ? 5 : 4,
       opacity: 0.95,
       lineCap: 'round',
@@ -51,7 +51,7 @@ export default function RunMap({ route, kmMarkers = [], showFullRoute = false, s
     }).addTo(map)
 
     kmLayerRef.current = L.layerGroup().addTo(map)
-    map.setView([48.1351, 11.582], 16)  // Munich default until GPS kicks in
+    map.setView([48.1351, 11.582], 16)
     mapRef.current = map
 
     return () => {
@@ -69,35 +69,35 @@ export default function RunMap({ route, kmMarkers = [], showFullRoute = false, s
   useEffect(() => {
     if (!mapRef.current || !polyRef.current || route.length === 0) return
 
-    const latlngs = route.map(p => [p.lat, p.lng] as L.LatLngExpression)
+    const latlngs = route.map((p) => [p.lat, p.lng] as L.LatLngExpression)
     polyRef.current.setLatLngs(latlngs)
 
     const last = route[route.length - 1]
 
-    // Live position: pulsing blue dot (Google Maps style)
+    // Live position: pulsing gold dot
     if (!showFullRoute) {
       if (posMarkerRef.current) {
         posMarkerRef.current.setLatLng([last.lat, last.lng])
       } else {
         const icon = L.divIcon({
           html: `
-            <div style="position:relative;width:20px;height:20px">
-              <div style="position:absolute;inset:0;background:rgba(59,130,246,0.25);border-radius:50%;animation:pulse 1.8s ease-in-out infinite"></div>
-              <div style="position:absolute;top:3px;left:3px;width:14px;height:14px;background:#3b82f6;border:2.5px solid #fff;border-radius:50%;box-shadow:0 2px 8px rgba(59,130,246,0.6)"></div>
+            <div style="position:relative;width:22px;height:22px">
+              <div style="position:absolute;inset:0;background:rgba(245,158,11,0.3);border-radius:50%;animation:pulse 1.8s ease-in-out infinite"></div>
+              <div style="position:absolute;top:3px;left:3px;width:16px;height:16px;background:#f59e0b;border:2.5px solid #fff;border-radius:50%;box-shadow:0 2px 10px rgba(245,158,11,0.7)"></div>
             </div>
           `,
-          iconSize: [20, 20],
-          iconAnchor: [10, 10],
+          iconSize: [22, 22],
+          iconAnchor: [11, 11],
           className: '',
         })
         posMarkerRef.current = L.marker([last.lat, last.lng], { icon, zIndexOffset: 1000 }).addTo(mapRef.current)
       }
     }
 
-    // Start marker: green flag-dot placed once
+    // Start marker: green dot placed once
     if (!startMarkerRef.current) {
       const startIcon = L.divIcon({
-        html: '<div style="width:12px;height:12px;background:#10b981;border:2.5px solid #fff;border-radius:50%;box-shadow:0 2px 6px rgba(16,185,129,0.5)"></div>',
+        html: '<div style="width:12px;height:12px;background:#10b981;border:2.5px solid #fff;border-radius:50%;box-shadow:0 2px 6px rgba(16,185,129,0.6)"></div>',
         iconSize: [12, 12],
         iconAnchor: [6, 6],
         className: '',
@@ -108,7 +108,6 @@ export default function RunMap({ route, kmMarkers = [], showFullRoute = false, s
     if (showFullRoute && route.length > 1) {
       mapRef.current.fitBounds(polyRef.current.getBounds(), { padding: [50, 50], animate: false })
     } else {
-      // Smooth follow: only pan if runner has moved noticeably
       mapRef.current.setView([last.lat, last.lng], Math.max(17, mapRef.current.getZoom()), {
         animate: true,
         duration: 0.8,
@@ -117,7 +116,7 @@ export default function RunMap({ route, kmMarkers = [], showFullRoute = false, s
     }
   }, [route, showFullRoute])
 
-  // ── Add km markers incrementally (only new ones, never redraw) ────────────
+  // ── Add km markers incrementally (only new ones) ──────────────────────────
   useEffect(() => {
     const layer = kmLayerRef.current
     if (!mapRef.current || !layer) return
@@ -127,22 +126,22 @@ export default function RunMap({ route, kmMarkers = [], showFullRoute = false, s
       const icon = L.divIcon({
         html: `
           <div style="
-            width:24px;height:24px;
-            background:${showFullRoute ? '#f59e0b' : '#1d4ed8'};
+            width:26px;height:26px;
+            background:#f59e0b;
             border:2px solid #fff;border-radius:50%;
             display:flex;align-items:center;justify-content:center;
-            font-size:9px;font-weight:900;color:#fff;
-            box-shadow:0 2px 8px rgba(0,0,0,0.5)
+            font-size:9px;font-weight:900;color:#000;
+            box-shadow:0 2px 10px rgba(245,158,11,0.6)
           ">${km}</div>
         `,
-        iconSize: [24, 24],
-        iconAnchor: [12, 12],
+        iconSize: [26, 26],
+        iconAnchor: [13, 13],
         className: '',
       })
       L.marker([point.lat, point.lng], { icon }).addTo(layer)
     })
     kmCountRef.current = kmMarkers.length
-  }, [kmMarkers, showFullRoute])
+  }, [kmMarkers])
 
   return <div ref={containerRef} className={className} style={style} />
 }

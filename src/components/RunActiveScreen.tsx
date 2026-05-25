@@ -1,12 +1,12 @@
-import { useState } from 'react'
-import { Pause, Play, Square } from 'lucide-react'
+import { useState, useEffect, useRef } from 'react'
+import { Pause, Play, Square, ChevronUp, ChevronDown } from 'lucide-react'
 import type { RunTrackerState } from '../hooks/useRunTracker'
 import RunMap from './RunMap'
 
-// ── Formatters (exported for RunSummary) ──────────────────────────────────
+// ── Formatters (exported for RunSummary) ──────────────────────────────────────
 export function fmtTime(s: number): string {
-  const h = Math.floor(s / 3600)
-  const m = Math.floor((s % 3600) / 60)
+  const h   = Math.floor(s / 3600)
+  const m   = Math.floor((s % 3600) / 60)
   const sec = s % 60
   if (h > 0) return `${h}:${String(m).padStart(2, '0')}:${String(sec).padStart(2, '0')}`
   return `${String(m).padStart(2, '0')}:${String(sec).padStart(2, '0')}`
@@ -19,61 +19,51 @@ export function fmtPace(secPerKm: number): string {
   return `${m}:${String(s).padStart(2, '0')}`
 }
 
-// ── GPS signal indicator (4 rising bars like a phone) ─────────────────────
+// ── GPS signal bars ───────────────────────────────────────────────────────────
 function GpsSignal({ accuracy }: { accuracy: number | null }) {
   const bars = accuracy === null ? 0
     : accuracy < 5  ? 4
     : accuracy < 12 ? 3
     : accuracy < 25 ? 2
     : accuracy < 50 ? 1 : 0
-
-  const color = bars >= 4 ? '#10b981' : bars >= 3 ? '#10b981' : bars >= 2 ? '#f59e0b' : bars >= 1 ? '#f97316' : '#ef4444'
+  const color = bars >= 3 ? '#10b981' : bars >= 2 ? '#f59e0b' : '#f97316'
 
   return (
     <div className="flex items-end gap-0.5">
-      {[1, 2, 3, 4].map(b => (
+      {[1, 2, 3, 4].map((b) => (
         <div key={b} style={{
-          width: 4,
-          height: 3 + b * 3,
-          borderRadius: 1,
-          background: b <= bars ? color : 'rgba(255,255,255,0.18)',
+          width: 4, height: 3 + b * 3, borderRadius: 1,
+          background: b <= bars ? color : 'rgba(255,255,255,0.15)',
         }} />
       ))}
-      <span style={{ fontSize: 10, color, marginLeft: 4, fontWeight: 700, lineHeight: 1 }}>
+      <span style={{ fontSize: 9, color: color || '#555', marginLeft: 3, fontWeight: 700, lineHeight: 1 }}>
         {accuracy === null ? 'GPS…' : `±${Math.round(accuracy)}m`}
       </span>
     </div>
   )
 }
 
-// ── Stop confirmation modal ───────────────────────────────────────────────
+// ── Stop confirmation modal ───────────────────────────────────────────────────
 function StopConfirm({ onCancel, onConfirm }: { onCancel: () => void; onConfirm: () => void }) {
   return (
-    <div
-      className="fixed inset-0 z-[200] flex items-center justify-center px-6"
-      style={{ background: 'rgba(0,0,0,0.85)', backdropFilter: 'blur(6px)' }}
-    >
+    <div className="fixed inset-0 z-[200] flex items-center justify-center px-6"
+      style={{ background: 'rgba(0,0,0,0.88)', backdropFilter: 'blur(8px)' }}>
       <div className="w-full max-w-sm rounded-3xl p-7 text-center"
-        style={{ background: '#111', border: '1px solid #2a2a2a', boxShadow: '0 24px 80px rgba(0,0,0,0.8)' }}>
-        <div className="text-5xl mb-4">🏁</div>
+        style={{ background: '#111', border: '1px solid #2a2a2a', boxShadow: '0 24px 80px rgba(0,0,0,0.9)' }}>
+        <div style={{ fontSize: 52, marginBottom: 12 }}>🏁</div>
         <h3 className="text-xl font-black mb-2" style={{ color: '#fff' }}>Lauf beenden?</h3>
-        <p className="text-sm mb-7" style={{ color: '#777', lineHeight: 1.6 }}>
-          Willst du deinen Lauf wirklich beenden?<br />
-          Deine Daten werden gespeichert.
+        <p className="text-sm mb-7" style={{ color: '#666', lineHeight: 1.7 }}>
+          Deine Strecke und Statistiken werden<br />automatisch gespeichert.
         </p>
         <div className="flex gap-3">
-          <button
-            onClick={onCancel}
-            className="flex-1 py-4 rounded-2xl font-bold text-sm"
-            style={{ background: 'rgba(255,255,255,0.07)', border: '1px solid rgba(255,255,255,0.1)', color: '#fff' }}
-          >
+          <button onClick={onCancel}
+            className="flex-1 py-4 rounded-2xl font-bold text-sm glass-press"
+            style={{ background: 'rgba(255,255,255,0.07)', border: '1px solid rgba(255,255,255,0.1)', color: '#fff' }}>
             Weiter laufen
           </button>
-          <button
-            onClick={onConfirm}
-            className="flex-1 py-4 rounded-2xl font-bold text-sm"
-            style={{ background: 'rgba(239,68,68,0.15)', border: '1px solid rgba(239,68,68,0.35)', color: '#ef4444' }}
-          >
+          <button onClick={onConfirm}
+            className="flex-1 py-4 rounded-2xl font-bold text-sm glass-press"
+            style={{ background: 'rgba(239,68,68,0.14)', border: '1px solid rgba(239,68,68,0.35)', color: '#ef4444' }}>
             Jetzt beenden
           </button>
         </div>
@@ -82,182 +72,264 @@ function StopConfirm({ onCancel, onConfirm }: { onCancel: () => void; onConfirm:
   )
 }
 
-// ── Stat cell ─────────────────────────────────────────────────────────────
-function Stat({ label, value, sub, color = '#fff' }: { label: string; value: string; sub?: string; color?: string }) {
+// ── KM Split toast overlay ────────────────────────────────────────────────────
+function KmToast({ km, pace }: { km: number; pace: string }) {
   return (
-    <div className="flex flex-col items-center justify-center py-3">
-      <p style={{ fontSize: 26, fontWeight: 900, color, lineHeight: 1, letterSpacing: -0.5 }}>{value}</p>
-      {sub && <p style={{ fontSize: 11, color, opacity: 0.6, fontWeight: 700, marginTop: 1 }}>{sub}</p>}
-      <p style={{ fontSize: 9, color: '#555', fontWeight: 700, textTransform: 'uppercase', letterSpacing: 1.2, marginTop: 3 }}>{label}</p>
+    <div className="absolute top-4 left-1/2 z-20"
+      style={{ transform: 'translateX(-50%)', animation: 'slideUp 0.4s cubic-bezier(0.16,1,0.3,1) both' }}>
+      <div className="flex items-center gap-3 px-5 py-3.5 rounded-2xl"
+        style={{
+          background: 'rgba(245,158,11,0.95)',
+          backdropFilter: 'blur(16px)',
+          boxShadow: '0 8px 32px rgba(245,158,11,0.5)',
+        }}>
+        <span style={{ fontSize: 22 }}>⚡</span>
+        <div>
+          <p style={{ fontSize: 16, fontWeight: 900, color: '#000', lineHeight: 1 }}>
+            KM {km} geschafft!
+          </p>
+          <p style={{ fontSize: 12, fontWeight: 700, color: 'rgba(0,0,0,0.65)', marginTop: 1 }}>
+            Pace: {pace} min/km
+          </p>
+        </div>
+      </div>
     </div>
   )
 }
 
-// ── Main component ────────────────────────────────────────────────────────
+// ── Main RunActiveScreen ──────────────────────────────────────────────────────
 interface Props {
   run: RunTrackerState & { pause: () => void; resume: () => void; finish: () => void }
+  goal?: { type: 'distance' | 'time'; value: number }
 }
 
-export default function RunActiveScreen({ run }: Props) {
-  const [showStop, setShowStop] = useState(false)
-  const { status, elapsed, distance, currentPace, avgPace, calories, elevationGain, route, splits, gpsAccuracy, gpsError, kmMarkers } = run
+export default function RunActiveScreen({ run, goal }: Props) {
+  const [showStop, setShowStop]         = useState(false)
+  const [statsExpanded, setExpanded]    = useState(false)
+  const [kmToast, setKmToast]           = useState<{ km: number; pace: string } | null>(null)
+  const prevSplitLen = useRef(0)
+
+  const { status, elapsed, distance, currentPace, avgPace, calories,
+    elevationGain, route, splits, gpsAccuracy, gpsError, kmMarkers } = run
   const isPaused = status === 'paused'
 
+  // Detect new km split → show toast
+  useEffect(() => {
+    if (splits.length > prevSplitLen.current) {
+      const last = splits[splits.length - 1]
+      setKmToast({ km: last.km, pace: fmtPace(last.pace) })
+      prevSplitLen.current = splits.length
+      const t = setTimeout(() => setKmToast(null), 4000)
+      return () => clearTimeout(t)
+    }
+    prevSplitLen.current = splits.length
+  }, [splits.length])
+
   const distDisplay = distance < 1
-    ? { value: (distance * 1000).toFixed(0), unit: 'Meter' }
-    : { value: distance.toFixed(2), unit: 'Kilometer' }
+    ? { value: (distance * 1000).toFixed(0), unit: 'm' }
+    : { value: distance.toFixed(2), unit: 'km' }
+
+  // Goal progress bar
+  const goalPct = goal
+    ? goal.type === 'distance'
+      ? Math.min(1, distance / goal.value)
+      : Math.min(1, elapsed / (goal.value * 60))
+    : null
 
   return (
     <div className="fixed inset-0 z-[100] flex flex-col" style={{ background: '#000' }}>
 
-      {/* ── Top bar: GPS signal + app name + pause badge ── */}
+      {/* ── Top bar ── */}
       <div className="flex items-center justify-between px-4"
         style={{
           paddingTop: 'max(env(safe-area-inset-top), 14px)',
           paddingBottom: 10,
-          background: 'rgba(0,0,0,0.92)',
-          backdropFilter: 'blur(12px)',
+          background: 'rgba(0,0,0,0.94)',
+          backdropFilter: 'blur(16px)',
           zIndex: 10,
-          borderBottom: '1px solid rgba(255,255,255,0.06)',
+          borderBottom: '1px solid rgba(255,255,255,0.05)',
         }}>
-
         <GpsSignal accuracy={gpsAccuracy} />
 
-        <p style={{ color: '#fff', fontWeight: 900, fontSize: 15, letterSpacing: -0.3 }}>
-          🏃 Kalorilo
+        <p style={{ color: '#fff', fontWeight: 900, fontSize: 14, letterSpacing: -0.3 }}>
+          🏃 Läuft
         </p>
 
         {isPaused ? (
           <span className="px-3 py-1 rounded-full text-xs font-black"
-            style={{ background: 'rgba(245,158,11,0.2)', color: '#f59e0b', border: '1px solid rgba(245,158,11,0.35)' }}>
+            style={{ background: 'rgba(245,158,11,0.18)', color: '#f59e0b', border: '1px solid rgba(245,158,11,0.35)' }}>
             Pausiert
           </span>
         ) : (
           <div className="flex items-center gap-1.5">
-            <div className="w-2 h-2 rounded-full bg-[#10b981] animate-pulse" />
+            <div className="w-2 h-2 rounded-full" style={{ background: '#10b981', animation: 'pulseSoft 1.4s ease-in-out infinite' }} />
             <span style={{ color: '#10b981', fontSize: 11, fontWeight: 700 }}>Live</span>
           </div>
         )}
       </div>
 
-      {/* ── Live map (takes remaining height) ── */}
-      <div className="flex-1 relative" style={{ minHeight: 0 }}>
+      {/* ── Goal progress bar ── */}
+      {goalPct !== null && (
+        <div style={{ height: 3, background: '#111' }}>
+          <div style={{
+            height: '100%', width: `${goalPct * 100}%`,
+            background: goalPct >= 1
+              ? 'linear-gradient(90deg, #10b981, #059669)'
+              : 'linear-gradient(90deg, #f59e0b, #d97706)',
+            transition: 'width 0.5s ease',
+          }} />
+        </div>
+      )}
 
-        {/* GPS error banner */}
+      {/* ── Live map ── */}
+      <div className="relative" style={{ flex: '1 1 0', minHeight: 0 }}>
+
+        {/* GPS error */}
         {gpsError && (
           <div className="absolute top-3 left-3 right-3 z-10 rounded-2xl px-4 py-3 text-center text-sm font-bold"
-            style={{ background: 'rgba(239,68,68,0.9)', color: '#fff' }}>
+            style={{ background: 'rgba(239,68,68,0.92)', color: '#fff', backdropFilter: 'blur(8px)' }}>
             ⚠ {gpsError}
           </div>
         )}
+
+        {/* KM split toast */}
+        {kmToast && <KmToast km={kmToast.km} pace={kmToast.pace} />}
 
         {route.length > 0 ? (
           <RunMap route={route} kmMarkers={kmMarkers} style={{ width: '100%', height: '100%' }} />
         ) : (
           <div className="w-full h-full flex flex-col items-center justify-center gap-5"
-            style={{ background: '#080808' }}>
-            <div className="relative">
-              <div className="w-20 h-20 rounded-full flex items-center justify-center"
-                style={{ background: 'rgba(59,130,246,0.1)', border: '1.5px solid rgba(59,130,246,0.2)' }}>
-                <span style={{ fontSize: 40 }}>📡</span>
-              </div>
-              <div className="absolute -top-1 -right-1 w-5 h-5 rounded-full bg-amber-400 animate-pulse
-                flex items-center justify-center">
-                <span style={{ fontSize: 10 }}>!</span>
-              </div>
-            </div>
+            style={{ background: '#060606' }}>
+            <div style={{ fontSize: 52 }}>📡</div>
             <div className="text-center">
-              <p className="font-black text-base" style={{ color: '#ccc' }}>GPS wird gesucht…</p>
-              <p className="text-sm mt-1" style={{ color: '#555' }}>Bitte ins Freie gehen</p>
+              <p style={{ fontWeight: 800, fontSize: 16, color: '#ccc' }}>GPS Signal suchen…</p>
+              <p style={{ fontSize: 13, color: '#444', marginTop: 4 }}>Bitte ins Freie gehen</p>
             </div>
           </div>
         )}
 
-        {/* Timer overlay – bottom of map, fading into dark panel */}
-        <div className="absolute bottom-0 left-0 right-0 flex flex-col items-center pb-3 pt-8"
-          style={{ background: 'linear-gradient(to top, rgba(0,0,0,1) 0%, rgba(0,0,0,0.7) 60%, transparent 100%)' }}>
+        {/* Timer overlay – anchored to bottom of map */}
+        <div className="absolute bottom-0 left-0 right-0 flex flex-col items-center pb-4 pt-10"
+          style={{ background: 'linear-gradient(to top, rgba(0,0,0,1) 0%, rgba(0,0,0,0.75) 55%, transparent 100%)', pointerEvents: 'none' }}>
           <p className="font-black font-mono"
-            style={{ fontSize: 72, lineHeight: 1, color: '#fff', letterSpacing: -3, textShadow: '0 0 40px rgba(0,0,0,0.8)' }}>
+            style={{ fontSize: 78, lineHeight: 1, color: '#fff', letterSpacing: -4, textShadow: '0 0 40px rgba(0,0,0,0.9)' }}>
             {fmtTime(elapsed)}
           </p>
-          <p style={{ fontSize: 11, color: '#555', fontWeight: 700, textTransform: 'uppercase', letterSpacing: 1.5, marginTop: 2 }}>
-            Zeit
+          <p style={{ fontSize: 10, color: '#555', fontWeight: 700, textTransform: 'uppercase', letterSpacing: 1.5, marginTop: 2 }}>
+            {isPaused ? 'Pausiert' : 'Zeit'}
           </p>
         </div>
+
+        {/* Expand/collapse toggle */}
+        <button
+          onClick={() => setExpanded((v) => !v)}
+          className="absolute bottom-3 right-3 z-10 w-8 h-8 rounded-xl flex items-center justify-center"
+          style={{ background: 'rgba(0,0,0,0.7)', border: '1px solid rgba(255,255,255,0.1)', backdropFilter: 'blur(8px)' }}>
+          {statsExpanded ? <ChevronDown size={16} style={{ color: '#888' }} /> : <ChevronUp size={16} style={{ color: '#888' }} />}
+        </button>
       </div>
 
       {/* ── Stats panel ── */}
-      <div style={{ background: '#0a0a0a' }}>
+      <div style={{ background: '#080808', flexShrink: 0 }}>
 
-        {/* Main stats: 3 columns */}
+        {/* Main row: 3 stats */}
         <div className="grid grid-cols-3" style={{ borderBottom: '1px solid #141414' }}>
-          <div style={{ borderRight: '1px solid #141414' }}>
-            <Stat label="Distanz" value={distDisplay.value} sub={distDisplay.unit} color="#10b981" />
-          </div>
-          <div style={{ borderRight: '1px solid #141414' }}>
-            <Stat label="Pace /km" value={fmtPace(currentPace)} />
-          </div>
-          <div>
-            <Stat label="Ø Pace /km" value={fmtPace(avgPace)} />
-          </div>
+          {[
+            { label: 'Distanz', value: distDisplay.value, sub: distDisplay.unit, color: '#f59e0b' },
+            { label: 'Pace /km', value: fmtPace(currentPace), sub: 'aktuell', color: '#fff' },
+            { label: 'Ø Pace /km', value: fmtPace(avgPace), sub: 'gesamt', color: '#aaa' },
+          ].map((s, i) => (
+            <div key={s.label} className="flex flex-col items-center justify-center py-3"
+              style={{ borderRight: i < 2 ? '1px solid #141414' : 'none' }}>
+              <p style={{ fontSize: 27, fontWeight: 900, color: s.color, lineHeight: 1, letterSpacing: -0.5 }}>{s.value}</p>
+              <p style={{ fontSize: 10, color: s.color, opacity: 0.55, fontWeight: 700, marginTop: 1 }}>{s.sub}</p>
+              <p style={{ fontSize: 9, color: '#444', fontWeight: 700, textTransform: 'uppercase', letterSpacing: 1.2, marginTop: 3 }}>{s.label}</p>
+            </div>
+          ))}
         </div>
 
-        {/* Secondary stats: 3 columns */}
-        <div className="grid grid-cols-3" style={{ borderBottom: '1px solid #141414' }}>
-          <div className="flex items-center justify-center gap-2 py-2.5"
-            style={{ borderRight: '1px solid #141414' }}>
-            <span style={{ fontSize: 16 }}>🔥</span>
-            <div>
-              <p style={{ fontSize: 15, fontWeight: 800, color: '#f97316', lineHeight: 1 }}>{calories}</p>
-              <p style={{ fontSize: 8, color: '#444', fontWeight: 700, textTransform: 'uppercase', letterSpacing: 1 }}>Kcal</p>
+        {/* Secondary row: calories, elevation, splits */}
+        {(statsExpanded || splits.length > 0) && (
+          <div className="grid grid-cols-3" style={{ borderBottom: '1px solid #141414' }}>
+            {[
+              { emoji: '🔥', val: String(calories),                     unit: 'kcal',   color: '#f97316' },
+              { emoji: '⛰',  val: elevationGain > 0 ? `+${elevationGain}` : '–', unit: 'm hoch',  color: '#60a5fa' },
+              { emoji: '📍', val: String(splits.length),                unit: 'splits', color: '#a78bfa' },
+            ].map((s, i) => (
+              <div key={s.emoji} className="flex items-center justify-center gap-1.5 py-2.5"
+                style={{ borderRight: i < 2 ? '1px solid #141414' : 'none' }}>
+                <span style={{ fontSize: 15 }}>{s.emoji}</span>
+                <div>
+                  <p style={{ fontSize: 14, fontWeight: 800, color: s.color, lineHeight: 1 }}>{s.val}</p>
+                  <p style={{ fontSize: 8, color: '#444', fontWeight: 700, textTransform: 'uppercase', letterSpacing: 0.8 }}>{s.unit}</p>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+
+        {/* Latest km splits (last 3) */}
+        {statsExpanded && splits.length > 0 && (
+          <div className="px-4 py-2" style={{ borderBottom: '1px solid #141414' }}>
+            <p className="label mb-1.5">Letzte Splits</p>
+            <div className="flex gap-2">
+              {splits.slice(-3).map((s) => (
+                <div key={s.km} className="flex-1 rounded-xl py-2 text-center"
+                  style={{ background: '#111', border: '1px solid #1c1c1c' }}>
+                  <p style={{ fontSize: 11, fontWeight: 900, color: '#f59e0b' }}>{fmtPace(s.pace)}</p>
+                  <p style={{ fontSize: 9, color: '#444', fontWeight: 700 }}>KM {s.km}</p>
+                </div>
+              ))}
             </div>
           </div>
-          <div className="flex items-center justify-center gap-2 py-2.5"
-            style={{ borderRight: '1px solid #141414' }}>
-            <span style={{ fontSize: 16 }}>⛰</span>
-            <div>
-              <p style={{ fontSize: 15, fontWeight: 800, color: '#60a5fa', lineHeight: 1 }}>
-                {elevationGain > 0 ? `+${elevationGain}m` : '–'}
+        )}
+
+        {/* Goal progress if set */}
+        {goal && goalPct !== null && (
+          <div className="px-4 py-2.5" style={{ borderBottom: '1px solid #141414' }}>
+            <div className="flex items-center justify-between mb-1.5">
+              <p style={{ fontSize: 11, color: '#555', fontWeight: 700 }}>
+                Ziel: {goal.type === 'distance' ? `${goal.value} km` : `${goal.value} min`}
               </p>
-              <p style={{ fontSize: 8, color: '#444', fontWeight: 700, textTransform: 'uppercase', letterSpacing: 1 }}>Höhe</p>
+              <p style={{ fontSize: 11, color: goalPct >= 1 ? '#10b981' : '#f59e0b', fontWeight: 800 }}>
+                {Math.round(goalPct * 100)}%
+              </p>
+            </div>
+            <div className="h-1.5 rounded-full overflow-hidden" style={{ background: '#1a1a1a' }}>
+              <div style={{
+                height: '100%', width: `${goalPct * 100}%`,
+                background: goalPct >= 1 ? '#10b981' : '#f59e0b',
+                transition: 'width 0.5s ease', borderRadius: '99px',
+              }} />
             </div>
           </div>
-          <div className="flex items-center justify-center gap-2 py-2.5">
-            <span style={{ fontSize: 16 }}>📍</span>
-            <div>
-              <p style={{ fontSize: 15, fontWeight: 800, color: '#a78bfa', lineHeight: 1 }}>{splits.length}</p>
-              <p style={{ fontSize: 8, color: '#444', fontWeight: 700, textTransform: 'uppercase', letterSpacing: 1 }}>Splits</p>
-            </div>
-          </div>
-        </div>
+        )}
 
         {/* Control buttons */}
         <div className="flex gap-3 px-4 pt-3"
           style={{ paddingBottom: 'max(env(safe-area-inset-bottom), 18px)' }}>
           {isPaused ? (
-            <button
-              onClick={run.resume}
-              className="flex-1 flex items-center justify-center gap-2 rounded-2xl font-black"
-              style={{ fontSize: 18, paddingTop: 18, paddingBottom: 18, background: 'rgba(16,185,129,0.15)', border: '1.5px solid rgba(16,185,129,0.4)', color: '#10b981' }}
-            >
-              <Play size={22} />Weiter
+            <button onClick={run.resume}
+              className="flex-1 flex items-center justify-center gap-2 rounded-2xl font-black glass-press"
+              style={{ fontSize: 18, paddingTop: 20, paddingBottom: 20,
+                background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
+                boxShadow: '0 6px 24px rgba(16,185,129,0.35)', color: '#fff', border: 'none' }}>
+              <Play size={24} fill="#fff" /> Weiter
             </button>
           ) : (
-            <button
-              onClick={run.pause}
-              className="flex-1 flex items-center justify-center gap-2 rounded-2xl font-black"
-              style={{ fontSize: 18, paddingTop: 18, paddingBottom: 18, background: 'rgba(245,158,11,0.12)', border: '1.5px solid rgba(245,158,11,0.35)', color: '#f59e0b' }}
-            >
-              <Pause size={22} />Pause
+            <button onClick={run.pause}
+              className="flex-1 flex items-center justify-center gap-2 rounded-2xl font-black glass-press"
+              style={{ fontSize: 18, paddingTop: 20, paddingBottom: 20,
+                background: 'rgba(245,158,11,0.12)', border: '1.5px solid rgba(245,158,11,0.4)', color: '#f59e0b' }}>
+              <Pause size={24} /> Pause
             </button>
           )}
 
-          <button
-            onClick={() => setShowStop(true)}
-            className="flex-1 flex items-center justify-center gap-2 rounded-2xl font-black"
-            style={{ fontSize: 18, paddingTop: 18, paddingBottom: 18, background: 'rgba(239,68,68,0.12)', border: '1.5px solid rgba(239,68,68,0.35)', color: '#ef4444' }}
-          >
-            <Square size={22} />Beenden
+          <button onClick={() => setShowStop(true)}
+            className="flex-1 flex items-center justify-center gap-2 rounded-2xl font-black glass-press"
+            style={{ fontSize: 18, paddingTop: 20, paddingBottom: 20,
+              background: 'rgba(239,68,68,0.1)', border: '1.5px solid rgba(239,68,68,0.3)', color: '#ef4444' }}>
+            <Square size={24} /> Beenden
           </button>
         </div>
       </div>
