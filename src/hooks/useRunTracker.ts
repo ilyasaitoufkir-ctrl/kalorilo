@@ -2,23 +2,53 @@ import { useState, useRef, useCallback, useEffect } from 'react'
 import type { GeoPoint, KmSplit, KmMarker } from '../types'
 
 export type RunStatus = 'idle' | 'running' | 'paused' | 'finished'
+export type GpsStatus = 'searching' | 'weak' | 'good' | 'excellent'
 
 export interface RunTrackerState {
   status: RunStatus
-  elapsed: number       // active seconds, pause-excluded
-  distance: number      // km (2 decimal)
+  elapsed: number
+  distance: number
   route: GeoPoint[]
   splits: KmSplit[]
   kmMarkers: KmMarker[]
-  elevationGain: number // m
-  currentPace: number   // sec/km (recent 200m window)
-  avgPace: number       // sec/km overall
+  elevationGain: number
+  currentPace: number
+  avgPace: number
   calories: number
-  gpsAccuracy: number | null   // metres, null = no fix yet
+  gpsAccuracy: number | null
+  gpsStatus: GpsStatus
   gpsError: string | null
 }
 
-// ── Haversine distance formula ─────────────────────────────────────────────
+// ── Constants ──────────────────────────────────────────────────────────────
+const MAX_ACCURACY_M   = 20    // reject GPS points worse than 20m accuracy
+const MAX_SPEED_M_S    = 15    // reject jumps > 54 km/h (impossible on foot)
+const MIN_MOVEMENT_M_S = 0.5   // below this = stationary, no distance added
+const PACE_WINDOW_SEC  = 30    // rolling pace window in seconds
+
+// ── 1D Kalman Filter ───────────────────────────────────────────────────────
+class KalmanFilter1D {
+  private p = 1.0
+  private x = 0.0
+  private initialized = false
+  private readonly q: number
+  private readonly r: number
+
+  constructor(q = 1e-5, r = 5e-5) { this.q = q; this.r = r }
+
+  filter(z: number): number {
+    if (!this.initialized) { this.x = z; this.initialized = true; return z }
+    this.p += this.q
+    const k = this.p / (this.p + this.r)
+    this.x += k * (z - this.x)
+    this.p *= (1 - k)
+    return this.x
+  }
+
+  reset() { this.p = 1.0; this.initialized = false }
+}
+
+// ── Haversine distance (km) ────────────────────────────────────────────────
 function haversine(lat1: number, lon1: number, lat2: number, lon2: number): number {
   const R = 6371
   const φ1 = lat1 * Math.PI / 180, φ2 = lat2 * Math.PI / 180
@@ -28,7 +58,14 @@ function haversine(lat1: number, lon1: number, lat2: number, lon2: number): numb
   return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a))
 }
 
-// ── Km announcement: vibration + German speech ────────────────────────────
+function accuracyToStatus(acc: number): GpsStatus {
+  if (acc <= 5)  return 'excellent'
+  if (acc <= 15) return 'good'
+  if (acc <= 30) return 'weak'
+  return 'searching'
+}
+
+// ── KM announcement: vibration + German speech ─────────────────────────────
 function announceKm(km: number, paceSecPerKm: number) {
   if ('vibrate' in navigator) navigator.vibrate([300, 150, 300])
   if ('speechSynthesis' in window) {
@@ -38,8 +75,7 @@ function announceKm(km: number, paceSecPerKm: number) {
     const u = new SpeechSynthesisUtterance(
       `${km} Kilometer geschafft – Pace: ${m}:${String(s).padStart(2, '0')} Minuten pro Kilometer`
     )
-    u.lang = 'de-DE'
-    u.rate = 0.95
+    u.lang = 'de-DE'; u.rate = 0.95
     window.speechSynthesis.speak(u)
   }
 }
@@ -48,36 +84,46 @@ const INIT: RunTrackerState = {
   status: 'idle', elapsed: 0, distance: 0, route: [],
   splits: [], kmMarkers: [], elevationGain: 0,
   currentPace: 0, avgPace: 0, calories: 0,
-  gpsAccuracy: null, gpsError: null,
+  gpsAccuracy: null, gpsStatus: 'searching', gpsError: null,
 }
 
 export function useRunTracker(weightKg: number) {
   const [state, setState] = useState<RunTrackerState>(INIT)
 
-  // ── Refs (GPS callback must not capture stale state) ──
-  const statusRef       = useRef<RunStatus>('idle')
-  const watchIdRef      = useRef<number | null>(null)
-  const timerRef        = useRef<ReturnType<typeof setInterval> | null>(null)
-  const wakeLockRef     = useRef<WakeLockSentinel | null>(null)
-  const lastPointRef    = useRef<GeoPoint | null>(null)
+  // ── Refs ──────────────────────────────────────────────────────────────────
+  const statusRef        = useRef<RunStatus>('idle')
+  const watchIdRef       = useRef<number | null>(null)
+  const timerRef         = useRef<ReturnType<typeof setInterval> | null>(null)
+  const wakeLockRef      = useRef<WakeLockSentinel | null>(null)
 
-  // Timestamp-based elapsed: accurate even when tab is backgrounded
-  const sessionStartRef = useRef<number>(0)  // Date.now() when current run/resume started
-  const baseElapsedRef  = useRef<number>(0)  // seconds accumulated before this session
+  // Kalman filters – one per coordinate axis
+  const kalmanLat        = useRef(new KalmanFilter1D())
+  const kalmanLng        = useRef(new KalmanFilter1D())
 
-  const distRef         = useRef(0)
-  const elevRef         = useRef(0)
-  const splitDistRef    = useRef(0)   // partial km since last full split
-  const splitTimeRef    = useRef(0)   // elapsed-seconds at start of current km
-  const recentRef       = useRef<{ dist: number; elapsed: number }[]>([])
-  const splitsRef       = useRef<KmSplit[]>([])
-  const routeRef        = useRef<GeoPoint[]>([])
-  const kmMarkersRef    = useRef<KmMarker[]>([])
+  // Jump detection uses last RAW point (before Kalman) so filter doesn't mask bad jumps
+  const lastRawRef       = useRef<GeoPoint | null>(null)
+  // Polyline uses last FILTERED point for smooth drawing
+  const lastFilteredRef  = useRef<GeoPoint | null>(null)
+
+  // Timestamp-based elapsed
+  const sessionStartRef  = useRef<number>(0)
+  const baseElapsedRef   = useRef<number>(0)
+
+  const distRef          = useRef(0)
+  const elevRef          = useRef(0)
+  const splitDistRef     = useRef(0)
+  const splitTimeRef     = useRef(0)
+
+  // Time-based pace window: array of { elapsed, dist } snapshots
+  const paceWindowRef    = useRef<{ elapsed: number; dist: number }[]>([])
+
+  const splitsRef        = useRef<KmSplit[]>([])
+  const routeRef         = useRef<GeoPoint[]>([])
+  const kmMarkersRef     = useRef<KmMarker[]>([])
 
   const getElapsed = (): number => {
-    if (statusRef.current !== 'running' || sessionStartRef.current === 0) {
+    if (statusRef.current !== 'running' || sessionStartRef.current === 0)
       return baseElapsedRef.current
-    }
     return baseElapsedRef.current + Math.round((Date.now() - sessionStartRef.current) / 1000)
   }
 
@@ -86,14 +132,14 @@ export function useRunTracker(weightKg: number) {
     try {
       if ('wakeLock' in navigator)
         wakeLockRef.current = await (navigator as any).wakeLock.request('screen')
-    } catch { /* not supported on all browsers */ }
+    } catch { /* not critical */ }
   }
   const releaseWakeLock = () => {
     wakeLockRef.current?.release().catch(() => {})
     wakeLockRef.current = null
   }
 
-  // ── Timer (1-second tick, displays timestamp-corrected value) ─────────────
+  // ── Timer ─────────────────────────────────────────────────────────────────
   const stopTimer = () => {
     if (timerRef.current) { clearInterval(timerRef.current); timerRef.current = null }
   }
@@ -101,8 +147,7 @@ export function useRunTracker(weightKg: number) {
     stopTimer()
     sessionStartRef.current = Date.now()
     timerRef.current = setInterval(() => {
-      const elapsed = getElapsed()
-      setState(s => ({ ...s, elapsed }))
+      setState(s => ({ ...s, elapsed: getElapsed() }))
     }, 1000)
   }
 
@@ -117,52 +162,92 @@ export function useRunTracker(weightKg: number) {
   const onPosition = useCallback((pos: GeolocationPosition) => {
     if (statusRef.current !== 'running') return
 
-    const point: GeoPoint = {
-      lat: pos.coords.latitude,
-      lng: pos.coords.longitude,
+    const acc = pos.coords.accuracy
+
+    // Always update GPS status indicator even when not tracking
+    setState(s => ({ ...s, gpsAccuracy: acc, gpsStatus: accuracyToStatus(acc) }))
+
+    // Reject low-accuracy fix
+    if (acc > MAX_ACCURACY_M) return
+
+    const rawLat = pos.coords.latitude
+    const rawLng = pos.coords.longitude
+    const rawPoint: GeoPoint = {
+      lat: rawLat, lng: rawLng,
       altitude: pos.coords.altitude ?? undefined,
-      accuracy: pos.coords.accuracy,
+      accuracy: acc,
       timestamp: pos.timestamp,
     }
 
-    const prev = lastPointRef.current
-    let addedDist = 0
+    // Jump detection on raw coordinates
+    const prevRaw = lastRawRef.current
+    if (prevRaw) {
+      const d = haversine(prevRaw.lat, prevRaw.lng, rawLat, rawLng) * 1000 // meters
+      const dtSec = (pos.timestamp - prevRaw.timestamp) / 1000
+      if (dtSec > 0 && d / dtSec > MAX_SPEED_M_S) return  // impossible jump, discard
+    }
+    lastRawRef.current = rawPoint
 
-    if (prev && (point.accuracy ?? 999) < 60) {
-      const d = haversine(prev.lat, prev.lng, point.lat, point.lng)
-      const dtSec = (point.timestamp - prev.timestamp) / 1000
-      // Sanity: reject GPS jumps > 10 m/s (36 km/h – faster than any sprinter)
-      if (dtSec > 0 && (d * 1000) / dtSec < 10) addedDist = d
-      // Elevation gain (filter out tiny noise with 0.5m threshold)
-      if (point.altitude != null && prev.altitude != null && point.altitude > prev.altitude + 0.5)
-        elevRef.current += point.altitude - prev.altitude
+    // Apply Kalman smoothing
+    const filteredLat = kalmanLat.current.filter(rawLat)
+    const filteredLng = kalmanLng.current.filter(rawLng)
+    const filteredPoint: GeoPoint = {
+      lat: filteredLat, lng: filteredLng,
+      altitude: pos.coords.altitude ?? undefined,
+      accuracy: acc,
+      timestamp: pos.timestamp,
     }
 
-    lastPointRef.current = point
-    routeRef.current = [...routeRef.current, point]
+    const prevFiltered = lastFilteredRef.current
+    let addedDist = 0
+
+    if (prevFiltered) {
+      const d = haversine(prevFiltered.lat, prevFiltered.lng, filteredLat, filteredLng)  // km
+      const dtSec = (pos.timestamp - prevFiltered.timestamp) / 1000
+      const speedMs = dtSec > 0 ? (d * 1000) / dtSec : 0
+
+      // Only add distance if actually moving (avoids GPS drift inflation)
+      if (speedMs >= MIN_MOVEMENT_M_S) addedDist = d
+
+      // Elevation gain (require 0.5m to reduce noise)
+      if (
+        filteredPoint.altitude != null &&
+        prevFiltered.altitude != null &&
+        filteredPoint.altitude > prevFiltered.altitude + 0.5
+      ) {
+        elevRef.current += filteredPoint.altitude - prevFiltered.altitude
+      }
+    }
+
+    lastFilteredRef.current = filteredPoint
+    routeRef.current = [...routeRef.current, filteredPoint]
     distRef.current += addedDist
 
     const elapsed = getElapsed()
 
-    // Smoothed current pace: last 200m sliding window
-    recentRef.current.push({ dist: distRef.current, elapsed })
-    while (recentRef.current.length > 1 && distRef.current - recentRef.current[0].dist > 0.2)
-      recentRef.current.shift()
+    // Time-based pace window (last PACE_WINDOW_SEC seconds)
+    paceWindowRef.current.push({ elapsed, dist: distRef.current })
+    while (
+      paceWindowRef.current.length > 1 &&
+      elapsed - paceWindowRef.current[0].elapsed > PACE_WINDOW_SEC
+    ) paceWindowRef.current.shift()
+
     let currentPace = 0
-    if (recentRef.current.length >= 2) {
-      const old = recentRef.current[0]
-      const dD = distRef.current - old.dist, dT = elapsed - old.elapsed
-      if (dD > 0.01) currentPace = dT / dD
+    const pw = paceWindowRef.current
+    if (pw.length >= 2) {
+      const dD = pw[pw.length - 1].dist - pw[0].dist
+      const dT = pw[pw.length - 1].elapsed - pw[0].elapsed
+      if (dD > 0.005) currentPace = dT / dD  // only show pace when actually moving
     }
 
-    // Kilometer splits + vibration + speech
+    // KM splits
     splitDistRef.current += addedDist
     while (splitDistRef.current >= 1.0) {
       splitDistRef.current -= 1.0
       const splitPace = elapsed - splitTimeRef.current
       const km = splitsRef.current.length + 1
       splitsRef.current = [...splitsRef.current, { km, pace: splitPace, time: elapsed }]
-      kmMarkersRef.current = [...kmMarkersRef.current, { km, point }]
+      kmMarkersRef.current = [...kmMarkersRef.current, { km, point: filteredPoint }]
       splitTimeRef.current = elapsed
       announceKm(km, splitPace)
     }
@@ -180,7 +265,8 @@ export function useRunTracker(weightKg: number) {
       avgPace,
       elevationGain: Math.round(elevRef.current),
       calories,
-      gpsAccuracy: point.accuracy ?? null,
+      gpsAccuracy: acc,
+      gpsStatus: accuracyToStatus(acc),
       gpsError: null,
     }))
   }, [weightKg])
@@ -191,7 +277,7 @@ export function useRunTracker(weightKg: number) {
       2: 'GPS-Signal nicht verfügbar.',
       3: 'GPS-Zeitüberschreitung. Bitte ins Freie gehen.',
     }
-    setState(s => ({ ...s, gpsError: msgs[err.code] ?? 'GPS-Fehler' }))
+    setState(s => ({ ...s, gpsError: msgs[err.code] ?? 'GPS-Fehler', gpsStatus: 'searching' }))
   }, [])
 
   const startGps = useCallback(() => {
@@ -203,17 +289,15 @@ export function useRunTracker(weightKg: number) {
     watchIdRef.current = navigator.geolocation.watchPosition(
       onPosition,
       onGpsError,
-      { enableHighAccuracy: true, timeout: 20000, maximumAge: 1000 },
+      { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 },
     )
   }, [onPosition, onGpsError])
 
-  // Re-sync timer when tab comes back from background
+  // Re-sync timer on tab focus
   useEffect(() => {
     const onVisible = () => {
-      if (statusRef.current === 'running') {
-        const elapsed = getElapsed()
-        setState(s => ({ ...s, elapsed }))
-      }
+      if (statusRef.current === 'running')
+        setState(s => ({ ...s, elapsed: getElapsed() }))
     }
     document.addEventListener('visibilitychange', onVisible)
     return () => document.removeEventListener('visibilitychange', onVisible)
@@ -223,7 +307,12 @@ export function useRunTracker(weightKg: number) {
   const start = useCallback(async () => {
     baseElapsedRef.current = 0
     statusRef.current = 'running'
-    setState(s => ({ ...s, status: 'running', gpsError: null }))
+    kalmanLat.current.reset()
+    kalmanLng.current.reset()
+    lastRawRef.current = null
+    lastFilteredRef.current = null
+    paceWindowRef.current = []
+    setState(s => ({ ...s, status: 'running', gpsError: null, gpsStatus: 'searching' }))
     await acquireWakeLock()
     startTimer()
     startGps()
@@ -233,16 +322,20 @@ export function useRunTracker(weightKg: number) {
     if ('vibrate' in navigator) navigator.vibrate(100)
     baseElapsedRef.current = getElapsed()
     statusRef.current = 'paused'
-    setState(s => ({ ...s, status: 'paused', elapsed: baseElapsedRef.current }))
+    paceWindowRef.current = []   // clear pace window so we don't show stale pace on resume
+    setState(s => ({ ...s, status: 'paused', elapsed: baseElapsedRef.current, currentPace: 0 }))
     stopTimer()
     stopGps()
     releaseWakeLock()
-    lastPointRef.current = null  // prevents distance jump on resume
+    lastRawRef.current = null      // prevent distance jump on resume
+    lastFilteredRef.current = null
   }, [])
 
   const resume = useCallback(async () => {
     statusRef.current = 'running'
-    setState(s => ({ ...s, status: 'running' }))
+    kalmanLat.current.reset()
+    kalmanLng.current.reset()
+    setState(s => ({ ...s, status: 'running', gpsStatus: 'searching' }))
     await acquireWakeLock()
     startTimer()
     startGps()
@@ -259,9 +352,7 @@ export function useRunTracker(weightKg: number) {
   }, [])
 
   const reset = useCallback(() => {
-    stopTimer()
-    stopGps()
-    releaseWakeLock()
+    stopTimer(); stopGps(); releaseWakeLock()
     statusRef.current = 'idle'
     sessionStartRef.current = 0
     baseElapsedRef.current = 0
@@ -269,11 +360,14 @@ export function useRunTracker(weightKg: number) {
     elevRef.current = 0
     splitDistRef.current = 0
     splitTimeRef.current = 0
-    recentRef.current = []
+    paceWindowRef.current = []
     splitsRef.current = []
     routeRef.current = []
     kmMarkersRef.current = []
-    lastPointRef.current = null
+    lastRawRef.current = null
+    lastFilteredRef.current = null
+    kalmanLat.current.reset()
+    kalmanLng.current.reset()
     setState(INIT)
   }, [])
 

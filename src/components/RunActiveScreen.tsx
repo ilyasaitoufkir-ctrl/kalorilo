@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react'
 import { Pause, Play, Square, ChevronUp, ChevronDown } from 'lucide-react'
-import type { RunTrackerState } from '../hooks/useRunTracker'
+import type { RunTrackerState, GpsStatus } from '../hooks/useRunTracker'
 import RunMap from './RunMap'
 
 // ── Formatters (exported for RunSummary) ──────────────────────────────────────
@@ -20,24 +20,31 @@ export function fmtPace(secPerKm: number): string {
 }
 
 // ── GPS signal bars ───────────────────────────────────────────────────────────
-function GpsSignal({ accuracy }: { accuracy: number | null }) {
+function GpsSignal({ accuracy, gpsStatus }: { accuracy: number | null; gpsStatus: GpsStatus }) {
   const bars = accuracy === null ? 0
     : accuracy < 5  ? 4
     : accuracy < 12 ? 3
-    : accuracy < 25 ? 2
-    : accuracy < 50 ? 1 : 0
+    : accuracy < 20 ? 2
+    : accuracy < 35 ? 1 : 0
   const color = bars >= 3 ? '#10b981' : bars >= 2 ? '#f59e0b' : '#f97316'
 
+  const label = gpsStatus === 'searching' ? 'GPS sucht…'
+    : gpsStatus === 'weak'      ? 'GPS schwach'
+    : gpsStatus === 'good'      ? 'GPS bereit'
+    : 'GPS ✅'
+
   return (
-    <div className="flex items-end gap-0.5">
-      {[1, 2, 3, 4].map((b) => (
-        <div key={b} style={{
-          width: 4, height: 3 + b * 3, borderRadius: 1,
-          background: b <= bars ? color : 'rgba(255,255,255,0.15)',
-        }} />
-      ))}
-      <span style={{ fontSize: 9, color: color || '#555', marginLeft: 3, fontWeight: 700, lineHeight: 1 }}>
-        {accuracy === null ? 'GPS…' : `±${Math.round(accuracy)}m`}
+    <div className="flex items-center gap-1.5">
+      <div className="flex items-end gap-0.5">
+        {[1, 2, 3, 4].map((b) => (
+          <div key={b} style={{
+            width: 4, height: 3 + b * 3, borderRadius: 1,
+            background: b <= bars ? color : 'rgba(255,255,255,0.15)',
+          }} />
+        ))}
+      </div>
+      <span style={{ fontSize: 9, color: color || '#555', fontWeight: 700, lineHeight: 1 }}>
+        {label}
       </span>
     </div>
   )
@@ -110,7 +117,7 @@ export default function RunActiveScreen({ run, goal }: Props) {
   const prevSplitLen = useRef(0)
 
   const { status, elapsed, distance, currentPace, avgPace, calories,
-    elevationGain, route, splits, gpsAccuracy, gpsError, kmMarkers } = run
+    elevationGain, route, splits, gpsAccuracy, gpsStatus, gpsError, kmMarkers } = run
   const isPaused = status === 'paused'
 
   // Detect new km split → show toast
@@ -149,7 +156,7 @@ export default function RunActiveScreen({ run, goal }: Props) {
           zIndex: 10,
           borderBottom: '1px solid rgba(255,255,255,0.05)',
         }}>
-        <GpsSignal accuracy={gpsAccuracy} />
+        <GpsSignal accuracy={gpsAccuracy} gpsStatus={gpsStatus} />
 
         <p style={{ color: '#fff', fontWeight: 900, fontSize: 14, letterSpacing: -0.3 }}>
           🏃 Läuft

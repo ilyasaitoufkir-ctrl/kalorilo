@@ -34,15 +34,15 @@ function GpsSignalBars({ accuracy }: { accuracy: number | null }) {
   const bars = accuracy === null ? 0
     : accuracy < 5  ? 4
     : accuracy < 12 ? 3
-    : accuracy < 25 ? 2
-    : accuracy < 60 ? 1 : 0
+    : accuracy < 20 ? 2
+    : accuracy < 35 ? 1 : 0
 
   const label = accuracy === null ? 'Suche GPS…'
     : accuracy < 5  ? 'Exzellent'
     : accuracy < 12 ? 'Sehr gut'
-    : accuracy < 25 ? 'Gut'
-    : accuracy < 60 ? 'Schwach'
-    : 'Sehr schwach'
+    : accuracy < 20 ? 'Gut – bereit!'
+    : accuracy < 35 ? 'Schwach – warte kurz'
+    : 'Zu ungenau – bitte warten'
 
   const color = bars >= 3 ? '#10b981' : bars === 2 ? '#f59e0b' : bars === 1 ? '#f97316' : '#ef4444'
 
@@ -118,15 +118,15 @@ export default function RunStartScreen({ onStart, onCancel }: Props) {
         }
         setGpsError(msgs[err.code] ?? 'GPS-Fehler')
       },
-      { enableHighAccuracy: true, timeout: 15000, maximumAge: 1000 },
+      { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 },
     )
     return () => {
       if (watchRef.current !== null) navigator.geolocation.clearWatch(watchRef.current)
     }
   }, [])
 
-  const gpsReady  = accuracy !== null && accuracy < 60 && !gpsError
-  const gpsGood   = accuracy !== null && accuracy < 25
+  const gpsReady  = accuracy !== null && accuracy < 35 && !gpsError
+  const gpsGood   = accuracy !== null && accuracy < 20
 
   const handleStart = () => {
     if (watchRef.current !== null) navigator.geolocation.clearWatch(watchRef.current)
