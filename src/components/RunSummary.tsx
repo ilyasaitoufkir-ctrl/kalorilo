@@ -67,7 +67,7 @@ export default function RunSummary({ session, onDone }: Props) {
   }
 
   return (
-    <div className="fixed inset-0 z-[100] overflow-y-auto" style={{ background: 'var(--bg)' }}>
+    <div className="fixed inset-0 z-[110] overflow-y-auto" style={{ background: 'var(--bg)' }}>
 
       {/* ── Hero header ── */}
       <div className="relative overflow-hidden text-center pb-6"

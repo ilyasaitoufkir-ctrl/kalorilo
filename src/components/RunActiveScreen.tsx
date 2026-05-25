@@ -144,7 +144,7 @@ export default function RunActiveScreen({ run, goal }: Props) {
     : null
 
   return (
-    <div className="fixed inset-0 z-[100] flex flex-col" style={{ background: '#000' }}>
+    <div className="fixed inset-0 z-[110] flex flex-col" style={{ background: '#000' }}>
 
       {/* ── Top bar ── */}
       <div className="flex items-center justify-between px-4"

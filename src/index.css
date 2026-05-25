@@ -98,9 +98,9 @@ body {
 .pt-safe  { padding-top:    max(env(safe-area-inset-top),    48px); }
 .pb-safe  { padding-bottom: max(env(safe-area-inset-bottom), 16px); }
 /* pb-nav = Tab-Bar (80px) + Home Bar + extra breathing room */
-.pb-nav   { padding-bottom: calc(110px + max(env(safe-area-inset-bottom), 20px)); }
+.pb-nav   { padding-bottom: calc(120px + max(env(safe-area-inset-bottom), 16px)); }
 /* For flex scroll containers inside full-height screens */
-.scroll-pb { padding-bottom: calc(110px + max(env(safe-area-inset-bottom), 20px)); }
+.scroll-pb { padding-bottom: calc(120px + max(env(safe-area-inset-bottom), 16px)); }
 /* Enable momentum scrolling on iOS for all overflow-y-auto containers */
 .overflow-y-auto, .overflow-y-scroll {
   -webkit-overflow-scrolling: touch;

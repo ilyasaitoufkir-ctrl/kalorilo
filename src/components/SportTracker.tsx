@@ -84,7 +84,7 @@ function AddSheet({ onClose }: { onClose: ()=>void }) {
   ]
 
   return (
-    <div className="fixed inset-0 z-50 flex items-end" onClick={onClose}>
+    <div className="fixed inset-0 z-[110] flex items-end" onClick={onClose}>
       <div className="sheet-overlay absolute inset-0"/>
       <div className="sheet-bg relative w-full max-w-[430px] mx-auto max-h-[93dvh] overflow-hidden flex flex-col anim-up"
         onClick={(e)=>e.stopPropagation()}>
@@ -96,7 +96,7 @@ function AddSheet({ onClose }: { onClose: ()=>void }) {
           </button>
         </div>
 
-        <div className="flex-1 overflow-y-auto overflow-x-hidden px-5 space-y-3" style={{ paddingBottom:'calc(40px + max(env(safe-area-inset-bottom),16px))' }}>
+        <div className="flex-1 overflow-y-auto overflow-x-hidden px-5 space-y-3" style={{ paddingBottom:'calc(max(env(safe-area-inset-bottom),20px) + 48px)' }}>
           {!sport ? (
             <>
               <div className="flex gap-2 overflow-x-auto pb-1 -mx-1 px-1" style={{ scrollbarWidth:'none' }}>

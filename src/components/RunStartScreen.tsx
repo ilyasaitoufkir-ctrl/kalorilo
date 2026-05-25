@@ -147,7 +147,7 @@ export default function RunStartScreen({ onStart, onCancel }: Props) {
   const tip = tips[new Date().getDate() % tips.length]
 
   return (
-    <div className="fixed inset-0 z-[100] flex flex-col" style={{ background: '#000' }}>
+    <div className="fixed inset-0 z-[110] flex flex-col" style={{ background: '#000' }}>
 
       {/* ── Header ── */}
       <div className="flex items-center justify-between px-5"

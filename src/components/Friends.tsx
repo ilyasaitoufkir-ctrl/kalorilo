@@ -98,7 +98,7 @@ function CreateSheet({ userId, userName, userAvatar, onCreated, onClose }: {
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-end" onClick={onClose}>
+    <div className="fixed inset-0 z-[110] flex items-end" onClick={onClose}>
       <div className="sheet-overlay absolute inset-0" />
       <div className="relative w-full max-w-[430px] mx-auto rounded-t-[32px] max-h-[92dvh] overflow-y-auto flex flex-col anim-up"
         style={{ background: 'var(--bg)' }} onClick={(e) => e.stopPropagation()}>
@@ -108,7 +108,7 @@ function CreateSheet({ userId, userName, userAvatar, onCreated, onClose }: {
           <button onClick={onClose} className="w-9 h-9 card flex items-center justify-center"><X size={18} style={{ color: 'var(--text1)' }} /></button>
         </div>
 
-        <div className="px-5 pb-8 space-y-4">
+        <div className="px-5 space-y-4" style={{ paddingBottom: 'calc(max(env(safe-area-inset-bottom), 20px) + 24px)' }}>
           {step === 'name' && (
             <>
               <div>
@@ -193,7 +193,7 @@ function JoinSheet({ userId, userName, userAvatar, onJoined, onClose }: {
   const challenge = CHALLENGES.find((c) => c.id === info?.challengeId)
 
   return (
-    <div className="fixed inset-0 z-50 flex items-end" onClick={onClose}>
+    <div className="fixed inset-0 z-[110] flex items-end" onClick={onClose}>
       <div className="sheet-overlay absolute inset-0" />
       <div className="relative w-full max-w-[430px] mx-auto rounded-t-[32px] anim-up"
         style={{ background: 'var(--bg)' }} onClick={(e) => e.stopPropagation()}>
@@ -202,7 +202,7 @@ function JoinSheet({ userId, userName, userAvatar, onJoined, onClose }: {
           <h2 className="text-lg font-black" style={{ color: 'var(--text1)' }}>Mit Code beitreten</h2>
           <button onClick={onClose} className="w-9 h-9 card flex items-center justify-center"><X size={18} style={{ color: 'var(--text1)' }} /></button>
         </div>
-        <div className="px-5 pb-8 space-y-3">
+        <div className="px-5 space-y-3" style={{ paddingBottom: 'calc(max(env(safe-area-inset-bottom), 20px) + 24px)' }}>
           <div className="flex gap-2">
             <input
               autoFocus value={code}
