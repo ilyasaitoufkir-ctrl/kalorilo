@@ -1,44 +1,27 @@
-import { initializeApp, getApps, type FirebaseApp } from 'firebase/app'
-import { getFirestore, type Firestore } from 'firebase/firestore'
+import { initializeApp, getApps, getApp } from 'firebase/app'
+import { getAuth, GoogleAuthProvider } from 'firebase/auth'
+import { getFirestore } from 'firebase/firestore'
 
-export interface FirebaseConfig {
-  apiKey: string
-  authDomain: string
-  projectId: string
-  storageBucket: string
-  messagingSenderId: string
-  appId: string
+const cfg = {
+  apiKey:            import.meta.env.VITE_FIREBASE_API_KEY             ?? '',
+  authDomain:        import.meta.env.VITE_FIREBASE_AUTH_DOMAIN         ?? '',
+  projectId:         import.meta.env.VITE_FIREBASE_PROJECT_ID          ?? '',
+  storageBucket:     import.meta.env.VITE_FIREBASE_STORAGE_BUCKET      ?? '',
+  messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID ?? '',
+  appId:             import.meta.env.VITE_FIREBASE_APP_ID              ?? '',
 }
 
-let _app: FirebaseApp | null = null
-let _db: Firestore | null = null
+export const isFirebaseConfigured = !!(cfg.apiKey && cfg.projectId)
 
-export function initFirebase(config: FirebaseConfig): Firestore {
-  if (!config.apiKey || !config.projectId) throw new Error('Firebase Konfiguration unvollständig')
-  if (!getApps().length) {
-    _app = initializeApp(config)
-  } else {
-    _app = getApps()[0]
-  }
-  _db = getFirestore(_app)
-  return _db
-}
+const app = isFirebaseConfigured
+  ? (getApps().length ? getApp() : initializeApp(cfg))
+  : null
 
-export function getDb(): Firestore | null {
-  return _db
-}
+export const auth      = app ? getAuth(app)      : null
+export const db        = app ? getFirestore(app) : null
+export const gProvider = isFirebaseConfigured ? new GoogleAuthProvider() : null
 
-export function isFirebaseReady(): boolean {
-  return _db !== null
-}
-
-// Versuche beim Start zu initialisieren falls Config im Store vorhanden
-export function tryInitFromConfig(config: Partial<FirebaseConfig> | null): boolean {
-  if (!config?.apiKey || !config?.projectId) return false
-  try {
-    initFirebase(config as FirebaseConfig)
-    return true
-  } catch {
-    return false
-  }
-}
+// Legacy no-ops kept for backward compatibility
+export function tryInitFromConfig(_cfg: unknown): boolean { return isFirebaseConfigured }
+export function getDb() { return db }
+export function isFirebaseReady(): boolean { return !!db }

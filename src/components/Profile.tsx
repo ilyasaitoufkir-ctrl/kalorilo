@@ -1,6 +1,7 @@
 import { useState } from 'react'
-import { Save, Key, ExternalLink, Bell, ChevronRight, Unlink, RefreshCw, Loader } from 'lucide-react'
+import { Save, Key, ExternalLink, Bell, ChevronRight, Unlink, RefreshCw, Loader, LogOut } from 'lucide-react'
 import { useStore } from '../store/useStore'
+import { useAuth } from '../contexts/AuthContext'
 import { getBMI, getBMICategory } from '../utils/calculations'
 import { buildAuthUrl, syncWhoopData, refreshAccessToken } from '../lib/whoop'
 import type { UserProfile, Gender, ActivityLevel, Goal } from '../types'
@@ -26,6 +27,7 @@ const inputStyle = {
 } as const
 
 export default function Profile() {
+  const { signOut, user, isConfigured } = useAuth()
   const storeProfile   = useStore((s) => s.profile)
   const setProfile     = useStore((s) => s.setProfile)
   const apiKeys        = useStore((s) => s.apiKeys)
@@ -484,6 +486,20 @@ export default function Profile() {
               className="btn-gold w-full py-4 flex items-center justify-center gap-2" style={{ minHeight:52 }}>
               <Bell size={16}/>Speichern
             </button>
+          </div>
+        )}
+
+        {/* Logout */}
+        {isConfigured && user && (
+          <div className="px-5 pt-2 pb-4">
+            <button onClick={signOut}
+              className="w-full flex items-center justify-center gap-2 rounded-2xl font-bold py-4 glass-press"
+              style={{ background: 'rgba(239,68,68,0.08)', border: '1px solid rgba(239,68,68,0.2)', color: '#ef4444', fontSize: 15 }}>
+              <LogOut size={18} /> Abmelden
+            </button>
+            <p className="text-center mt-2" style={{ fontSize: 11, color: 'var(--text-3)' }}>
+              {user.email}
+            </p>
           </div>
         )}
       </div>

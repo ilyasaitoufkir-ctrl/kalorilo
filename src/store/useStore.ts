@@ -95,6 +95,9 @@ interface AppState {
   weeklyPlans: WeeklyPlan[]
   addWeeklyPlan: (plan: WeeklyPlan) => void
 
+  // Clear all user data (called on logout)
+  clearUserData: () => void
+
   // Run sessions
   runSessions: RunSession[]
   addRunSession: (session: RunSession) => void
@@ -207,6 +210,15 @@ export const useStore = create<AppState>()(
       runSessions: [],
       addRunSession: (session) => set((s) => ({ runSessions: [session, ...s.runSessions] })),
       removeRunSession: (id) => set((s) => ({ runSessions: s.runSessions.filter((r) => r.id !== id) })),
+
+      clearUserData: () => set({
+        profile: null,
+        foodLogs: [], activityLogs: [], weightHistory: [], waterLogs: [],
+        customRecipes: [], aiMessages: [], whoopData: null,
+        cheatDays: [], beforeAfterPhotos: [], weeklyPlans: [], runSessions: [],
+        apiKeys: defaultApiKeys, activeTab: 'home',
+        whoopTokens: null, groupIds: [],
+      }),
 
       getFoodLogsForDate: (date) => get().foodLogs.filter((l) => l.date === date),
       getActivityLogsForDate: (date) => get().activityLogs.filter((l) => l.date === date),
