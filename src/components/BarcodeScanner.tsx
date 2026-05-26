@@ -1,4 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
+import { BrowserMultiFormatReader } from '@zxing/browser'
+import { NotFoundException } from '@zxing/library'
 import { X, Zap, ZapOff, Loader } from 'lucide-react'
 
 interface Props {
@@ -7,130 +9,105 @@ interface Props {
 }
 
 export default function BarcodeScanner({ onDetected, onClose }: Props) {
-  const videoRef  = useRef<HTMLVideoElement>(null)
-  const streamRef = useRef<MediaStream | null>(null)
-  const stoppedRef = useRef(false)
+  const videoRef    = useRef<HTMLVideoElement>(null)
+  const doneRef     = useRef(false)
 
-  const [status, setStatus] = useState<'starting' | 'scanning' | 'detected' | 'error'>('starting')
-  const [errorMsg, setErrorMsg] = useState('')
-  const [torch, setTorch] = useState(false)
-  const [detectedCode, setDetectedCode] = useState('')
-
-  const stopAll = () => {
-    stoppedRef.current = true
-    streamRef.current?.getTracks().forEach((t) => t.stop())
-    streamRef.current = null
+  const stopStream = () => {
+    const s = videoRef.current?.srcObject as MediaStream | null
+    s?.getTracks().forEach((t) => t.stop())
+    if (videoRef.current) videoRef.current.srcObject = null
   }
 
+  const [status, setStatus]           = useState<'starting' | 'scanning' | 'detected' | 'error'>('starting')
+  const [errorMsg, setErrorMsg]       = useState('')
+  const [detectedCode, setDetectedCode] = useState('')
+  const [torch, setTorch]             = useState(false)
+
   useEffect(() => {
-    stoppedRef.current = false
+    doneRef.current = false
+    const reader = new BrowserMultiFormatReader()
 
-    const start = async () => {
-      if (!window.isSecureContext) {
-        setStatus('error')
-        setErrorMsg('Kamera benötigt HTTPS. Bitte kalorilo.vercel.app öffnen.')
-        return
-      }
-      if (!navigator.mediaDevices?.getUserMedia) {
-        setStatus('error')
-        setErrorMsg('Kamera wird von diesem Browser nicht unterstützt. Bitte Safari nutzen.')
-        return
-      }
+    let scanStarted = false
 
-      try {
-        const stream = await navigator.mediaDevices.getUserMedia({
-          video: { facingMode: { ideal: 'environment' }, width: { ideal: 1920 }, height: { ideal: 1080 } },
-          audio: false,
-        })
-
-        if (stoppedRef.current) { stream.getTracks().forEach((t) => t.stop()); return }
-
-        streamRef.current = stream
-
-        const video = videoRef.current!
-        video.srcObject = stream
-        video.setAttribute('playsinline', 'true')
-        video.setAttribute('webkit-playsinline', 'true')
-        video.muted = true
-
-        await video.play()
-        setStatus('scanning')
-
-        // Try native BarcodeDetector first (Chrome/Android, iOS 17+)
-        if ('BarcodeDetector' in window) {
-          const detector = new (window as any).BarcodeDetector({
-            formats: ['ean_13', 'ean_8', 'upc_a', 'upc_e', 'code_128', 'code_39', 'qr_code'],
-          })
-          const scan = async () => {
-            if (stoppedRef.current) return
-            try {
-              const codes = await detector.detect(video)
-              if (codes.length > 0 && !stoppedRef.current) {
-                const code = codes[0].rawValue as string
-                setDetectedCode(code)
-                setStatus('detected')
-                stopAll()
-                setTimeout(() => onDetected(code), 500)
-                return
-              }
-            } catch { /* frame not ready */ }
-            setTimeout(scan, 150)
+    // decodeFromConstraints: handles getUserMedia + video.play() + continuous scan loop
+    // callback fires on every frame (result=barcode found, err=NotFoundException=no barcode yet)
+    reader
+      .decodeFromConstraints(
+        {
+          video: {
+            facingMode: { ideal: 'environment' },
+            width:  { ideal: 1280 },
+            height: { ideal: 720 },
+          },
+        },
+        videoRef.current!,
+        (result, err) => {
+          // First callback = camera is live and scanning
+          if (!scanStarted) {
+            scanStarted = true
+            setStatus('scanning')
           }
-          setTimeout(scan, 500)
-        } else {
-          // Fallback: ZXing
-          const { BrowserMultiFormatReader } = await import('@zxing/browser')
-          const { NotFoundException } = await import('@zxing/library')
-          const reader = new BrowserMultiFormatReader()
-          reader.decodeFromStream(stream, video, (result, err) => {
-            if (stoppedRef.current) return
-            if (result) {
-              const code = result.getText()
-              setDetectedCode(code)
-              setStatus('detected')
-              stopAll()
-              setTimeout(() => onDetected(code), 500)
-            } else if (err && !(err instanceof NotFoundException)) {
-              console.warn('[BarcodeScanner]', err)
-            }
-          })
-        }
-      } catch (e: any) {
-        if (stoppedRef.current) return
-        setStatus('error')
-        if (e.name === 'NotAllowedError') {
-          setErrorMsg('Kamera-Zugriff verweigert.\n\niPhone: Einstellungen → Safari → Kamera → Erlauben')
-        } else if (e.name === 'NotFoundError') {
-          setErrorMsg('Keine Kamera gefunden.')
-        } else if (e.name === 'NotReadableError') {
-          setErrorMsg('Kamera wird gerade von einer anderen App genutzt.')
-        } else {
-          setErrorMsg(`Kamera-Fehler: ${e.message}`)
-        }
-      }
-    }
 
-    start()
-    return () => { stopAll() }
+          if (doneRef.current) return
+
+          if (result) {
+            doneRef.current = true
+            const code = result.getText()
+            setDetectedCode(code)
+            setStatus('detected')
+            stopStream()
+            setTimeout(() => onDetected(code), 550)
+            return
+          }
+
+          // NotFoundException is normal (no barcode in frame) – ignore silently
+          if (err && !(err instanceof NotFoundException)) {
+            console.warn('[BarcodeScanner]', err)
+          }
+        }
+      )
+      .catch((e: any) => {
+        if (doneRef.current) return
+        setStatus('error')
+        if (e?.name === 'NotAllowedError') {
+          setErrorMsg('Kamera-Zugriff verweigert.\n\niPhone: Einstellungen → Safari → Kamera → Erlauben')
+        } else if (e?.name === 'NotFoundError') {
+          setErrorMsg('Keine Kamera gefunden.')
+        } else if (e?.name === 'NotReadableError') {
+          setErrorMsg('Kamera wird von einer anderen App genutzt.')
+        } else if (!window.isSecureContext) {
+          setErrorMsg('Kamera benötigt HTTPS. Bitte kalorilo.vercel.app öffnen.')
+        } else {
+          setErrorMsg(`Kamera-Fehler: ${e?.message ?? 'Unbekannt'}`)
+        }
+      })
+
+    return () => {
+      doneRef.current = true
+      stopStream()
+    }
   }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
   const toggleTorch = async () => {
-    const track = streamRef.current?.getVideoTracks()[0]
+    const stream = videoRef.current?.srcObject as MediaStream | null
+    const track  = stream?.getVideoTracks()[0]
     if (!track) return
     try {
       await (track as any).applyConstraints({ advanced: [{ torch: !torch }] })
       setTorch((v) => !v)
-    } catch { /* torch not supported on this device */ }
+    } catch { /* torch not supported */ }
   }
 
-  const handleClose = () => { stopAll(); onClose() }
+  const handleClose = () => {
+    doneRef.current = true
+    stopStream()
+    onClose()
+  }
 
   return (
-    <div
-      className="fixed inset-0 z-[120] flex flex-col"
-      style={{ background: '#000' }}
-    >
-      {/* ── Video feed – always in DOM, always visible ── */}
+    <div className="fixed inset-0 z-[120]" style={{ background: '#000' }}>
+
+      {/* ── Video – always in DOM so ZXing can attach to it ── */}
       <video
         ref={videoRef}
         autoPlay
@@ -143,18 +120,17 @@ export default function BarcodeScanner({ onDetected, onClose }: Props) {
           height: '100%',
           objectFit: 'cover',
           opacity: status === 'scanning' || status === 'detected' ? 1 : 0,
-          transition: 'opacity 0.3s',
+          transition: 'opacity 0.4s',
         }}
       />
 
-      {/* ── Dark vignette overlay ── */}
+      {/* ── Vignette overlay ── */}
       {(status === 'scanning' || status === 'detected') && (
         <div
           className="absolute inset-0 pointer-events-none"
           style={{
-            background: [
-              'linear-gradient(to bottom, rgba(0,0,0,0.6) 0%, rgba(0,0,0,0.1) 25%, rgba(0,0,0,0.1) 75%, rgba(0,0,0,0.6) 100%)',
-            ].join(','),
+            background:
+              'linear-gradient(to bottom, rgba(0,0,0,0.55) 0%, rgba(0,0,0,0.08) 28%, rgba(0,0,0,0.08) 72%, rgba(0,0,0,0.55) 100%)',
           }}
         />
       )}
@@ -162,58 +138,79 @@ export default function BarcodeScanner({ onDetected, onClose }: Props) {
       {/* ── Scan frame ── */}
       {(status === 'scanning' || status === 'detected') && (
         <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-          <div className="relative flex items-center justify-center" style={{ width: '76vw', maxWidth: 340, height: 180 }}>
-
-            {/* Corner brackets – green */}
-            {(['tl','tr','bl','br'] as const).map((corner) => (
-              <div key={corner} style={{
-                position: 'absolute',
-                width: 36, height: 36,
-                top:    corner.startsWith('t') ? 0 : undefined,
-                bottom: corner.startsWith('b') ? 0 : undefined,
-                left:   corner.endsWith('l')   ? 0 : undefined,
-                right:  corner.endsWith('r')   ? 0 : undefined,
-                borderTop:    corner.startsWith('t') ? '3px solid #4a8c5c' : 'none',
-                borderBottom: corner.startsWith('b') ? '3px solid #4a8c5c' : 'none',
-                borderLeft:   corner.endsWith('l')   ? '3px solid #4a8c5c' : 'none',
-                borderRight:  corner.endsWith('r')   ? '3px solid #4a8c5c' : 'none',
-                borderRadius:
-                  corner === 'tl' ? '8px 0 0 0' :
-                  corner === 'tr' ? '0 8px 0 0' :
-                  corner === 'bl' ? '0 0 0 8px' : '0 0 8px 0',
-              }}/>
+          <div
+            style={{
+              position: 'relative',
+              width: 'min(76vw, 320px)',
+              height: 170,
+            }}
+          >
+            {/* Corner brackets */}
+            {(['tl', 'tr', 'bl', 'br'] as const).map((c) => (
+              <div
+                key={c}
+                style={{
+                  position: 'absolute',
+                  width: 34,
+                  height: 34,
+                  top:    c[0] === 't' ? 0 : undefined,
+                  bottom: c[0] === 'b' ? 0 : undefined,
+                  left:   c[1] === 'l' ? 0 : undefined,
+                  right:  c[1] === 'r' ? 0 : undefined,
+                  borderTop:    c[0] === 't' ? '3px solid #4a8c5c' : 'none',
+                  borderBottom: c[0] === 'b' ? '3px solid #4a8c5c' : 'none',
+                  borderLeft:   c[1] === 'l' ? '3px solid #4a8c5c' : 'none',
+                  borderRight:  c[1] === 'r' ? '3px solid #4a8c5c' : 'none',
+                  borderRadius:
+                    c === 'tl' ? '8px 0 0 0' :
+                    c === 'tr' ? '0 8px 0 0' :
+                    c === 'bl' ? '0 0 0 8px' :
+                                 '0 0 8px 0',
+                }}
+              />
             ))}
 
             {/* Animated scan line */}
             {status === 'scanning' && (
-              <div style={{
-                position: 'absolute',
-                left: 4, right: 4,
-                height: 2,
-                background: 'linear-gradient(90deg, transparent, #7db88a, #4a8c5c, #7db88a, transparent)',
-                borderRadius: 1,
-                animation: 'scanline 1.6s ease-in-out infinite',
-                boxShadow: '0 0 8px rgba(74,140,92,0.8)',
-              }}/>
+              <div
+                style={{
+                  position: 'absolute',
+                  left: 4,
+                  right: 4,
+                  height: 2,
+                  background:
+                    'linear-gradient(90deg, transparent, #7db88a, #4a8c5c, #7db88a, transparent)',
+                  boxShadow: '0 0 10px rgba(74,140,92,0.9)',
+                  borderRadius: 1,
+                  animation: 'bcscan 1.8s ease-in-out infinite',
+                }}
+              />
             )}
 
-            {/* Success flash */}
+            {/* Detected flash */}
             {status === 'detected' && (
-              <div style={{
-                position: 'absolute',
-                inset: 0,
-                background: 'rgba(74,140,92,0.25)',
-                borderRadius: 8,
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-              }}>
-                <div style={{
-                  background: '#4a8c5c',
-                  borderRadius: 12,
-                  padding: '8px 18px',
-                }}>
-                  <p style={{ color: '#fff', fontWeight: 800, fontSize: 14 }}>✅ {detectedCode}</p>
+              <div
+                style={{
+                  position: 'absolute',
+                  inset: 0,
+                  background: 'rgba(74,140,92,0.3)',
+                  borderRadius: 8,
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                }}
+              >
+                <div
+                  style={{
+                    background: '#4a8c5c',
+                    borderRadius: 12,
+                    padding: '8px 20px',
+                    boxShadow: '0 4px 20px rgba(74,140,92,0.5)',
+                  }}
+                >
+                  <p style={{ color: '#fff', fontWeight: 800, fontSize: 14 }}>
+                    ✅ {detectedCode}
+                  </p>
                 </div>
               </div>
             )}
@@ -221,54 +218,60 @@ export default function BarcodeScanner({ onDetected, onClose }: Props) {
         </div>
       )}
 
-      {/* ── Hint text below scan frame ── */}
+      {/* ── Hint label ── */}
       {status === 'scanning' && (
-        <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-          <p style={{
+        <p
+          style={{
             position: 'absolute',
-            bottom: '34%',
-            left: 0, right: 0,
+            bottom: '30%',
+            left: 0,
+            right: 0,
             textAlign: 'center',
-            color: 'rgba(255,255,255,0.75)',
+            color: 'rgba(255,255,255,0.8)',
             fontSize: 13,
             fontWeight: 600,
             letterSpacing: 0.3,
-          }}>
-            Barcode in den Rahmen halten
-          </p>
-        </div>
+            pointerEvents: 'none',
+          }}
+        >
+          Barcode in den Rahmen halten
+        </p>
       )}
 
       {/* ── Starting spinner ── */}
       {status === 'starting' && (
         <div className="absolute inset-0 flex flex-col items-center justify-center gap-4">
-          <Loader size={40} className="animate-spin" style={{ color: '#4a8c5c' }}/>
-          <p style={{ color: '#aaa', fontSize: 14, fontWeight: 600 }}>Kamera wird gestartet…</p>
+          <Loader size={42} className="animate-spin" style={{ color: '#4a8c5c' }} />
+          <p style={{ color: '#bbb', fontSize: 14, fontWeight: 600 }}>Kamera wird gestartet…</p>
         </div>
       )}
 
-      {/* ── Error state ── */}
+      {/* ── Error ── */}
       {status === 'error' && (
         <div className="absolute inset-0 flex flex-col items-center justify-center px-8 text-center gap-5">
           <span style={{ fontSize: 56 }}>📷</span>
           <p style={{ color: '#fff', fontSize: 18, fontWeight: 800 }}>Kamera nicht verfügbar</p>
-          <div style={{
-            background: 'rgba(239,68,68,0.12)',
-            border: '1px solid rgba(239,68,68,0.3)',
-            borderRadius: 16,
-            padding: '14px 18px',
-            width: '100%',
-          }}>
-            <p style={{ color: '#f87171', fontSize: 14, whiteSpace: 'pre-line', fontWeight: 600 }}>{errorMsg}</p>
+          <div
+            style={{
+              background: 'rgba(239,68,68,0.12)',
+              border: '1px solid rgba(239,68,68,0.3)',
+              borderRadius: 16,
+              padding: '14px 18px',
+              width: '100%',
+            }}
+          >
+            <p style={{ color: '#f87171', fontSize: 14, whiteSpace: 'pre-line', fontWeight: 600 }}>
+              {errorMsg}
+            </p>
           </div>
           <button
             onClick={handleClose}
             style={{
-              background: '#222',
-              border: '1px solid #444',
+              background: '#1a1a1a',
+              border: '1px solid #333',
               borderRadius: 16,
               color: '#fff',
-              padding: '12px 32px',
+              padding: '13px 36px',
               fontSize: 15,
               fontWeight: 700,
             }}
@@ -278,57 +281,83 @@ export default function BarcodeScanner({ onDetected, onClose }: Props) {
         </div>
       )}
 
-      {/* ── Top bar: close button ── */}
+      {/* ── Top bar ── */}
       <div
-        className="absolute top-0 left-0 right-0 flex items-center justify-between px-5"
-        style={{ paddingTop: 'max(env(safe-area-inset-top), 16px)', zIndex: 10 }}
+        style={{
+          position: 'absolute',
+          top: 0,
+          left: 0,
+          right: 0,
+          paddingTop: 'max(env(safe-area-inset-top), 16px)',
+          paddingLeft: 20,
+          paddingRight: 20,
+          paddingBottom: 12,
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          zIndex: 10,
+          background: 'linear-gradient(to bottom, rgba(0,0,0,0.5), transparent)',
+        }}
       >
         <p style={{ color: '#fff', fontWeight: 800, fontSize: 16 }}>Barcode scannen</p>
         <button
           onClick={handleClose}
           style={{
-            width: 40, height: 40,
+            width: 40,
+            height: 40,
             borderRadius: 20,
-            background: 'rgba(0,0,0,0.5)',
-            border: '1px solid rgba(255,255,255,0.2)',
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            background: 'rgba(0,0,0,0.45)',
+            border: '1px solid rgba(255,255,255,0.18)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
           }}
         >
-          <X size={18} color="#fff"/>
+          <X size={18} color="#fff" />
         </button>
       </div>
 
       {/* ── Bottom bar: torch ── */}
       {status === 'scanning' && (
         <div
-          className="absolute bottom-0 left-0 right-0 flex justify-center"
           style={{
-            paddingBottom: 'max(env(safe-area-inset-bottom), 32px)',
-            paddingTop: 24,
-            background: 'linear-gradient(to top, rgba(0,0,0,0.7), transparent)',
+            position: 'absolute',
+            bottom: 0,
+            left: 0,
+            right: 0,
+            paddingBottom: 'max(env(safe-area-inset-bottom), 36px)',
+            paddingTop: 28,
+            display: 'flex',
+            justifyContent: 'center',
+            background: 'linear-gradient(to top, rgba(0,0,0,0.6), transparent)',
           }}
         >
           <button
             onClick={toggleTorch}
             style={{
-              width: 52, height: 52,
-              borderRadius: 26,
-              background: torch ? 'rgba(74,140,92,0.3)' : 'rgba(255,255,255,0.12)',
-              border: torch ? '1px solid rgba(74,140,92,0.6)' : '1px solid rgba(255,255,255,0.2)',
-              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              width: 54,
+              height: 54,
+              borderRadius: 27,
+              background: torch ? 'rgba(74,140,92,0.35)' : 'rgba(255,255,255,0.1)',
+              border: torch
+                ? '1px solid rgba(74,140,92,0.7)'
+                : '1px solid rgba(255,255,255,0.2)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
             }}
           >
-            {torch ? <Zap size={22} color="#7db88a"/> : <ZapOff size={22} color="#fff"/>}
+            {torch ? <Zap size={22} color="#7db88a" /> : <ZapOff size={22} color="#fff" />}
           </button>
         </div>
       )}
 
-      {/* Scan line keyframes */}
+      {/* Scan line animation */}
       <style>{`
-        @keyframes scanline {
-          0%   { top: 8px; opacity: 0.6; }
+        @keyframes bcscan {
+          0%   { top: 6px;  opacity: 0.5; }
           50%  { opacity: 1; }
-          100% { top: calc(100% - 10px); opacity: 0.6; }
+          100% { top: calc(100% - 8px); opacity: 0.5; }
         }
       `}</style>
     </div>
