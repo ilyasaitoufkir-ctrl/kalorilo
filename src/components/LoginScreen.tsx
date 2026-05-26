@@ -16,10 +16,10 @@ export default function LoginScreen() {
   const [success, setSuccess] = useState('')
 
   const inp = {
-    background: 'rgba(255,255,255,0.05)',
-    border: '1px solid rgba(255,255,255,0.1)',
+    background: 'rgba(74,140,92,0.05)',
+    border: '1px solid rgba(125,184,138,0.15)',
     borderRadius: 16,
-    color: '#fff',
+    color: 'var(--text-1)',
     padding: '14px 16px',
     width: '100%',
     fontSize: 15,
@@ -72,11 +72,11 @@ export default function LoginScreen() {
   }
 
   return (
-    <div className="h-dvh overflow-y-auto overflow-x-hidden" style={{ background: '#000' }}>
+    <div className="h-dvh overflow-y-auto overflow-x-hidden" style={{ background: 'var(--bg)' }}>
       {/* Gold orb */}
       <div style={{
         position: 'fixed', top: -120, right: -80, width: 320, height: 320, pointerEvents: 'none', zIndex: 0,
-        background: 'radial-gradient(circle, rgba(245,158,11,0.18) 0%, transparent 70%)',
+        background: 'radial-gradient(circle, rgba(74,140,92,0.18) 0%, transparent 70%)',
       }} />
 
       <div className="flex flex-col items-center px-5 anim-fade relative z-10"
@@ -85,26 +85,26 @@ export default function LoginScreen() {
         {/* Logo */}
         <div className="text-center mb-8">
           <div style={{ fontSize: 72, lineHeight: 1, marginBottom: 12 }}>🥗</div>
-          <h1 className="font-black tracking-tight" style={{ fontSize: 36, color: '#fff', letterSpacing: -1.5 }}>
+          <h1 className="font-black tracking-tight" style={{ fontSize: 36, color: 'var(--text-1)', letterSpacing: -1.5 }}>
             Kalorilo
           </h1>
-          <p style={{ fontSize: 14, color: 'rgba(255,255,255,0.35)', marginTop: 6, fontWeight: 500 }}>
+          <p style={{ fontSize: 14, color: 'var(--text-3)', marginTop: 6, fontWeight: 500 }}>
             Dein smarter Ernährungsbegleiter
           </p>
         </div>
 
         {/* Card */}
-        <div className="w-full max-w-sm rounded-3xl p-6" style={{ background: '#111', border: '1px solid #222' }}>
+        <div className="w-full max-w-sm rounded-3xl p-6" style={{ background: '#ffffff', border: '1px solid rgba(125,184,138,0.2)', boxShadow: '0 4px 24px rgba(74,140,92,0.08)' }}>
 
           {/* Mode tabs */}
           {mode !== 'forgot' && (
-            <div className="flex gap-1 p-1 rounded-2xl mb-6" style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.06)' }}>
+            <div className="flex gap-1 p-1 rounded-2xl mb-6" style={{ background: 'rgba(74,140,92,0.04)', border: '1px solid rgba(74,140,92,0.06)' }}>
               {(['login', 'register'] as const).map((m) => (
                 <button key={m} onClick={() => { setMode(m); setError(''); setSuccess('') }}
                   className="flex-1 py-2.5 rounded-xl text-sm font-bold transition-all"
                   style={mode === m
-                    ? { background: 'var(--grad-gold)', color: '#000' }
-                    : { color: 'rgba(255,255,255,0.4)' }}>
+                    ? { background: 'var(--grad-gold)', color: '#ffffff' }
+                    : { color: 'var(--text-2)' }}>
                   {m === 'login' ? 'Anmelden' : 'Registrieren'}
                 </button>
               ))}
@@ -114,11 +114,11 @@ export default function LoginScreen() {
           {mode === 'forgot' && (
             <div className="mb-5">
               <button onClick={() => { setMode('login'); setError('') }}
-                className="text-sm font-bold glass-press" style={{ color: '#f59e0b' }}>
+                className="text-sm font-bold glass-press" style={{ color: '#4a8c5c' }}>
                 ← Zurück
               </button>
-              <h2 className="font-black text-lg mt-2" style={{ color: '#fff' }}>Passwort zurücksetzen</h2>
-              <p className="text-sm mt-1" style={{ color: 'rgba(255,255,255,0.4)' }}>
+              <h2 className="font-black text-lg mt-2" style={{ color: 'var(--text-1)' }}>Passwort zurücksetzen</h2>
+              <p className="text-sm mt-1" style={{ color: 'var(--text-2)' }}>
                 Wir senden dir einen Reset-Link.
               </p>
             </div>
@@ -130,7 +130,7 @@ export default function LoginScreen() {
             {/* Name (register only) */}
             {mode === 'register' && (
               <div className="relative">
-                <User size={16} style={{ position: 'absolute', left: 14, top: '50%', transform: 'translateY(-50%)', color: 'rgba(255,255,255,0.3)' }} />
+                <User size={16} style={{ position: 'absolute', left: 14, top: '50%', transform: 'translateY(-50%)', color: 'var(--text-3)' }} />
                 <input
                   value={name} onChange={(e) => setName(e.target.value)}
                   placeholder="Dein Name"
@@ -142,7 +142,7 @@ export default function LoginScreen() {
 
             {/* Email */}
             <div className="relative">
-              <Mail size={16} style={{ position: 'absolute', left: 14, top: '50%', transform: 'translateY(-50%)', color: 'rgba(255,255,255,0.3)' }} />
+              <Mail size={16} style={{ position: 'absolute', left: 14, top: '50%', transform: 'translateY(-50%)', color: 'var(--text-3)' }} />
               <input
                 type="email" value={email} onChange={(e) => setEmail(e.target.value)}
                 placeholder="E-Mail Adresse"
@@ -155,7 +155,7 @@ export default function LoginScreen() {
             {/* Password (not for forgot) */}
             {mode !== 'forgot' && (
               <div className="relative">
-                <Lock size={16} style={{ position: 'absolute', left: 14, top: '50%', transform: 'translateY(-50%)', color: 'rgba(255,255,255,0.3)' }} />
+                <Lock size={16} style={{ position: 'absolute', left: 14, top: '50%', transform: 'translateY(-50%)', color: 'var(--text-3)' }} />
                 <input
                   type={showPw ? 'text' : 'password'}
                   value={password} onChange={(e) => setPassword(e.target.value)}
@@ -165,7 +165,7 @@ export default function LoginScreen() {
                   onKeyDown={(e) => e.key === 'Enter' && handle()}
                 />
                 <button onClick={() => setShowPw((v) => !v)} type="button"
-                  style={{ position: 'absolute', right: 14, top: '50%', transform: 'translateY(-50%)', color: 'rgba(255,255,255,0.3)' }}>
+                  style={{ position: 'absolute', right: 14, top: '50%', transform: 'translateY(-50%)', color: 'var(--text-3)' }}>
                   {showPw ? <EyeOff size={16} /> : <Eye size={16} />}
                 </button>
               </div>
@@ -182,9 +182,9 @@ export default function LoginScreen() {
               className="w-full font-black rounded-2xl glass-press disabled:opacity-40"
               style={{
                 paddingTop: 17, paddingBottom: 17, fontSize: 16,
-                background: 'linear-gradient(135deg, #f59e0b 0%, #d97706 100%)',
-                color: '#000', border: 'none',
-                boxShadow: '0 6px 24px rgba(245,158,11,0.35)',
+                background: 'linear-gradient(135deg, #7db88a 0%, #4a8c5c 100%)',
+                color: '#ffffff', border: 'none',
+                boxShadow: '0 6px 24px rgba(74,140,92,0.3)',
               }}>
               {loading ? '…' : mode === 'login' ? 'Anmelden' : mode === 'register' ? 'Registrieren' : 'Reset-Link senden'}
             </button>
@@ -193,7 +193,7 @@ export default function LoginScreen() {
             {mode === 'login' && (
               <button onClick={() => { setMode('forgot'); setError('') }}
                 className="w-full text-center text-sm font-semibold glass-press py-1"
-                style={{ color: 'rgba(255,255,255,0.35)' }}>
+                style={{ color: 'var(--text-3)' }}>
                 Passwort vergessen?
               </button>
             )}
@@ -203,9 +203,9 @@ export default function LoginScreen() {
           {mode !== 'forgot' && (
             <>
               <div className="flex items-center gap-3 my-5">
-                <div className="flex-1 h-px" style={{ background: 'rgba(255,255,255,0.08)' }} />
-                <span style={{ fontSize: 12, color: 'rgba(255,255,255,0.25)', fontWeight: 700 }}>ODER</span>
-                <div className="flex-1 h-px" style={{ background: 'rgba(255,255,255,0.08)' }} />
+                <div className="flex-1 h-px" style={{ background: 'rgba(74,140,92,0.08)' }} />
+                <span style={{ fontSize: 12, color: 'var(--text-3)', fontWeight: 700 }}>ODER</span>
+                <div className="flex-1 h-px" style={{ background: 'rgba(74,140,92,0.08)' }} />
               </div>
 
               <button
@@ -214,9 +214,9 @@ export default function LoginScreen() {
                 className="w-full flex items-center justify-center gap-3 font-bold rounded-2xl glass-press disabled:opacity-40"
                 style={{
                   paddingTop: 15, paddingBottom: 15, fontSize: 15,
-                  background: 'rgba(255,255,255,0.06)',
-                  border: '1px solid rgba(255,255,255,0.12)',
-                  color: '#fff',
+                  background: 'rgba(74,140,92,0.06)',
+                  border: '1px solid rgba(125,184,138,0.2)',
+                  color: 'var(--text-1)',
                 }}>
                 <Globe size={20} />
                 Mit Google fortfahren

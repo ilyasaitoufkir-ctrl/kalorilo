@@ -34,7 +34,7 @@ function Timer({ onStop }: { onStop: (s: number) => void }) {
       <div className="flex gap-3 justify-center">
         <button onClick={()=>setRunning(!running)}
           className="glass-press px-6 py-3 rounded-2xl font-bold text-sm flex items-center gap-2"
-          style={{ background:running?'rgba(245,158,11,0.1)':'rgba(16,185,129,0.1)', color:running?'#f59e0b':'#10b981', border:`1px solid ${running?'rgba(245,158,11,0.2)':'rgba(16,185,129,0.2)'}` }}>
+          style={{ background:running?'rgba(74,140,92,0.08)':'rgba(16,185,129,0.1)', color:running?'#4a8c5c':'#10b981', border:`1px solid ${running?'rgba(74,140,92,0.18)':'rgba(16,185,129,0.2)'}` }}>
           {running ? <><Square size={15}/>Pause</> : <><Play size={15}/>Weiter</>}
         </button>
         <button onClick={()=>{ setRunning(false); onStop(seconds) }}
@@ -79,7 +79,7 @@ function AddSheet({ onClose }: { onClose: ()=>void }) {
   const filtered = activeCategory ? SPORTS_DATABASE.filter((s)=>s.category===activeCategory) : SPORTS_DATABASE
   const INTENSITY: { id:Intensity; label:string; color:string }[] = [
     { id:'light',   label:'🟢 Leicht',  color:'#10b981' },
-    { id:'medium',  label:'🟡 Mittel',  color:'#f59e0b' },
+    { id:'medium',  label:'🟡 Mittel',  color:'#4a8c5c' },
     { id:'intense', label:'🔴 Intensiv',color:'#ef4444' },
   ]
 
@@ -102,14 +102,14 @@ function AddSheet({ onClose }: { onClose: ()=>void }) {
               <div className="flex gap-2 overflow-x-auto pb-1 -mx-1 px-1" style={{ scrollbarWidth:'none' }}>
                 <button onClick={()=>setActiveCategory(null)}
                   className="flex-shrink-0 glass-press rounded-2xl px-3 py-2 text-xs font-bold whitespace-nowrap transition-all"
-                  style={!activeCategory ? { background:'var(--gold-dim)', border:'1px solid rgba(245,158,11,0.3)', color:'var(--gold)' }
+                  style={!activeCategory ? { background:'var(--gold-dim)', border:'1px solid rgba(74,140,92,0.25)', color:'var(--gold)' }
                     : { background:'var(--glass)', border:'1px solid var(--glass-border)', color:'var(--text-2)' }}>
                   Alle
                 </button>
                 {SPORT_CATEGORIES.map((cat)=>(
                   <button key={cat} onClick={()=>setActiveCategory(cat)}
                     className="flex-shrink-0 glass-press rounded-2xl px-3 py-2 text-xs font-bold whitespace-nowrap transition-all"
-                    style={activeCategory===cat ? { background:'var(--gold-dim)', border:'1px solid rgba(245,158,11,0.3)', color:'var(--gold)' }
+                    style={activeCategory===cat ? { background:'var(--gold-dim)', border:'1px solid rgba(74,140,92,0.25)', color:'var(--gold)' }
                       : { background:'var(--glass)', border:'1px solid var(--glass-border)', color:'var(--text-2)' }}>
                     {cat}
                   </button>
@@ -128,7 +128,7 @@ function AddSheet({ onClose }: { onClose: ()=>void }) {
           ) : (
             <>
               <div className="glass p-4 flex items-center gap-3"
-                style={{ background:'rgba(245,158,11,0.05)', borderColor:'rgba(245,158,11,0.15)' }}>
+                style={{ background:'rgba(245,158,11,0.05)', borderColor:'rgba(74,140,92,0.15)' }}>
                 <span className="text-4xl">{sport.icon}</span>
                 <div className="flex-1">
                   <p className="font-black" style={{ color:'var(--text-1)' }}>{sport.name}</p>
@@ -161,7 +161,7 @@ function AddSheet({ onClose }: { onClose: ()=>void }) {
                       ))}
                     </div>
                     <input type="number" inputMode="numeric" value={duration} onChange={(e)=>setDuration(e.target.value)}
-                      style={{ background:'rgba(255,255,255,0.05)', border:'1px solid rgba(255,255,255,0.08)', borderRadius:16, color:'var(--text-1)', padding:'12px 16px', width:'100%', textAlign:'center', fontSize:18, fontWeight:800 }} />
+                      style={{ background:'rgba(255,255,255,0.05)', border:'1px solid rgba(74,140,92,0.1)', borderRadius:16, color:'var(--text-1)', padding:'12px 16px', width:'100%', textAlign:'center', fontSize:18, fontWeight:800 }} />
                   </div>
 
                   <div>
@@ -192,7 +192,7 @@ function AddSheet({ onClose }: { onClose: ()=>void }) {
                             className="flex-1 py-3 rounded-2xl text-sm font-bold glass-press transition-all"
                             style={kbWeight === kg
                               ? { background:'var(--grad-gold)', color:'#000', minWidth:44 }
-                              : { background:'rgba(255,255,255,0.05)', border:'1px solid rgba(255,255,255,0.08)', color:'var(--text-2)', minWidth:44 }
+                              : { background:'rgba(255,255,255,0.05)', border:'1px solid rgba(74,140,92,0.1)', color:'var(--text-2)', minWidth:44 }
                             }>{kg}kg</button>
                         ))}
                       </div>
@@ -203,7 +203,7 @@ function AddSheet({ onClose }: { onClose: ()=>void }) {
                     <p className="label mb-2">Schritte <span style={{ color:'var(--text-3)', fontWeight:400, textTransform:'none', letterSpacing:0 }}>(optional)</span></p>
                     <input type="number" inputMode="numeric" value={steps} onChange={(e)=>setSteps(e.target.value)}
                       placeholder="z.B. 8000"
-                      style={{ background:'rgba(255,255,255,0.05)', border:'1px solid rgba(255,255,255,0.08)', borderRadius:16, color:'var(--text-1)', padding:'12px 16px', width:'100%', fontSize:14, fontWeight:600 }} />
+                      style={{ background:'rgba(255,255,255,0.05)', border:'1px solid rgba(74,140,92,0.1)', borderRadius:16, color:'var(--text-1)', padding:'12px 16px', width:'100%', fontSize:14, fontWeight:600 }} />
                   </div>
                 </>
               )}
@@ -334,7 +334,7 @@ export default function SportTracker() {
 
       {/* Header */}
       <div className="pt-safe px-5 pb-5 relative overflow-hidden"
-        style={{ background:'#000', borderBottom:'1px solid #1a1a1a' }}>
+        style={{ background:'var(--bg)', borderBottom:'1px solid rgba(125,184,138,0.15)' }}>
         <div className="absolute" style={{ top:-40,right:-40,width:200,height:200, background:'radial-gradient(circle,rgba(16,185,129,0.08),transparent 70%)', pointerEvents:'none' }}/>
         <h1 className="text-2xl font-black mb-1 relative" style={{ color:'var(--text-1)' }}>Sport & Aktivität</h1>
         <p className="text-sm relative" style={{ color:'var(--text-3)' }}>Heute verbrannt</p>
@@ -373,7 +373,7 @@ export default function SportTracker() {
             onClick={() => setTab(id)}
             className="flex-1 py-2.5 rounded-2xl text-sm font-bold transition-all"
             style={tab === id
-              ? { background:'var(--gold-dim)', border:'1px solid rgba(245,158,11,0.3)', color:'var(--gold)' }
+              ? { background:'var(--gold-dim)', border:'1px solid rgba(74,140,92,0.25)', color:'var(--gold)' }
               : { background:'var(--glass)', border:'1px solid var(--glass-border)', color:'var(--text-3)' }}>
             {label}
           </button>

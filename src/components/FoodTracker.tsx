@@ -150,7 +150,7 @@ function AddSheet({ mealType, onClose }: { mealType: MealType; onClose: () => vo
 
   const categoryFoods = ALL_FOODS.filter((f) => f.category === activeCategory)
 
-  const inputStyle = { background:'rgba(255,255,255,0.05)', border:'1px solid rgba(255,255,255,0.08)', borderRadius: 16, color:'var(--text-1)', padding:'12px 16px', width:'100%', fontSize:14, fontWeight:600 } as const
+  const inputStyle = { background:'rgba(255,255,255,0.05)', border:'1px solid rgba(74,140,92,0.1)', borderRadius: 16, color:'var(--text-1)', padding:'12px 16px', width:'100%', fontSize:14, fontWeight:600 } as const
   const btnStyle   = { minHeight: 50 } as const
 
   return (
@@ -193,9 +193,9 @@ function AddSheet({ mealType, onClose }: { mealType: MealType; onClose: () => vo
               {/* Voice banner */}
               <button onClick={() => (setView as any)('voice')}
                 className="w-full p-4 rounded-3xl flex items-center gap-3 overflow-hidden relative glass-press"
-                style={{ background:'linear-gradient(135deg,rgba(245,158,11,0.15),rgba(59,130,246,0.15))', border:'1px solid rgba(245,158,11,0.2)' }}>
+                style={{ background:'linear-gradient(135deg,rgba(74,140,92,0.15),rgba(59,130,246,0.15))', border:'1px solid rgba(74,140,92,0.18)' }}>
                 <div className="w-12 h-12 rounded-2xl flex items-center justify-center flex-shrink-0"
-                  style={{ background:'rgba(245,158,11,0.15)' }}>
+                  style={{ background:'rgba(74,140,92,0.15)' }}>
                   <Mic size={22} style={{ color:'var(--gold)' }} />
                 </div>
                 <div style={{ minWidth:0 }}>
@@ -209,7 +209,7 @@ function AddSheet({ mealType, onClose }: { mealType: MealType; onClose: () => vo
                 { icon:Search,   label:'Lebensmittel suchen',  sub:'100+ Einträge + Marken',            action:()=>setView('search'),             color:'#3b82f6' },
                 { icon:ScanLine, label:'Barcode-Kamera',        sub:'Kamera öffnet sich direkt',          action:()=>setShowCameraScanner(true),    color:'#10b981' },
                 { icon:Camera,   label:'KI-Teller-Foto',        sub:'Claude AI analysiert',               action:()=>setView('photo'),              color:'#8b5cf6' },
-                { icon:PenLine,  label:'Manuell eintragen',     sub:'Eigene Kalorien & Makros',           action:()=>setView('manual'),             color:'#f59e0b' },
+                { icon:PenLine,  label:'Manuell eintragen',     sub:'Eigene Kalorien & Makros',           action:()=>setView('manual'),             color:'#4a8c5c' },
               ].map((opt) => (
                 <button key={opt.label} onClick={opt.action} style={btnStyle}
                   className="w-full glass glass-press p-4 flex items-center gap-4 text-left">
@@ -266,7 +266,7 @@ function AddSheet({ mealType, onClose }: { mealType: MealType; onClose: () => vo
                       <button key={cat} onClick={() => setActiveCategory(cat)}
                         className="flex-shrink-0 glass-press rounded-2xl px-3 py-2 text-xs font-bold whitespace-nowrap transition-all"
                         style={activeCategory===cat
-                          ? { background:'var(--gold-dim)', border:'1px solid rgba(245,158,11,0.3)', color:'var(--gold)' }
+                          ? { background:'var(--gold-dim)', border:'1px solid rgba(74,140,92,0.25)', color:'var(--gold)' }
                           : { background:'var(--glass)', border:'1px solid var(--glass-border)', color:'var(--text-2)' }
                         }>{cat}</button>
                     ))}
@@ -308,7 +308,7 @@ function AddSheet({ mealType, onClose }: { mealType: MealType; onClose: () => vo
           {/* Amount picker */}
           {view === 'search' && selected && macro && (
             <div className="space-y-4">
-              <div className="glass p-4" style={{ background:'rgba(245,158,11,0.05)', borderColor:'rgba(245,158,11,0.15)' }}>
+              <div className="glass p-4" style={{ background:'rgba(245,158,11,0.05)', borderColor:'rgba(74,140,92,0.15)' }}>
                 <p className="font-black" style={{ color:'var(--text-1)' }}>{selected.name}</p>
                 {selected.brand && <p className="text-xs mt-0.5" style={{ color:'var(--gold)' }}>{selected.brand}</p>}
                 <div className="grid grid-cols-4 gap-2 mt-3">
@@ -470,7 +470,7 @@ function AddSheet({ mealType, onClose }: { mealType: MealType; onClose: () => vo
                   <div className="glass p-4">
                     <p className="font-black mb-3" style={{ color:'var(--text-1)' }}>🎯 {photoResult.description}</p>
                     <div className="grid grid-cols-4 gap-2 mb-3">
-                      {[['kcal',photoResult.macros.calories,'#f59e0b'],['E',`${photoResult.macros.protein}g`,'#3b82f6'],['KH',`${photoResult.macros.carbs}g`,'#10b981'],['F',`${photoResult.macros.fat}g`,'#ef4444']].map(([l,v,c])=>(
+                      {[['kcal',photoResult.macros.calories,'#4a8c5c'],['E',`${photoResult.macros.protein}g`,'#3b82f6'],['KH',`${photoResult.macros.carbs}g`,'#10b981'],['F',`${photoResult.macros.fat}g`,'#ef4444']].map(([l,v,c])=>(
                         <div key={String(l)} className="rounded-2xl py-3 text-center" style={{ background:'var(--glass)' }}>
                           <p className="text-sm font-black" style={{ color:String(c) }}>{v}</p>
                           <p className="text-[10px]" style={{ color:'var(--text-3)' }}>{l}</p>
@@ -548,11 +548,11 @@ export default function FoodTracker() {
   return (
     <div className="h-dvh overflow-y-auto overflow-x-hidden pb-nav anim-fade" style={{ background:'var(--bg)' }}>
       {/* Header */}
-      <div className="pt-safe px-5 pb-5" style={{ background:'#000', borderBottom:'1px solid #1a1a1a' }}>
+      <div className="pt-safe px-5 pb-5" style={{ background:'var(--bg)', borderBottom:'1px solid rgba(125,184,138,0.15)' }}>
         <h1 className="text-2xl font-black mb-1" style={{ color:'var(--text-1)' }}>Essen tracken</h1>
         <p className="text-sm mb-4" style={{ color:'var(--text-3)' }}>Heute: {Math.round(totalCals)} kcal</p>
         <div className="flex gap-2 mb-3">
-          {[{ l:'Eiweiß',c:'#3b82f6',v:Math.round(totalProt)},{l:'Kohlenhydrate',c:'#f59e0b',v:Math.round(totalCarbs)},{l:'Fett',c:'#ef4444',v:Math.round(totalFat)}].map((m)=>(
+          {[{ l:'Eiweiß',c:'#3b82f6',v:Math.round(totalProt)},{l:'Kohlenhydrate',c:'#4a8c5c',v:Math.round(totalCarbs)},{l:'Fett',c:'#ef4444',v:Math.round(totalFat)}].map((m)=>(
             <div key={m.l} className="flex-1 glass-sm py-2.5 text-center" style={{ minWidth:0 }}>
               <p className="text-base font-black" style={{ color:m.c }}>{m.v}g</p>
               <p className="text-[10px]" style={{ color:'var(--text-3)' }}>{m.l}</p>
@@ -593,7 +593,7 @@ export default function FoodTracker() {
                 </div>
                 <button onClick={(e)=>{ e.stopPropagation(); setAddingMeal(meal.id) }}
                   className="w-9 h-9 rounded-2xl flex items-center justify-center flex-shrink-0"
-                  style={{ background:'var(--gold-dim)', border:'1px solid rgba(245,158,11,0.2)' }}>
+                  style={{ background:'var(--gold-dim)', border:'1px solid rgba(74,140,92,0.18)' }}>
                   <Plus size={17} style={{ color:'var(--gold)' }} />
                 </button>
               </button>
@@ -615,7 +615,7 @@ export default function FoodTracker() {
                       <p className="text-sm mb-2" style={{ color:'var(--text-3)' }}>Noch nichts</p>
                       <button onClick={()=>setAddingMeal(meal.id)}
                         className="text-sm font-bold px-4 py-2 rounded-2xl glass-press"
-                        style={{ color:'var(--gold)', background:'var(--gold-dim)', border:'1px solid rgba(245,158,11,0.2)' }}>
+                        style={{ color:'var(--gold)', background:'var(--gold-dim)', border:'1px solid rgba(74,140,92,0.18)' }}>
                         + Hinzufügen
                       </button>
                     </div>

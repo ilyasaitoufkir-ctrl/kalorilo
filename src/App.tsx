@@ -57,11 +57,11 @@ function MainApp() {
   // Auth loading spinner
   if (isConfigured && loading) {
     return (
-      <div className="h-dvh flex items-center justify-center" style={{ background: '#000' }}>
+      <div className="h-dvh flex items-center justify-center" style={{ background: 'var(--bg)' }}>
         <div className="text-center anim-fade">
           <div style={{ fontSize: 56, marginBottom: 16 }}>🥗</div>
           <div className="w-8 h-8 rounded-full border-2 mx-auto"
-            style={{ borderColor: 'rgba(245,158,11,0.3)', borderTopColor: '#f59e0b', animation: 'spin 0.8s linear infinite' }} />
+            style={{ borderColor: 'rgba(74,140,92,0.3)', borderTopColor: '#4a8c5c', animation: 'spin 0.8s linear infinite' }} />
         </div>
       </div>
     )
@@ -108,9 +108,9 @@ export default function App() {
             duration: 2800,
             style: {
               borderRadius: '16px',
-              background: '#111',
-              color: '#fff',
-              border: '1px solid #222',
+              background: '#ffffff',
+              color: 'var(--text-1)',
+              border: '1px solid rgba(125,184,138,0.2)',
               fontSize: '14px',
               fontWeight: '600',
               padding: '12px 18px',

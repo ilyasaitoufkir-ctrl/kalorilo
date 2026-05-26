@@ -45,14 +45,14 @@ export default function WhoopCallback() {
 
   return (
     <div className="min-h-dvh flex flex-col items-center justify-center px-6 text-center"
-      style={{ background: '#000' }}>
+      style={{ background: 'var(--bg)' }}>
 
       {/* Logo */}
       <div className="text-5xl mb-6">⌚</div>
 
       {status === 'loading' && (
         <>
-          <Loader size={36} className="animate-spin mb-4" style={{ color: '#f59e0b' }} />
+          <Loader size={36} className="animate-spin mb-4" style={{ color: '#4a8c5c' }} />
           <h2 className="text-xl font-black mb-2" style={{ color: '#fff' }}>Verbinde mit Whoop…</h2>
           <p className="text-sm" style={{ color: '#666' }}>Tausche Authorization Code gegen Token aus</p>
         </>
@@ -64,8 +64,8 @@ export default function WhoopCallback() {
           <h2 className="text-xl font-black mb-2" style={{ color: '#fff' }}>Whoop verbunden! ✅</h2>
           <p className="text-sm mb-6" style={{ color: '#666' }}>Daten werden beim nächsten App-Start automatisch synchronisiert.</p>
           <div className="rounded-2xl px-4 py-3 mb-6"
-            style={{ background:'rgba(245,158,11,0.1)', border:'1px solid rgba(245,158,11,0.2)' }}>
-            <p className="text-sm font-bold" style={{ color: '#f59e0b' }}>Weiterleitung in Kürze…</p>
+            style={{ background:'rgba(74,140,92,0.08)', border:'1px solid rgba(74,140,92,0.18)' }}>
+            <p className="text-sm font-bold" style={{ color: '#4a8c5c' }}>Weiterleitung in Kürze…</p>
           </div>
           <button onClick={() => window.location.href = '/'}
             className="px-8 py-4 rounded-2xl font-black text-sm"
@@ -80,12 +80,12 @@ export default function WhoopCallback() {
           <XCircle size={48} className="mb-4" style={{ color: '#ef4444' }} />
           <h2 className="text-xl font-black mb-2" style={{ color: '#fff' }}>Verbindung fehlgeschlagen</h2>
           <div className="rounded-2xl px-4 py-4 mb-6 text-left max-w-sm"
-            style={{ background: '#111', border: '1px solid #333' }}>
+            style={{ background: '#ffffff', border: '1px solid #333' }}>
             <p className="text-sm font-mono break-all" style={{ color: '#ef4444' }}>{errorMsg}</p>
           </div>
           <button onClick={() => window.location.href = '/'}
             className="px-8 py-4 rounded-2xl font-black text-sm"
-            style={{ background:'#111', border:'1px solid #333', color:'#fff' }}>
+            style={{ background:'#ffffff', border:'1px solid #333', color:'#fff' }}>
             ← Zurück zur App
           </button>
         </>

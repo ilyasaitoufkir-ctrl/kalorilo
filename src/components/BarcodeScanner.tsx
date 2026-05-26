@@ -110,7 +110,7 @@ export default function BarcodeScanner({ onDetected, onClose }: Props) {
   }
 
   return (
-    <div className="fixed inset-0 z-[60] flex flex-col" style={{ background: '#000' }}>
+    <div className="fixed inset-0 z-[60] flex flex-col" style={{ background: 'var(--bg)' }}>
       {/* Camera feed */}
       <video
         ref={videoRef}
@@ -167,7 +167,7 @@ export default function BarcodeScanner({ onDetected, onClose }: Props) {
       {/* Loading state */}
       {state === 'requesting' && (
         <div className="absolute inset-0 flex flex-col items-center justify-center gap-4">
-          <Loader size={36} className="animate-spin" style={{ color: '#f59e0b' }}/>
+          <Loader size={36} className="animate-spin" style={{ color: '#4a8c5c' }}/>
           <p className="text-sm font-semibold" style={{ color: '#999' }}>Kamera wird gestartet…</p>
         </div>
       )}
@@ -177,7 +177,7 @@ export default function BarcodeScanner({ onDetected, onClose }: Props) {
         <div className="absolute inset-0 flex flex-col items-center justify-center px-8 text-center gap-4">
           <span className="text-5xl">📷</span>
           <p className="text-lg font-black" style={{ color: '#fff' }}>Kamera nicht verfügbar</p>
-          <div className="rounded-2xl p-4 w-full" style={{ background:'#111', border:'1px solid #333' }}>
+          <div className="rounded-2xl p-4 w-full" style={{ background:'#ffffff', border:'1px solid #333' }}>
             <p className="text-sm whitespace-pre-line" style={{ color: '#ef4444' }}>{errorMsg}</p>
           </div>
           <button onClick={onClose}
@@ -194,8 +194,8 @@ export default function BarcodeScanner({ onDetected, onClose }: Props) {
           style={{ background:'linear-gradient(to top, rgba(0,0,0,0.8), transparent)' }}>
           <button onClick={toggleTorch}
             className="w-12 h-12 rounded-2xl flex items-center justify-center"
-            style={{ background: torch ? 'rgba(245,158,11,0.2)' : 'rgba(255,255,255,0.1)' }}>
-            <Flashlight size={20} style={{ color: torch ? '#f59e0b' : '#fff' }}/>
+            style={{ background: torch ? 'rgba(74,140,92,0.18)' : 'rgba(255,255,255,0.1)' }}>
+            <Flashlight size={20} style={{ color: torch ? '#4a8c5c' : '#fff' }}/>
           </button>
 
           <p className="text-sm font-semibold text-center" style={{ color: '#ccc' }}>

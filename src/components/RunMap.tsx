@@ -43,7 +43,7 @@ export default function RunMap({ route, kmMarkers = [], showFullRoute = false, s
 
     // Route line: gold always (Kalorilo brand color)
     polyRef.current = L.polyline([], {
-      color: '#f59e0b',
+      color: '#4a8c5c',
       weight: showFullRoute ? 5 : 4,
       opacity: 0.95,
       lineCap: 'round',
@@ -82,7 +82,7 @@ export default function RunMap({ route, kmMarkers = [], showFullRoute = false, s
         const icon = L.divIcon({
           html: `
             <div style="position:relative;width:22px;height:22px">
-              <div style="position:absolute;inset:0;background:rgba(245,158,11,0.3);border-radius:50%;animation:pulse 1.8s ease-in-out infinite"></div>
+              <div style="position:absolute;inset:0;background:rgba(74,140,92,0.25);border-radius:50%;animation:pulse 1.8s ease-in-out infinite"></div>
               <div style="position:absolute;top:3px;left:3px;width:16px;height:16px;background:#f59e0b;border:2.5px solid #fff;border-radius:50%;box-shadow:0 2px 10px rgba(245,158,11,0.7)"></div>
             </div>
           `,

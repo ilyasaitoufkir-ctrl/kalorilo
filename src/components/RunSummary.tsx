@@ -71,16 +71,16 @@ export default function RunSummary({ session, onDone }: Props) {
 
       {/* ── Hero header ── */}
       <div className="relative overflow-hidden text-center pb-6"
-        style={{ background: '#000', paddingTop: 'max(env(safe-area-inset-top), 24px)', borderBottom: '1px solid #1a1a1a' }}>
+        style={{ background: 'var(--bg)', paddingTop: 'max(env(safe-area-inset-top), 24px)', borderBottom: '1px solid rgba(125,184,138,0.15)' }}>
         <div className="absolute inset-0 pointer-events-none"
-          style={{ background: 'radial-gradient(ellipse at 50% 100%, rgba(245,158,11,0.1), transparent 65%)' }} />
+          style={{ background: 'radial-gradient(ellipse at 50% 100%, rgba(74,140,92,0.08), transparent 65%)' }} />
 
         <div className="relative">
           {/* Trophy */}
           <div className="flex items-center justify-center mb-4">
             <div style={{ width: 80, height: 80, borderRadius: '50%',
-              background: 'linear-gradient(135deg, rgba(245,158,11,0.2), rgba(217,119,6,0.1))',
-              border: '2px solid rgba(245,158,11,0.3)',
+              background: 'linear-gradient(135deg, rgba(74,140,92,0.18), rgba(217,119,6,0.1))',
+              border: '2px solid rgba(74,140,92,0.25)',
               display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
               <span style={{ fontSize: 40 }}>
                 {isNewPaceRecord || isNewDistRecord ? '🏆' : '🏅'}
@@ -96,7 +96,7 @@ export default function RunSummary({ session, onDone }: Props) {
             <div className="flex gap-2 justify-center mt-3 px-4">
               {isNewPaceRecord && (
                 <span className="px-3 py-1.5 rounded-2xl text-xs font-black"
-                  style={{ background: 'rgba(245,158,11,0.15)', border: '1px solid rgba(245,158,11,0.35)', color: '#f59e0b' }}>
+                  style={{ background: 'rgba(74,140,92,0.15)', border: '1px solid rgba(74,140,92,0.3)', color: '#4a8c5c' }}>
                   🏆 Neue Bestpace!
                 </span>
               )}
@@ -115,11 +115,11 @@ export default function RunSummary({ session, onDone }: Props) {
 
         {/* ── Distance hero ── */}
         <div className="glass p-6 text-center relative overflow-hidden"
-          style={{ background: 'rgba(245,158,11,0.05)', borderColor: 'rgba(245,158,11,0.2)' }}>
+          style={{ background: 'rgba(245,158,11,0.05)', borderColor: 'rgba(74,140,92,0.18)' }}>
           <div className="absolute inset-0 pointer-events-none"
             style={{ background: 'radial-gradient(ellipse at 50% 120%, rgba(245,158,11,0.07), transparent 55%)' }} />
           <p className="label mb-2 relative">Gesamtdistanz</p>
-          <p className="font-black leading-none relative" style={{ fontSize: 88, color: '#f59e0b', letterSpacing: -5 }}>
+          <p className="font-black leading-none relative" style={{ fontSize: 88, color: '#4a8c5c', letterSpacing: -5 }}>
             {session.distance.toFixed(2)}
           </p>
           <p className="text-2xl font-bold mt-1 relative" style={{ color: 'rgba(245,158,11,0.5)' }}>km</p>
@@ -130,7 +130,7 @@ export default function RunSummary({ session, onDone }: Props) {
           {[
             { icon: '⏱', label: 'Gesamtzeit',  value: fmtTime(session.duration),              color: '#fff' },
             { icon: '⚡', label: 'Ø Pace',       value: `${fmtPace(session.avgPace)} /km`,      color: '#fff' },
-            { icon: '🏅', label: 'Beste Pace',   value: `${fmtPace(bestSplit)} /km`,            color: '#f59e0b' },
+            { icon: '🏅', label: 'Beste Pace',   value: `${fmtPace(bestSplit)} /km`,            color: '#4a8c5c' },
             { icon: '🔥', label: 'Kalorien',     value: `${session.caloriesBurned} kcal`,        color: '#f97316' },
             { icon: '⛰',  label: 'Höhenmeter',  value: `+${session.elevationGain} m`,          color: '#60a5fa' },
             { icon: '📍', label: 'Splits',       value: `${session.splits.length} km`,           color: '#a78bfa' },
@@ -153,7 +153,7 @@ export default function RunSummary({ session, onDone }: Props) {
             <div className="flex-1">
               <p className="label">Whoop Recovery (Lauftag)</p>
               <p className="font-black text-base mt-0.5"
-                style={{ color: whoopData.recovery > 66 ? '#10b981' : whoopData.recovery > 33 ? '#f59e0b' : '#ef4444' }}>
+                style={{ color: whoopData.recovery > 66 ? '#10b981' : whoopData.recovery > 33 ? '#4a8c5c' : '#ef4444' }}>
                 {whoopData.recovery}% Recovery
               </p>
             </div>
@@ -166,9 +166,9 @@ export default function RunSummary({ session, onDone }: Props) {
 
         {/* ── PB comparison ── */}
         {pb && (
-          <div className="glass p-4" style={{ background: 'rgba(245,158,11,0.04)', borderColor: 'rgba(245,158,11,0.12)' }}>
+          <div className="glass p-4" style={{ background: 'rgba(74,140,92,0.04)', borderColor: 'rgba(74,140,92,0.1)' }}>
             <p className="font-bold text-sm mb-3 flex items-center gap-2" style={{ color: 'var(--text-1)' }}>
-              <Trophy size={15} style={{ color: '#f59e0b', flexShrink: 0 }} /> Vergleich zu deinen Bestleistungen
+              <Trophy size={15} style={{ color: '#4a8c5c', flexShrink: 0 }} /> Vergleich zu deinen Bestleistungen
             </p>
             <div className="grid grid-cols-2 gap-2">
               {[
@@ -192,7 +192,7 @@ export default function RunSummary({ session, onDone }: Props) {
                   </p>
                   <div className="flex items-center justify-center gap-1 mt-1">
                     <span style={{ fontSize: 9, color: 'var(--text-3)' }}>Bestzeit:</span>
-                    <span style={{ fontSize: 11, fontWeight: 700, color: '#f59e0b' }}>{item.best}</span>
+                    <span style={{ fontSize: 11, fontWeight: 700, color: '#4a8c5c' }}>{item.best}</span>
                   </div>
                   {item.better && <p style={{ fontSize: 9, color: '#10b981', fontWeight: 700, marginTop: 2 }}>🏆 Neuer Rekord!</p>}
                 </div>
@@ -202,8 +202,8 @@ export default function RunSummary({ session, onDone }: Props) {
         )}
         {prevRuns.length === 0 && (
           <div className="glass p-4 text-center"
-            style={{ background: 'rgba(245,158,11,0.04)', borderColor: 'rgba(245,158,11,0.1)' }}>
-            <Zap size={18} style={{ color: '#f59e0b', margin: '0 auto 6px' }} />
+            style={{ background: 'rgba(74,140,92,0.04)', borderColor: 'rgba(74,140,92,0.08)' }}>
+            <Zap size={18} style={{ color: '#4a8c5c', margin: '0 auto 6px' }} />
             <p style={{ fontSize: 13, color: 'var(--text-2)', fontWeight: 600 }}>Das ist dein erster Lauf! 🎉</p>
           </div>
         )}
@@ -236,8 +236,8 @@ export default function RunSummary({ session, onDone }: Props) {
                   label={{ value: 'km', position: 'insideBottomRight', offset: 0, fill: '#444', fontSize: 10 }} />
                 <YAxis domain={['auto', 'auto']} tick={{ fill: '#555', fontSize: 10 }} axisLine={false} tickLine={false} />
                 <Tooltip
-                  cursor={{ fill: 'rgba(255,255,255,0.04)' }}
-                  contentStyle={{ background: '#111', border: '1px solid #222', borderRadius: 12 }}
+                  cursor={{ fill: 'rgba(74,140,92,0.06)' }}
+                  contentStyle={{ background: '#ffffff', border: '1px solid rgba(125,184,138,0.2)', borderRadius: 12 }}
                   labelStyle={{ color: '#888', fontSize: 11 }}
                   formatter={(_val: unknown, _name: unknown, props: any) =>
                     [(props?.payload?.paceStr ?? '') + ' min/km', 'Pace']}
@@ -246,7 +246,7 @@ export default function RunSummary({ session, onDone }: Props) {
                 <Bar dataKey="paceMin" radius={[6, 6, 0, 0]}>
                   {chartData.map((entry, i) => (
                     <Cell key={i}
-                      fill={entry.isBest ? '#f59e0b' : entry.isWorst ? '#ef4444' : '#3b82f6'}
+                      fill={entry.isBest ? '#4a8c5c' : entry.isWorst ? '#ef4444' : '#3b82f6'}
                       opacity={0.9}
                     />
                   ))}
@@ -270,15 +270,15 @@ export default function RunSummary({ session, onDone }: Props) {
               return (
                 <div key={split.km} className="flex items-center px-4 py-3.5"
                   style={{ borderTop: i > 0 ? '1px solid var(--glass-border)' : 'none',
-                    background: isBest ? 'rgba(245,158,11,0.04)' : 'transparent' }}>
+                    background: isBest ? 'rgba(74,140,92,0.04)' : 'transparent' }}>
                   <div className="w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0 mr-3"
-                    style={{ background: isBest ? 'rgba(245,158,11,0.15)' : 'rgba(59,130,246,0.1)' }}>
-                    <span style={{ fontSize: 12, fontWeight: 900, color: isBest ? '#f59e0b' : '#60a5fa' }}>{split.km}</span>
+                    style={{ background: isBest ? 'rgba(74,140,92,0.15)' : 'rgba(59,130,246,0.1)' }}>
+                    <span style={{ fontSize: 12, fontWeight: 900, color: isBest ? '#4a8c5c' : '#60a5fa' }}>{split.km}</span>
                   </div>
                   <p className="flex-1 text-sm font-bold" style={{ color: 'var(--text-1)' }}>km {split.km}</p>
                   <div className="flex items-center gap-2">
                     <p className="text-base font-black"
-                      style={{ color: isBest ? '#f59e0b' : isWorst ? '#ef4444' : 'var(--text-2)' }}>
+                      style={{ color: isBest ? '#4a8c5c' : isWorst ? '#ef4444' : 'var(--text-2)' }}>
                       {fmtPace(split.pace)}
                     </p>
                     <p className="text-xs" style={{ color: 'var(--text-3)' }}>/km</p>

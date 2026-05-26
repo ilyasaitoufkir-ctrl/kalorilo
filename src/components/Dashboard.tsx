@@ -22,17 +22,17 @@ function CalorieRing({ consumed, target, size = 220 }: { consumed: number; targe
   const id = 'ringGrad'
 
   return (
-    <svg width={size} height={size} className="ring-base" style={{ filter: 'drop-shadow(0 0 24px rgba(245,158,11,0.35))' }}>
+    <svg width={size} height={size} className="ring-base" style={{ filter: 'drop-shadow(0 0 24px rgba(74,140,92,0.3))' }}>
       <defs>
         <linearGradient id={id} x1="0%" y1="0%" x2="100%" y2="0%">
-          <stop offset="0%"   stopColor="#fbbf24" />
-          <stop offset="50%"  stopColor="#f59e0b" />
-          <stop offset="100%" stopColor="#d97706" />
+          <stop offset="0%"   stopColor="#a8c5a0" />
+          <stop offset="50%"  stopColor="#7db88a" />
+          <stop offset="100%" stopColor="#4a8c5c" />
         </linearGradient>
       </defs>
       {/* Track */}
       <circle cx={size/2} cy={size/2} r={r} fill="none"
-        stroke="rgba(255,255,255,0.04)" strokeWidth={stroke} />
+        stroke="rgba(74,140,92,0.12)" strokeWidth={stroke} />
       {/* Progress */}
       <circle cx={size/2} cy={size/2} r={r} fill="none"
         stroke={`url(#${id})`} strokeWidth={stroke}
@@ -55,7 +55,7 @@ function MacroCard({ label, value, max, color, unit = 'g' }: {
         <span className="label">{label}</span>
         <span className="text-xs font-bold" style={{ color }}>{Math.round(value)}{unit}</span>
       </div>
-      <div className="h-1.5 rounded-full overflow-hidden" style={{ background: 'rgba(255,255,255,0.06)' }}>
+      <div className="h-1.5 rounded-full overflow-hidden" style={{ background: 'rgba(74,140,92,0.08)' }}>
         <div className="h-full rounded-full transition-all duration-700"
           style={{ width: `${pct}%`, background: color }} />
       </div>
@@ -157,12 +157,12 @@ export default function Dashboard() {
 
       {/* ── Hero Header ──────────────────────────────────────────── */}
       <div className="relative overflow-hidden pt-safe px-5 pb-6"
-        style={{ background: 'linear-gradient(160deg, #0a0a0a 0%, #000000 100%)' }}>
+        style={{ background: 'var(--grad-hero)' }}>
 
         {/* Gold glow orb */}
         <div className="absolute" style={{
           top: -60, right: -60, width: 280, height: 280,
-          background: 'radial-gradient(circle, rgba(245,158,11,0.1) 0%, transparent 65%)',
+          background: 'radial-gradient(circle, rgba(74,140,92,0.1) 0%, transparent 65%)',
           pointerEvents: 'none',
         }} />
 
@@ -181,7 +181,7 @@ export default function Dashboard() {
         </div>
 
         {/* Quote */}
-        <div className="glass-sm px-4 py-3 mb-6" style={{ background: 'rgba(245,158,11,0.06)', borderColor: 'rgba(245,158,11,0.12)' }}>
+        <div className="glass-sm px-4 py-3 mb-6" style={{ background: 'rgba(74,140,92,0.06)', borderColor: 'rgba(74,140,92,0.12)' }}>
           <p className="text-sm italic" style={{ color: 'var(--text-2)' }}>{getTodayQuote()}</p>
         </div>
 
@@ -236,7 +236,7 @@ export default function Dashboard() {
           <button onClick={() => setActiveTab('food')}
             className="glass glass-press p-4 flex items-center gap-3 text-left">
             <div className="w-11 h-11 rounded-2xl flex items-center justify-center flex-shrink-0"
-              style={{ background: 'var(--gold-dim)', border: '1px solid rgba(245,158,11,0.2)' }}>
+              style={{ background: 'var(--gold-dim)', border: '1px solid rgba(74,140,92,0.18)' }}>
               <Plus size={20} style={{ color: 'var(--gold)' }} />
             </div>
             <div style={{ minWidth: 0 }}>
@@ -269,7 +269,7 @@ export default function Dashboard() {
             </p>
           </div>
           {/* Progress bar */}
-          <div className="h-2 rounded-full mb-3 overflow-hidden" style={{ background: 'rgba(255,255,255,0.06)' }}>
+          <div className="h-2 rounded-full mb-3 overflow-hidden" style={{ background: 'rgba(74,140,92,0.08)' }}>
             <div className="h-full rounded-full transition-all duration-700"
               style={{ width: `${waterPct * 100}%`, background: 'linear-gradient(90deg, #38bdf8, #0ea5e9)' }} />
           </div>
@@ -328,13 +328,13 @@ export default function Dashboard() {
               <>
                 <div className="grid grid-cols-4 gap-2 mb-2">
                   {[
-                    { l:'Recovery', v:`${whoopData.recovery}%`,  c: whoopData.recovery>66?'#10b981':whoopData.recovery>33?'#f59e0b':'#ef4444' },
+                    { l:'Recovery', v:`${whoopData.recovery}%`,  c: whoopData.recovery>66?'#10b981':whoopData.recovery>33?'#4a8c5c':'#ef4444' },
                     { l:'HRV',      v:`${whoopData.hrv}ms`,      c:'#60a5fa' },
                     { l:'Schlaf',   v:`${whoopData.sleepQuality}%`, c:'#a78bfa' },
                     { l:'Strain',   v:`${Number(whoopData.strain).toFixed(1)}`, c:'#fb923c' },
                   ].map((item) => (
                     <div key={item.l} className="rounded-2xl p-2.5 text-center"
-                      style={{ background: '#111', border: '1px solid #222' }}>
+                      style={{ background: '#ffffff', border: '1px solid rgba(125,184,138,0.2)' }}>
                       <p className="text-[10px] mb-0.5" style={{ color: 'var(--text-3)' }}>{item.l}</p>
                       <p className="text-sm font-black" style={{ color: item.c }}>{item.v}</p>
                     </div>
@@ -380,7 +380,7 @@ export default function Dashboard() {
             ) : (
               <button onClick={() => setActiveTab('profile')}
                 className="w-full py-3 rounded-2xl text-sm font-bold glass-press"
-                style={{ background:'rgba(245,158,11,0.08)', border:'1px solid rgba(245,158,11,0.15)', color:'var(--gold)' }}>
+                style={{ background:'rgba(74,140,92,0.08)', border:'1px solid rgba(74,140,92,0.15)', color:'var(--gold)' }}>
                 Whoop-Daten laden →
               </button>
             )}
@@ -392,7 +392,7 @@ export default function Dashboard() {
           <button onClick={() => setActiveTab('profile')}
             className="glass glass-press p-4 w-full flex items-center gap-3 text-left">
             <div className="w-11 h-11 rounded-2xl flex items-center justify-center text-xl flex-shrink-0"
-              style={{ background:'rgba(255,255,255,0.04)', border:'1px solid #222' }}>⌚</div>
+              style={{ background:'rgba(74,140,92,0.06)', border:'1px solid rgba(125,184,138,0.2)' }}>⌚</div>
             <div className="flex-1" style={{ minWidth:0 }}>
               <p className="text-sm font-black" style={{ color:'var(--text-1)' }}>Whoop verbinden</p>
               <p className="text-xs" style={{ color:'var(--text-3)' }}>Recovery & Schlaf automatisch importieren</p>
@@ -404,7 +404,7 @@ export default function Dashboard() {
         {/* Stats row */}
         <div className="grid grid-cols-3 gap-3">
           {[
-            { label: 'Streak',  value: streak, unit: 'Tage', icon: '🔥', color: '#f59e0b' },
+            { label: 'Streak',  value: streak, unit: 'Tage', icon: '🔥', color: '#4a8c5c' },
             { label: 'BMI',     value: bmi ?? '–', unit: '',     icon: '📊', color: '#60a5fa' },
             { label: 'Verbrannt', value: Math.round(burned), unit: 'kcal', icon: '💪', color: '#10b981' },
           ].map((s) => (
@@ -430,7 +430,7 @@ export default function Dashboard() {
             className="px-4 py-2.5 rounded-2xl text-sm font-bold glass-press transition-all"
             style={isCheatDay
               ? { background:'rgba(239,68,68,0.1)', border:'1px solid rgba(239,68,68,0.2)', color:'#ef4444' }
-              : { background:'var(--gold-dim)', border:'1px solid rgba(245,158,11,0.2)', color:'var(--gold)' }
+              : { background:'var(--gold-dim)', border:'1px solid rgba(74,140,92,0.18)', color:'var(--gold)' }
             }>
             {isCheatDay ? 'Deaktivieren' : 'Aktivieren'}
           </button>

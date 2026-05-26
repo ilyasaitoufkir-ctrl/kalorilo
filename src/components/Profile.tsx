@@ -17,7 +17,7 @@ const ACTIVITY_OPTIONS: { value: ActivityLevel; emoji: string; label: string; de
 
 const inputStyle = {
   background:'rgba(255,255,255,0.05)',
-  border:'1px solid rgba(255,255,255,0.08)',
+  border:'1px solid rgba(74,140,92,0.1)',
   borderRadius: 16,
   color:'var(--text-1)',
   padding:'13px 16px',
@@ -75,8 +75,8 @@ export default function Profile() {
   return (
     <div className="h-dvh overflow-y-auto overflow-x-hidden pb-nav anim-fade" style={{ background:'var(--bg)' }}>
       {/* Header */}
-      <div className="pt-safe px-5 pb-5 relative overflow-hidden" style={{ background:'#000', borderBottom:'1px solid #1a1a1a' }}>
-        <div className="absolute" style={{ top:-40,right:-40,width:200,height:200,background:'radial-gradient(circle,rgba(245,158,11,0.06),transparent 70%)',pointerEvents:'none' }}/>
+      <div className="pt-safe px-5 pb-5 relative overflow-hidden" style={{ background:'var(--bg)', borderBottom:'1px solid rgba(125,184,138,0.15)' }}>
+        <div className="absolute" style={{ top:-40,right:-40,width:200,height:200,background:'radial-gradient(circle,rgba(74,140,92,0.05),transparent 70%)',pointerEvents:'none' }}/>
         <h1 className="text-2xl font-black relative" style={{ color:'var(--text-1)' }}>
           {storeProfile?.name ? `Hallo, ${storeProfile.name.split(' ')[0]}!` : 'Profil & Einstellungen'}
         </h1>
@@ -95,7 +95,7 @@ export default function Profile() {
             <button key={s.id} onClick={()=>setSection(s.id)}
               className="flex-shrink-0 glass-press rounded-2xl px-4 py-2.5 text-sm font-bold whitespace-nowrap transition-all"
               style={section===s.id
-                ? { background:'var(--gold-dim)', border:'1px solid rgba(245,158,11,0.3)', color:'var(--gold)' }
+                ? { background:'var(--gold-dim)', border:'1px solid rgba(74,140,92,0.25)', color:'var(--gold)' }
                 : { background:'var(--glass)', border:'1px solid var(--glass-border)', color:'var(--text-3)' }
               }>{s.label}</button>
           ))}
@@ -131,7 +131,7 @@ export default function Profile() {
             </div>
             {bmi && (
               <div className="rounded-2xl px-4 py-3 flex justify-between items-center"
-                style={{ background:'rgba(245,158,11,0.06)', border:'1px solid rgba(245,158,11,0.12)' }}>
+                style={{ background:'rgba(74,140,92,0.05)', border:'1px solid rgba(74,140,92,0.1)' }}>
                 <span className="font-bold text-sm" style={{ color:'var(--gold)' }}>BMI: {bmi}</span>
                 <span className="text-sm" style={{ color:'var(--text-2)' }}>{getBMICategory(bmi)}</span>
               </div>
@@ -143,7 +143,7 @@ export default function Profile() {
                   <button key={a.value} onClick={()=>setForm({...form,activityLevel:a.value})}
                     className="w-full flex items-center gap-3 p-3.5 rounded-2xl glass-press transition-all text-left"
                     style={form.activityLevel===a.value
-                      ? { background:'var(--gold-dim)', border:'1px solid rgba(245,158,11,0.3)' }
+                      ? { background:'var(--gold-dim)', border:'1px solid rgba(74,140,92,0.25)' }
                       : { background:'var(--glass)', border:'1px solid var(--glass-border)' }
                     }>
                     <span className="text-xl">{a.emoji}</span>
@@ -172,7 +172,7 @@ export default function Profile() {
                   <button key={g} onClick={()=>setForm({...form,goal:g})}
                     className="py-4 rounded-2xl text-center glass-press transition-all"
                     style={form.goal===g
-                      ? { background:'var(--gold-dim)', border:'1px solid rgba(245,158,11,0.3)' }
+                      ? { background:'var(--gold-dim)', border:'1px solid rgba(74,140,92,0.25)' }
                       : { background:'var(--glass)', border:'1px solid var(--glass-border)' }
                     }>
                     <p className="text-2xl mb-1">{emoji}</p>
@@ -194,7 +194,7 @@ export default function Profile() {
               </div>
             </div>
             <div className="rounded-2xl p-4 text-center"
-              style={{ background:'var(--gold-dim)', border:'1px solid rgba(245,158,11,0.2)' }}>
+              style={{ background:'var(--gold-dim)', border:'1px solid rgba(74,140,92,0.18)' }}>
               <p className="text-4xl font-black" style={{ color:'var(--gold)' }}>{target}</p>
               <p className="text-sm" style={{ color:'var(--text-2)' }}>kcal Tagesziel</p>
             </div>
@@ -207,7 +207,7 @@ export default function Profile() {
         {/* API Keys */}
         {section==='apikeys' && (
           <div className="space-y-3">
-            <div className="glass p-4" style={{ background:'rgba(245,158,11,0.05)', borderColor:'rgba(245,158,11,0.15)' }}>
+            <div className="glass p-4" style={{ background:'rgba(245,158,11,0.05)', borderColor:'rgba(74,140,92,0.15)' }}>
               <p className="text-xs font-bold" style={{ color:'var(--text-2)' }}>🔒 Keys werden nur lokal auf deinem Gerät gespeichert.</p>
             </div>
             {[
@@ -246,7 +246,7 @@ export default function Profile() {
                 <button key={opt.id} onClick={()=>setDarkMode(opt.id)}
                   className="w-full flex items-center gap-3 p-4 rounded-2xl glass-press transition-all text-left"
                   style={darkMode===opt.id
-                    ? { background:'var(--gold-dim)', border:'1px solid rgba(245,158,11,0.3)' }
+                    ? { background:'var(--gold-dim)', border:'1px solid rgba(74,140,92,0.25)' }
                     : { background:'var(--glass)', border:'1px solid var(--glass-border)' }
                   }>
                   <span className="text-2xl">{opt.emoji}</span>
@@ -285,7 +285,7 @@ export default function Profile() {
             <div className="glass p-5">
               <div className="flex items-center gap-3 mb-4">
                 <div className="w-12 h-12 rounded-2xl flex items-center justify-center text-2xl flex-shrink-0"
-                  style={{ background:'rgba(255,255,255,0.06)', border:'1px solid #333' }}>⌚</div>
+                  style={{ background:'rgba(74,140,92,0.08)', border:'1px solid #333' }}>⌚</div>
                 <div>
                   <p className="font-black" style={{ color:'var(--text-1)' }}>Whoop API Verbindung</p>
                   <p className="text-xs mt-0.5" style={{ color: whoopTokens ? '#10b981' : 'var(--text-3)' }}>
@@ -329,7 +329,7 @@ export default function Profile() {
               ) : (
                 <div className="space-y-3">
                   {/* Require Client ID + Secret first */}
-                  <div className="rounded-2xl p-3" style={{ background:'rgba(245,158,11,0.08)', border:'1px solid rgba(245,158,11,0.15)' }}>
+                  <div className="rounded-2xl p-3" style={{ background:'rgba(74,140,92,0.06)', border:'1px solid rgba(74,140,92,0.15)' }}>
                     <p className="text-xs font-semibold" style={{ color:'var(--gold)' }}>
                       💡 Trage zuerst Client ID und Secret ein (unten), dann verbinden.
                     </p>
@@ -371,7 +371,7 @@ export default function Profile() {
                   />
                 </div>
               ))}
-              <div className="rounded-2xl p-3" style={{ background:'rgba(255,255,255,0.03)', border:'1px solid #1a1a1a' }}>
+              <div className="rounded-2xl p-3" style={{ background:'rgba(255,255,255,0.03)', border:'1px solid rgba(125,184,138,0.15)' }}>
                 <p className="text-xs" style={{ color:'var(--text-3)' }}>
                   Redirect URI für Whoop Developer Console:
                 </p>
@@ -391,12 +391,12 @@ export default function Profile() {
                 <p className="label mb-3">Letzte Sync-Daten · {whoopData.date}</p>
                 <div className="grid grid-cols-4 gap-2">
                   {[
-                    { l:'Recovery', v:`${whoopData.recovery}%`,  c: whoopData.recovery>66?'#10b981':whoopData.recovery>33?'#f59e0b':'#ef4444' },
+                    { l:'Recovery', v:`${whoopData.recovery}%`,  c: whoopData.recovery>66?'#10b981':whoopData.recovery>33?'#4a8c5c':'#ef4444' },
                     { l:'HRV',      v:`${whoopData.hrv}ms`,      c:'#60a5fa' },
                     { l:'Schlaf',   v:`${whoopData.sleepQuality}%`, c:'#a78bfa' },
                     { l:'Strain',   v:`${Number(whoopData.strain).toFixed(1)}`, c:'#fb923c' },
                   ].map((item) => (
-                    <div key={item.l} className="rounded-2xl py-3 text-center" style={{ background:'#0a0a0a', border:'1px solid #1a1a1a' }}>
+                    <div key={item.l} className="rounded-2xl py-3 text-center" style={{ background:'#0a0a0a', border:'1px solid rgba(125,184,138,0.15)' }}>
                       <p className="text-sm font-black" style={{ color:item.c }}>{item.v}</p>
                       <p className="text-[10px]" style={{ color:'var(--text-3)' }}>{item.l}</p>
                     </div>
@@ -475,7 +475,7 @@ export default function Profile() {
                       onChange={(e)=>{ const u=[...reminders]; u[i]={...r,enabled:e.target.checked}; setReminders(u) }}
                       className="sr-only peer"/>
                     <div className="w-11 h-6 rounded-full peer transition-all"
-                      style={{ background:r.enabled?'var(--grad-gold)':'rgba(255,255,255,0.08)', position:'relative' }}>
+                      style={{ background:r.enabled?'var(--grad-gold)':'rgba(74,140,92,0.1)', position:'relative' }}>
                       <div style={{ position:'absolute', top:2, left: r.enabled ? 22 : 2, width:20, height:20, background:'#fff', borderRadius:'50%', transition:'left 0.2s ease' }}/>
                     </div>
                   </label>

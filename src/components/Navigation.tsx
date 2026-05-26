@@ -31,9 +31,9 @@ export default function Navigation() {
                 <div
                   className="absolute inset-0 rounded-2xl"
                   style={{
-                    background: 'rgba(245,158,11,0.1)',
-                    border: '1px solid rgba(245,158,11,0.25)',
-                    boxShadow: '0 0 16px rgba(245,158,11,0.15)',
+                    background: 'rgba(74,140,92,0.1)',
+                    border: '1px solid rgba(74,140,92,0.2)',
+                    boxShadow: '0 0 16px rgba(74,140,92,0.15)',
                   }}
                 />
               )}
@@ -41,19 +41,19 @@ export default function Navigation() {
                 <Icon
                   size={22}
                   strokeWidth={active ? 2.5 : 1.7}
-                  style={{ color: active ? '#f59e0b' : '#444444', transition: 'color 0.2s ease' }}
+                  style={{ color: active ? '#4a8c5c' : '#8aaa93', transition: 'color 0.2s ease' }}
                 />
                 {/* Gold dot indicator */}
                 {active && (
                   <div
                     className="absolute -bottom-1 left-1/2 w-1 h-1 rounded-full"
-                    style={{ background: '#f59e0b', transform: 'translateX(-50%)', boxShadow: '0 0 6px #f59e0b' }}
+                    style={{ background: '#4a8c5c', transform: 'translateX(-50%)', boxShadow: '0 0 6px #f59e0b' }}
                   />
                 )}
               </div>
               <span
                 className="text-[10px] font-semibold relative"
-                style={{ color: active ? '#f59e0b' : '#444444', transition: 'color 0.2s ease' }}
+                style={{ color: active ? '#4a8c5c' : '#8aaa93', transition: 'color 0.2s ease' }}
               >
                 {label}
               </span>

@@ -44,7 +44,7 @@ function GpsSignalBars({ accuracy }: { accuracy: number | null }) {
     : accuracy < 35 ? 'Schwach – warte kurz'
     : 'Zu ungenau – bitte warten'
 
-  const color = bars >= 3 ? '#10b981' : bars === 2 ? '#f59e0b' : bars === 1 ? '#f97316' : '#ef4444'
+  const color = bars >= 3 ? '#10b981' : bars === 2 ? '#4a8c5c' : bars === 1 ? '#f97316' : '#ef4444'
 
   return (
     <div className="flex flex-col items-center gap-3">
@@ -147,20 +147,20 @@ export default function RunStartScreen({ onStart, onCancel }: Props) {
   const tip = tips[new Date().getDate() % tips.length]
 
   return (
-    <div className="fixed inset-0 z-[110] flex flex-col" style={{ background: '#000' }}>
+    <div className="fixed inset-0 z-[110] flex flex-col" style={{ background: 'var(--bg)' }}>
 
       {/* ── Header ── */}
       <div className="flex items-center justify-between px-5"
         style={{ paddingTop: 'max(env(safe-area-inset-top), 18px)', paddingBottom: 14,
           background: 'rgba(0,0,0,0.96)', backdropFilter: 'blur(16px)',
-          borderBottom: '1px solid #1a1a1a' }}>
+          borderBottom: '1px solid rgba(125,184,138,0.15)' }}>
         <div>
           <h2 className="font-black text-xl" style={{ color: '#fff', letterSpacing: -0.5 }}>Lauf vorbereiten</h2>
           {profile?.name && <p style={{ fontSize: 12, color: '#555', marginTop: 1 }}>Bereit, {profile.name.split(' ')[0]}?</p>}
         </div>
         <button onClick={onCancel}
           className="w-10 h-10 rounded-2xl flex items-center justify-center glass-press"
-          style={{ background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.1)' }}>
+          style={{ background: 'rgba(74,140,92,0.08)', border: '1px solid rgba(255,255,255,0.1)' }}>
           <X size={18} style={{ color: '#888' }} />
         </button>
       </div>
@@ -172,11 +172,11 @@ export default function RunStartScreen({ onStart, onCancel }: Props) {
           style={{
             background: gpsError ? 'rgba(239,68,68,0.08)'
               : gpsGood ? 'rgba(16,185,129,0.07)'
-              : gpsReady ? 'rgba(245,158,11,0.06)'
+              : gpsReady ? 'rgba(74,140,92,0.05)'
               : 'rgba(59,130,246,0.07)',
             border: `1.5px solid ${gpsError ? 'rgba(239,68,68,0.2)'
               : gpsGood ? 'rgba(16,185,129,0.2)'
-              : gpsReady ? 'rgba(245,158,11,0.2)'
+              : gpsReady ? 'rgba(74,140,92,0.18)'
               : 'rgba(59,130,246,0.2)'}`,
           }}>
 
@@ -204,7 +204,7 @@ export default function RunStartScreen({ onStart, onCancel }: Props) {
         {/* ── Weather card ── */}
         {weather && (
           <div className="rounded-3xl px-5 py-4 flex items-center gap-4"
-            style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)' }}>
+            style={{ background: 'rgba(74,140,92,0.06)', border: '1px solid rgba(74,140,92,0.1)' }}>
             <span style={{ fontSize: 44 }}>{weatherEmoji(weather.code)}</span>
             <div>
               <p style={{ fontSize: 28, fontWeight: 900, color: '#fff', lineHeight: 1, letterSpacing: -1 }}>
@@ -219,7 +219,7 @@ export default function RunStartScreen({ onStart, onCancel }: Props) {
 
         {/* ── Goal setting ── */}
         <div className="rounded-3xl p-4 space-y-3"
-          style={{ background: '#0d0d0d', border: '1px solid #1a1a1a' }}>
+          style={{ background: '#0d0d0d', border: '1px solid rgba(125,184,138,0.15)' }}>
           <p className="label px-1">Ziel setzen (optional)</p>
           <div className="flex gap-2">
             {[
@@ -230,8 +230,8 @@ export default function RunStartScreen({ onStart, onCancel }: Props) {
               <button key={opt.id} onClick={() => setGoalType(opt.id)}
                 className="flex-1 py-3 rounded-2xl text-xs font-bold transition-all flex items-center justify-center gap-1.5"
                 style={goalType === opt.id
-                  ? { background: 'rgba(245,158,11,0.15)', border: '1.5px solid rgba(245,158,11,0.4)', color: '#f59e0b' }
-                  : { background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)', color: 'rgba(255,255,255,0.4)' }}>
+                  ? { background: 'rgba(74,140,92,0.15)', border: '1.5px solid rgba(245,158,11,0.4)', color: '#4a8c5c' }
+                  : { background: 'rgba(74,140,92,0.06)', border: '1px solid rgba(74,140,92,0.1)', color: 'rgba(255,255,255,0.4)' }}>
                 {opt.icon} {opt.label}
               </button>
             ))}
@@ -245,15 +245,15 @@ export default function RunStartScreen({ onStart, onCancel }: Props) {
                 onChange={(e) => setGoalValue(e.target.value)}
                 placeholder={goalType === 'distance' ? '5.0' : '30'}
                 style={{
-                  flex: 1, background: 'rgba(255,255,255,0.06)',
-                  border: '1px solid rgba(255,255,255,0.12)',
+                  flex: 1, background: 'rgba(74,140,92,0.08)',
+                  border: '1px solid rgba(74,140,92,0.12)',
                   borderRadius: 16, color: '#fff',
                   padding: '13px 16px', fontSize: 22, fontWeight: 900,
                   textAlign: 'center',
                 }}
               />
               <div className="flex flex-col items-center" style={{ flexShrink: 0 }}>
-                <Target size={16} style={{ color: '#f59e0b', marginBottom: 2 }} />
+                <Target size={16} style={{ color: '#4a8c5c', marginBottom: 2 }} />
                 <p style={{ fontSize: 13, fontWeight: 700, color: 'rgba(255,255,255,0.5)' }}>
                   {goalType === 'distance' ? 'km' : 'min'}
                 </p>
@@ -264,7 +264,7 @@ export default function RunStartScreen({ onStart, onCancel }: Props) {
 
         {/* ── Tip card ── */}
         <div className="rounded-2xl px-4 py-3"
-          style={{ background: 'rgba(245,158,11,0.05)', border: '1px solid rgba(245,158,11,0.1)' }}>
+          style={{ background: 'rgba(245,158,11,0.05)', border: '1px solid rgba(74,140,92,0.08)' }}>
           <p style={{ fontSize: 12, color: 'rgba(255,255,255,0.45)', lineHeight: 1.6 }}>{tip}</p>
         </div>
       </div>
@@ -273,7 +273,7 @@ export default function RunStartScreen({ onStart, onCancel }: Props) {
       <div className="px-5"
         style={{ paddingBottom: 'max(env(safe-area-inset-bottom), 28px)', paddingTop: 14,
           background: 'rgba(0,0,0,0.96)', backdropFilter: 'blur(16px)',
-          borderTop: '1px solid #1a1a1a' }}>
+          borderTop: '1px solid rgba(125,184,138,0.15)' }}>
 
         <button
           onClick={handleStart}
@@ -283,7 +283,7 @@ export default function RunStartScreen({ onStart, onCancel }: Props) {
             paddingTop: 22, paddingBottom: 22,
             background: gpsReady
               ? 'linear-gradient(135deg, #f59e0b 0%, #d97706 100%)'
-              : 'rgba(245,158,11,0.25)',
+              : 'rgba(74,140,92,0.22)',
             boxShadow: gpsReady ? '0 8px 32px rgba(245,158,11,0.4)' : 'none',
             color: '#000', border: 'none', fontSize: 19,
             transition: 'all 0.4s cubic-bezier(0.16,1,0.3,1)',
@@ -303,7 +303,7 @@ export default function RunStartScreen({ onStart, onCancel }: Props) {
         {!gpsReady && !gpsError && (
           <button onClick={handleStart}
             className="w-full mt-2 py-3 rounded-2xl text-sm font-bold glass-press"
-            style={{ color: 'rgba(255,255,255,0.3)', background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.07)' }}>
+            style={{ color: 'rgba(255,255,255,0.3)', background: 'rgba(74,140,92,0.06)', border: '1px solid rgba(255,255,255,0.07)' }}>
             Trotzdem starten (ohne GPS)
           </button>
         )}

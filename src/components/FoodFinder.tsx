@@ -93,7 +93,7 @@ function scoreRestaurant(name: string, tags: Record<string, string>): { score: n
 }
 
 function scoreColor(s: number) {
-  return s >= 8 ? '#10b981' : s >= 6 ? '#f59e0b' : s >= 4 ? '#f97316' : '#ef4444'
+  return s >= 8 ? '#10b981' : s >= 6 ? '#4a8c5c' : s >= 4 ? '#f97316' : '#ef4444'
 }
 
 // ── Amenity label ─────────────────────────────────────────────────────────
@@ -396,7 +396,7 @@ export default function FoodFinder({ onClose }: Props) {
   }
 
   return (
-    <div className="fixed inset-0 z-[110] flex flex-col" style={{ background: '#000' }}>
+    <div className="fixed inset-0 z-[110] flex flex-col" style={{ background: 'var(--bg)' }}>
 
       {/* ── Header ── */}
       <div className="flex items-center justify-between px-4"
@@ -415,21 +415,21 @@ export default function FoodFinder({ onClose }: Props) {
         <div className="flex items-center gap-2">
           <button onClick={() => setShowDebug(v => !v)}
             className="w-9 h-9 rounded-full flex items-center justify-center"
-            style={{ background: showDebug ? 'rgba(245,158,11,0.15)' : 'rgba(255,255,255,0.05)',
-              border: showDebug ? '1px solid rgba(245,158,11,0.35)' : '1px solid rgba(255,255,255,0.08)',
+            style={{ background: showDebug ? 'rgba(74,140,92,0.15)' : 'rgba(255,255,255,0.05)',
+              border: showDebug ? '1px solid rgba(74,140,92,0.3)' : '1px solid rgba(74,140,92,0.1)',
               fontSize: 14 }}>
             🔍
           </button>
           {!loading && pos && !gpsErr && (
             <button onClick={reload}
               className="w-9 h-9 rounded-full flex items-center justify-center"
-              style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.08)' }}>
+              style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(74,140,92,0.1)' }}>
               <RefreshCw size={15} style={{ color: '#666' }} />
             </button>
           )}
           <button onClick={onClose}
             className="w-9 h-9 rounded-full flex items-center justify-center"
-            style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.08)' }}>
+            style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(74,140,92,0.1)' }}>
             <X size={18} style={{ color: '#888' }} />
           </button>
         </div>
@@ -437,8 +437,8 @@ export default function FoodFinder({ onClose }: Props) {
 
       {/* ── Debug panel ── */}
       {showDebug && (
-        <div className="px-4 py-3" style={{ background: '#0c0c0c', borderBottom: '1px solid #1a1a1a' }}>
-          <p className="text-xs font-black mb-2" style={{ color: '#f59e0b' }}>🔍 Debug</p>
+        <div className="px-4 py-3" style={{ background: '#0c0c0c', borderBottom: '1px solid rgba(125,184,138,0.15)' }}>
+          <p className="text-xs font-black mb-2" style={{ color: '#4a8c5c' }}>🔍 Debug</p>
           <p className="text-xs font-mono mb-1" style={{ color: pos ? '#10b981' : '#ef4444' }}>
             GPS: {pos ? `${pos.lat.toFixed(5)}, ${pos.lng.toFixed(5)}` : gpsErr ?? 'warte…'}
           </p>
@@ -460,8 +460,8 @@ export default function FoodFinder({ onClose }: Props) {
             <button key={r} onClick={() => setRadius(r)}
               className="flex-1 py-2 rounded-2xl text-xs font-black transition-all"
               style={radius === r
-                ? { background: 'rgba(245,158,11,0.18)', border: '1.5px solid rgba(245,158,11,0.5)', color: '#f59e0b', boxShadow: '0 0 12px rgba(245,158,11,0.15)' }
-                : { background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.07)', color: '#444' }}>
+                ? { background: 'rgba(245,158,11,0.18)', border: '1.5px solid rgba(245,158,11,0.5)', color: '#4a8c5c', boxShadow: '0 0 12px rgba(74,140,92,0.15)' }
+                : { background: 'rgba(74,140,92,0.06)', border: '1px solid rgba(255,255,255,0.07)', color: '#444' }}>
               {r < 1000 ? `${r}m` : `${r / 1000}km`}
             </button>
           ))}
@@ -476,7 +476,7 @@ export default function FoodFinder({ onClose }: Props) {
             className="flex-shrink-0 flex items-center gap-1.5 px-3 py-1.5 rounded-2xl text-xs font-bold"
             style={cat === c.id
               ? { background: 'rgba(16,185,129,0.15)', border: '1.5px solid rgba(16,185,129,0.4)', color: '#10b981' }
-              : { background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.07)', color: '#444' }}>
+              : { background: 'rgba(74,140,92,0.06)', border: '1px solid rgba(255,255,255,0.07)', color: '#444' }}>
             {c.emoji} {c.label}
           </button>
         ))}
@@ -549,7 +549,7 @@ export default function FoodFinder({ onClose }: Props) {
         <div className="px-4 py-2 flex-shrink-0" style={{ background: '#0a0a0a', borderTop: '1px solid #141414' }}>
           <button onClick={loadAiTip} disabled={aiLoading}
             className="w-full py-2.5 rounded-2xl text-sm font-bold flex items-center justify-center gap-2"
-            style={{ background: 'rgba(245,158,11,0.07)', border: '1px solid rgba(245,158,11,0.2)', color: '#f59e0b' }}>
+            style={{ background: 'rgba(245,158,11,0.07)', border: '1px solid rgba(74,140,92,0.18)', color: '#4a8c5c' }}>
             {aiLoading ? <><Loader2 size={14} className="animate-spin" />Analysiere…</> : <>✨ KI-Empfehlung ({goalLabel})</>}
           </button>
         </div>
@@ -615,7 +615,7 @@ export default function FoodFinder({ onClose }: Props) {
                     {/* Meta row */}
                     <div className="flex items-center gap-2 mt-1 flex-wrap">
                       <span className="text-xs font-bold px-2 py-0.5 rounded-lg"
-                        style={{ background: 'rgba(255,255,255,0.06)', color: '#888', border: '1px solid rgba(255,255,255,0.07)' }}>
+                        style={{ background: 'rgba(74,140,92,0.08)', color: '#888', border: '1px solid rgba(255,255,255,0.07)' }}>
                         {catLbl}
                       </span>
                       <span className="text-xs font-bold" style={{ color: color }}>

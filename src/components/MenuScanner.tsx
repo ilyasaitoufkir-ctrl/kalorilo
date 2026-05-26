@@ -17,7 +17,7 @@ const MEALS: { id: MealType; label: string; emoji: string }[] = [
 
 const RATING_CONFIG: Record<MenuDishRating, { icon: string; color: string; bg: string; border: string; label: string }> = {
   good: { icon: '✅', color: '#10b981', bg: 'rgba(16,185,129,0.08)',  border: 'rgba(16,185,129,0.25)',  label: 'Empfohlen' },
-  ok:   { icon: '⚠️', color: '#f59e0b', bg: 'rgba(245,158,11,0.08)', border: 'rgba(245,158,11,0.25)',  label: 'OK' },
+  ok:   { icon: '⚠️', color: '#4a8c5c', bg: 'rgba(74,140,92,0.06)', border: 'rgba(74,140,92,0.22)',  label: 'OK' },
   bad:  { icon: '❌', color: '#ef4444', bg: 'rgba(239,68,68,0.08)',  border: 'rgba(239,68,68,0.25)',   label: 'Nicht ideal' },
 }
 
@@ -105,13 +105,13 @@ export default function MenuScanner({ onClose, remainingCalories, remainingProte
     <div className="fixed inset-0 z-[110] flex flex-col" style={{ background: 'rgba(0,0,0,0.85)', backdropFilter: 'blur(8px)' }}>
       <div className="flex-1 overflow-y-auto overflow-x-hidden">
         {/* Header */}
-        <div className="flex items-center justify-between px-5 py-4 pt-safe" style={{ background: '#000', borderBottom: '1px solid #1a1a1a' }}>
+        <div className="flex items-center justify-between px-5 py-4 pt-safe" style={{ background: 'var(--bg)', borderBottom: '1px solid rgba(125,184,138,0.15)' }}>
           <div>
             <h2 className="text-lg font-black" style={{ color: '#fff' }}>📸 Menü scannen</h2>
             <p className="text-xs" style={{ color: 'var(--text-3)' }}>KI liest die Speisekarte & empfiehlt</p>
           </div>
           <button onClick={onClose} className="w-9 h-9 rounded-2xl flex items-center justify-center glass-press"
-            style={{ background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.1)' }}>
+            style={{ background: 'rgba(74,140,92,0.08)', border: '1px solid rgba(255,255,255,0.1)' }}>
             <X size={18} style={{ color: 'var(--text-2)' }} />
           </button>
         </div>
@@ -125,8 +125,8 @@ export default function MenuScanner({ onClose, remainingCalories, remainingProte
               <div className="glass p-4">
                 <p className="label mb-2">Dein Restbedarf heute</p>
                 <div className="flex gap-3">
-                  <div className="flex-1 text-center rounded-2xl py-3" style={{ background: 'rgba(245,158,11,0.08)', border: '1px solid rgba(245,158,11,0.2)' }}>
-                    <p className="text-xl font-black" style={{ color: '#f59e0b' }}>{Math.max(0, remainingCalories)}</p>
+                  <div className="flex-1 text-center rounded-2xl py-3" style={{ background: 'rgba(74,140,92,0.06)', border: '1px solid rgba(74,140,92,0.18)' }}>
+                    <p className="text-xl font-black" style={{ color: '#4a8c5c' }}>{Math.max(0, remainingCalories)}</p>
                     <p className="text-xs" style={{ color: 'var(--text-3)' }}>kcal übrig</p>
                   </div>
                   <div className="flex-1 text-center rounded-2xl py-3" style={{ background: 'rgba(59,130,246,0.08)', border: '1px solid rgba(59,130,246,0.2)' }}>
@@ -159,8 +159,8 @@ export default function MenuScanner({ onClose, remainingCalories, remainingProte
 
               <button onClick={() => fileRef.current?.click()} disabled={!apiKey}
                 className="w-full flex flex-col items-center justify-center gap-3 rounded-3xl glass-press disabled:opacity-40"
-                style={{ minHeight: 160, border: '2px dashed rgba(245,158,11,0.35)', background: 'rgba(245,158,11,0.04)' }}>
-                <Camera size={44} style={{ color: '#f59e0b' }} />
+                style={{ minHeight: 160, border: '2px dashed rgba(74,140,92,0.3)', background: 'rgba(74,140,92,0.04)' }}>
+                <Camera size={44} style={{ color: '#4a8c5c' }} />
                 <span className="font-black text-base" style={{ color: '#fff' }}>Speisekarte fotografieren</span>
                 <span className="text-xs" style={{ color: 'var(--text-3)' }}>oder aus Galerie wählen</span>
               </button>
@@ -179,8 +179,8 @@ export default function MenuScanner({ onClose, remainingCalories, remainingProte
                   style={{ border: '1px solid rgba(255,255,255,0.1)' }} />
               )}
               <div className="w-16 h-16 rounded-3xl flex items-center justify-center"
-                style={{ background: 'rgba(245,158,11,0.12)', border: '1px solid rgba(245,158,11,0.2)' }}>
-                <Loader size={28} className="animate-spin" style={{ color: '#f59e0b' }} />
+                style={{ background: 'rgba(74,140,92,0.1)', border: '1px solid rgba(74,140,92,0.18)' }}>
+                <Loader size={28} className="animate-spin" style={{ color: '#4a8c5c' }} />
               </div>
               <div className="text-center">
                 <p className="font-black text-base" style={{ color: '#fff' }}>KI liest die Karte…</p>
@@ -195,7 +195,7 @@ export default function MenuScanner({ onClose, remainingCalories, remainingProte
               {/* Preview thumbnail */}
               {preview && (
                 <img src={preview} alt="" className="w-full h-32 object-cover rounded-2xl"
-                  style={{ border: '1px solid rgba(255,255,255,0.08)' }} />
+                  style={{ border: '1px solid rgba(74,140,92,0.1)' }} />
               )}
 
               {/* Summary */}
@@ -214,7 +214,7 @@ export default function MenuScanner({ onClose, remainingCalories, remainingProte
                       className="flex-1 py-2.5 rounded-2xl text-xs font-bold transition-all glass-press"
                       style={mealType === m.id
                         ? { background: 'var(--grad-gold)', color: '#000' }
-                        : { background: 'rgba(255,255,255,0.04)', color: 'var(--text-3)', border: '1px solid rgba(255,255,255,0.06)' }}>
+                        : { background: 'rgba(74,140,92,0.06)', color: 'var(--text-3)', border: '1px solid rgba(74,140,92,0.08)' }}>
                       {m.emoji}
                     </button>
                   ))}
@@ -226,10 +226,10 @@ export default function MenuScanner({ onClose, remainingCalories, remainingProte
 
               {/* Disclaimer */}
               <div className="rounded-2xl px-4 py-2.5 flex items-start gap-2"
-                style={{ background: 'rgba(245,158,11,0.07)', border: '1px solid rgba(245,158,11,0.15)' }}>
+                style={{ background: 'rgba(245,158,11,0.07)', border: '1px solid rgba(74,140,92,0.15)' }}>
                 <span className="text-base flex-shrink-0">⚠️</span>
                 <p className="text-xs" style={{ color: 'var(--text-2)' }}>
-                  <strong style={{ color: '#f59e0b' }}>KI-Schätzung</strong> — Werte können abweichen. Tippe auf ein Gericht um Werte vor dem Speichern anzupassen.
+                  <strong style={{ color: '#4a8c5c' }}>KI-Schätzung</strong> — Werte können abweichen. Tippe auf ein Gericht um Werte vor dem Speichern anzupassen.
                 </p>
               </div>
 
@@ -273,14 +273,14 @@ export default function MenuScanner({ onClose, remainingCalories, remainingProte
 
                       {/* Expanded: reason + editable macros */}
                       {d.expanded && (
-                        <div className="px-4 pb-4 space-y-3" style={{ borderTop: '1px solid rgba(255,255,255,0.06)' }}>
+                        <div className="px-4 pb-4 space-y-3" style={{ borderTop: '1px solid rgba(74,140,92,0.08)' }}>
                           {d.reason && (
                             <p className="text-xs pt-3 leading-relaxed" style={{ color: 'var(--text-2)' }}>🤖 {d.reason}</p>
                           )}
                           <p className="text-xs font-bold" style={{ color: 'var(--text-3)' }}>Werte anpassen:</p>
                           <div className="grid grid-cols-4 gap-2">
                             {([
-                              { label: 'kcal', key: 'editCal' as const, color: '#f59e0b' },
+                              { label: 'kcal', key: 'editCal' as const, color: '#4a8c5c' },
                               { label: 'Eiweiß', key: 'editProt' as const, color: '#3b82f6' },
                               { label: 'Fett', key: 'editFat' as const, color: '#ef4444' },
                               { label: 'KH', key: 'editCarbs' as const, color: '#10b981' },
@@ -294,7 +294,7 @@ export default function MenuScanner({ onClose, remainingCalories, remainingProte
                                     prev.map((dish, idx) => idx === i ? { ...dish, [field.key]: e.target.value } : dish)
                                   )}
                                   className="w-full text-center text-sm font-bold rounded-xl py-2"
-                                  style={{ background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.1)', color: '#fff' }}
+                                  style={{ background: 'rgba(74,140,92,0.08)', border: '1px solid rgba(255,255,255,0.1)', color: '#fff' }}
                                 />
                               </div>
                             ))}
@@ -316,7 +316,7 @@ export default function MenuScanner({ onClose, remainingCalories, remainingProte
               {/* Rescan button */}
               <button onClick={() => { setStep('scan'); setPreview(null); setDishes([]) }}
                 className="w-full py-4 rounded-2xl font-bold text-sm glass-press"
-                style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)', color: 'var(--text-3)' }}>
+                style={{ background: 'rgba(74,140,92,0.06)', border: '1px solid rgba(74,140,92,0.1)', color: 'var(--text-3)' }}>
                 Neue Speisekarte scannen
               </button>
             </>

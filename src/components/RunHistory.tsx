@@ -83,18 +83,18 @@ function WeekBar({ sessions }: { sessions: RunSession[] }) {
         <div key={label} className="flex-1 flex flex-col items-center gap-1">
           <div className="w-9 h-9 rounded-2xl flex items-center justify-center"
             style={{
-              background: ran ? 'rgba(245,158,11,0.12)' : 'rgba(255,255,255,0.04)',
+              background: ran ? 'rgba(74,140,92,0.1)' : 'rgba(74,140,92,0.06)',
               border: isToday
                 ? '1.5px solid rgba(245,158,11,0.5)'
-                : ran ? '1px solid rgba(245,158,11,0.25)' : '1px solid rgba(255,255,255,0.07)',
+                : ran ? '1px solid rgba(74,140,92,0.22)' : '1px solid rgba(255,255,255,0.07)',
             }}>
             {ran
               ? <span style={{ fontSize: 16 }}>🏃</span>
               : <span style={{ width: 6, height: 6, borderRadius: '50%',
-                  background: isToday ? '#f59e0b' : '#222', display: 'block' }} />}
+                  background: isToday ? '#4a8c5c' : '#222', display: 'block' }} />}
           </div>
           <p style={{ fontSize: 10, fontWeight: 700,
-            color: isToday ? '#f59e0b' : ran ? '#888' : 'var(--text-3)' }}>{label}</p>
+            color: isToday ? '#4a8c5c' : ran ? '#888' : 'var(--text-3)' }}>{label}</p>
         </div>
       ))}
     </div>
@@ -122,18 +122,18 @@ function MonthStats({ sessions }: { sessions: RunSession[] }) {
   return (
     <div className="glass p-4">
       <p className="font-bold text-sm mb-3 flex items-center gap-2" style={{ color: 'var(--text-1)' }}>
-        <TrendingUp size={15} style={{ color: '#f59e0b', flexShrink: 0 }} />
+        <TrendingUp size={15} style={{ color: '#4a8c5c', flexShrink: 0 }} />
         {now.toLocaleString('de-DE', { month: 'long' })} – Monatsübersicht
       </p>
       <div className="grid grid-cols-4 gap-2">
         {[
-          { val: thisMonth.length.toString(), unit: 'Läufe',    color: '#f59e0b' },
+          { val: thisMonth.length.toString(), unit: 'Läufe',    color: '#4a8c5c' },
           { val: totalDist.toFixed(1),         unit: 'km',       color: '#10b981' },
           { val: fmtTime(totalTime),           unit: 'Zeit',     color: '#60a5fa' },
           { val: totalCal.toString(),          unit: 'kcal',     color: '#f97316' },
         ].map((item) => (
           <div key={item.unit} className="rounded-2xl py-2.5 text-center"
-            style={{ background: '#0a0a0a', border: '1px solid #1a1a1a' }}>
+            style={{ background: '#0a0a0a', border: '1px solid rgba(125,184,138,0.15)' }}>
             <p style={{ fontSize: 16, fontWeight: 900, color: item.color, lineHeight: 1 }}>{item.val}</p>
             <p style={{ fontSize: 9, color: '#444', fontWeight: 700, marginTop: 2 }}>{item.unit}</p>
           </div>
@@ -198,7 +198,7 @@ export default function RunHistory() {
           <div className="mt-3 pt-3 grid grid-cols-3 gap-2 text-center"
             style={{ borderTop: '1px solid var(--glass-border)' }}>
             {[
-              { val: `${thisWeek.reduce((s, r) => s + r.distance, 0).toFixed(1)} km`, label: 'Distanz', color: '#f59e0b' },
+              { val: `${thisWeek.reduce((s, r) => s + r.distance, 0).toFixed(1)} km`, label: 'Distanz', color: '#4a8c5c' },
               { val: thisWeek.length.toString(),                                        label: 'Läufe',    color: '#10b981' },
               { val: `${thisWeek.reduce((s, r) => s + r.caloriesBurned, 0)} kcal`,    label: 'Kalorien', color: '#f97316' },
             ].map((item) => (
@@ -214,13 +214,13 @@ export default function RunHistory() {
       {/* Personal bests */}
       {pb && (
         <div className="glass p-4"
-          style={{ background: 'rgba(245,158,11,0.04)', borderColor: 'rgba(245,158,11,0.12)' }}>
+          style={{ background: 'rgba(74,140,92,0.04)', borderColor: 'rgba(74,140,92,0.1)' }}>
           <p className="font-bold text-sm mb-3 flex items-center gap-2" style={{ color: 'var(--text-1)' }}>
-            <Trophy size={15} style={{ color: '#f59e0b', flexShrink: 0 }} /> Persönliche Bestleistungen
+            <Trophy size={15} style={{ color: '#4a8c5c', flexShrink: 0 }} /> Persönliche Bestleistungen
           </p>
           <div className="grid grid-cols-2 gap-2">
             {[
-              { label: 'Längster Lauf',    value: `${pb.longestRun.toFixed(2)} km`,                      color: '#f59e0b' },
+              { label: 'Längster Lauf',    value: `${pb.longestRun.toFixed(2)} km`,                      color: '#4a8c5c' },
               { label: 'Beste Pace',       value: pb.bestPace ? `${fmtPace(pb.bestPace)} /km` : '–',     color: '#10b981' },
               { label: 'Gesamt Distanz',   value: `${pb.totalDistance.toFixed(1)} km`,                   color: '#60a5fa' },
               { label: 'Gesamt Kalorien',  value: `${pb.totalCalories} kcal`,                            color: '#f97316' },
@@ -245,7 +245,7 @@ export default function RunHistory() {
 
           return (
             <div key={run.id} className="glass overflow-hidden"
-              style={isPb ? { borderColor: 'rgba(245,158,11,0.25)', background: 'rgba(245,158,11,0.03)' } : {}}>
+              style={isPb ? { borderColor: 'rgba(74,140,92,0.22)', background: 'rgba(245,158,11,0.03)' } : {}}>
               <div className="flex items-center gap-3 p-4">
                 {/* Mini route SVG */}
                 <MiniRoute route={run.route} size={56} />
@@ -257,8 +257,8 @@ export default function RunHistory() {
                       {run.distance.toFixed(2)} km
                     </p>
                     {isPb && (
-                      <span style={{ fontSize: 9, fontWeight: 800, color: '#f59e0b',
-                        background: 'rgba(245,158,11,0.12)', border: '1px solid rgba(245,158,11,0.25)',
+                      <span style={{ fontSize: 9, fontWeight: 800, color: '#4a8c5c',
+                        background: 'rgba(74,140,92,0.1)', border: '1px solid rgba(74,140,92,0.22)',
                         padding: '1px 6px', borderRadius: 8 }}>🏆 PB</span>
                     )}
                   </div>

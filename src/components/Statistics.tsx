@@ -101,7 +101,7 @@ export default function Statistics() {
     toast.success('Foto gespeichert! 📸')
   }
 
-  const inputStyle = { background:'rgba(255,255,255,0.05)', border:'1px solid rgba(255,255,255,0.08)', borderRadius:16, color:'var(--text-1)', padding:'13px 16px', width:'100%', fontSize:14, fontWeight:600 } as const
+  const inputStyle = { background:'rgba(255,255,255,0.05)', border:'1px solid rgba(74,140,92,0.1)', borderRadius:16, color:'var(--text-1)', padding:'13px 16px', width:'100%', fontSize:14, fontWeight:600 } as const
 
   const tooltipStyle = { background:'#111111', border:'1px solid #222222', borderRadius:12, color:'#ffffff', fontSize:12 }
   const axisStyle    = { fontSize:10, fill:'#555555', fontWeight:600 }
@@ -115,8 +115,8 @@ export default function Statistics() {
 
   return (
     <div className="h-dvh overflow-y-auto overflow-x-hidden pb-nav anim-fade" style={{ background:'var(--bg)' }}>
-      <div className="pt-safe px-5 pb-5 relative overflow-hidden" style={{ background:'#000', borderBottom:'1px solid #1a1a1a' }}>
-        <div className="absolute" style={{ top:-40,right:-40,width:200,height:200,background:'radial-gradient(circle,rgba(245,158,11,0.06),transparent 70%)',pointerEvents:'none' }}/>
+      <div className="pt-safe px-5 pb-5 relative overflow-hidden" style={{ background:'var(--bg)', borderBottom:'1px solid rgba(125,184,138,0.15)' }}>
+        <div className="absolute" style={{ top:-40,right:-40,width:200,height:200,background:'radial-gradient(circle,rgba(74,140,92,0.05),transparent 70%)',pointerEvents:'none' }}/>
         <h1 className="text-2xl font-black mb-3 relative" style={{ color:'var(--text-1)' }}>Statistiken</h1>
         <div className="grid grid-cols-3 gap-2">
           {[{v:`${avgCals}`,u:'kcal/Tag',l:'Ø Kalorien'},{v:`${goalDays}`,u:'Tage',l:'Ziel erreicht'},{v:`${totalDays}`,u:'Tage',l:'Eingetragen'}].map((s)=>(
@@ -133,7 +133,7 @@ export default function Statistics() {
         {/* Streak hero */}
         <div className="glass p-5 mb-4 flex items-center gap-4">
           <div className="w-16 h-16 rounded-3xl flex items-center justify-center text-4xl flex-shrink-0"
-            style={{ background:'rgba(245,158,11,0.1)', border:'1px solid rgba(245,158,11,0.15)' }}>
+            style={{ background:'rgba(74,140,92,0.08)', border:'1px solid rgba(74,140,92,0.15)' }}>
             {streak>0?'🔥':'💤'}
           </div>
           <div>
@@ -144,7 +144,7 @@ export default function Statistics() {
         </div>
 
         {/* Tabs */}
-        <div className="flex gap-1.5 p-1.5 rounded-2xl mb-4" style={{ background:'rgba(255,255,255,0.04)', border:'1px solid rgba(255,255,255,0.06)' }}>
+        <div className="flex gap-1.5 p-1.5 rounded-2xl mb-4" style={{ background:'rgba(74,140,92,0.06)', border:'1px solid rgba(74,140,92,0.08)' }}>
           {TABS.map((t)=>(
             <button key={t.id} onClick={()=>setActiveTab(t.id)}
               className="flex-1 py-2.5 rounded-xl text-xs font-bold transition-all"
@@ -160,7 +160,7 @@ export default function Statistics() {
               <p className="label mb-3">Kalorien & Sport (7 Tage)</p>
               <ResponsiveContainer width="100%" height={160}>
                 <BarChart data={weekData} barSize={14} barGap={3}>
-                  <CartesianGrid strokeDasharray="2 4" stroke="rgba(255,255,255,0.04)" vertical={false}/>
+                  <CartesianGrid strokeDasharray="2 4" stroke="rgba(74,140,92,0.06)" vertical={false}/>
                   <XAxis dataKey="day" tick={axisStyle} axisLine={false} tickLine={false}/>
                   <YAxis tick={axisStyle} axisLine={false} tickLine={false} width={30}/>
                   <Tooltip contentStyle={tooltipStyle} cursor={{ fill:'rgba(255,255,255,0.03)' }}/>
@@ -169,7 +169,7 @@ export default function Statistics() {
                 </BarChart>
               </ResponsiveContainer>
               <div className="flex gap-4 mt-2">
-                {[{c:'#f59e0b',l:'Gegessen'},{c:'#10b981',l:'Verbrannt'}].map((item)=>(
+                {[{c:'#4a8c5c',l:'Gegessen'},{c:'#10b981',l:'Verbrannt'}].map((item)=>(
                   <span key={item.l} className="flex items-center gap-1.5 text-xs" style={{ color:'var(--text-3)' }}>
                     <span className="w-2.5 h-2.5 rounded-sm inline-block flex-shrink-0" style={{ background:item.c }}/>
                     {item.l}
@@ -195,7 +195,7 @@ export default function Statistics() {
                   return (
                     <div key={date} title={`${date}: ${Math.round(s.totalCalories)} kcal`}
                       className="w-7 h-7 rounded-lg flex items-center justify-center text-[10px] font-bold"
-                      style={{ background: !hasData?'rgba(255,255,255,0.04)':s.goalMet?'rgba(16,185,129,0.2)':'rgba(239,68,68,0.15)', color:!hasData?'var(--text-3)':s.goalMet?'#10b981':'#ef4444', border:`1px solid ${!hasData?'rgba(255,255,255,0.06)':s.goalMet?'rgba(16,185,129,0.3)':'rgba(239,68,68,0.2)'}` }}>
+                      style={{ background: !hasData?'rgba(74,140,92,0.06)':s.goalMet?'rgba(16,185,129,0.2)':'rgba(239,68,68,0.15)', color:!hasData?'var(--text-3)':s.goalMet?'#10b981':'#ef4444', border:`1px solid ${!hasData?'rgba(74,140,92,0.08)':s.goalMet?'rgba(16,185,129,0.3)':'rgba(239,68,68,0.2)'}` }}>
                       {hasData?(s.goalMet?'✓':'✗'):'·'}
                     </div>
                   )
@@ -232,11 +232,11 @@ export default function Statistics() {
                 <p className="label mb-3">Verlauf</p>
                 <ResponsiveContainer width="100%" height={180}>
                   <LineChart data={weightData}>
-                    <CartesianGrid strokeDasharray="2 4" stroke="rgba(255,255,255,0.04)" vertical={false}/>
+                    <CartesianGrid strokeDasharray="2 4" stroke="rgba(74,140,92,0.06)" vertical={false}/>
                     <XAxis dataKey="date" tick={axisStyle} axisLine={false} tickLine={false}/>
                     <YAxis domain={['auto','auto']} tick={axisStyle} axisLine={false} tickLine={false} width={32}/>
                     <Tooltip contentStyle={tooltipStyle}/>
-                    <Line type="monotone" dataKey="weight" stroke="#f59e0b" strokeWidth={2.5} dot={{ r:4, fill:'#f59e0b', strokeWidth:0 }} name="kg"/>
+                    <Line type="monotone" dataKey="weight" stroke="#f59e0b" strokeWidth={2.5} dot={{ r:4, fill:'#4a8c5c', strokeWidth:0 }} name="kg"/>
                   </LineChart>
                 </ResponsiveContainer>
               </div>
@@ -275,7 +275,7 @@ export default function Statistics() {
         {activeTab==='body' && (
           <div className="space-y-3">
             {/* Disclaimer */}
-            <div className="glass p-4" style={{ background:'rgba(245,158,11,0.06)', borderColor:'rgba(245,158,11,0.2)' }}>
+            <div className="glass p-4" style={{ background:'rgba(74,140,92,0.05)', borderColor:'rgba(74,140,92,0.18)' }}>
               <p className="text-xs font-bold" style={{ color:'var(--gold)' }}>⚠️ KI-Schätzung · kein medizinischer Rat</p>
               <p className="text-xs mt-1" style={{ color:'var(--text-3)' }}>Claude AI analysiert Fotos visuell. Die Werte sind grobe Schätzungen und ersetzen keine medizinische Beurteilung.</p>
             </div>
@@ -339,7 +339,7 @@ export default function Statistics() {
                             <div className="mt-2 space-y-1">
                               <div className="flex flex-wrap gap-1.5">
                                 {[
-                                  { label:'KFA', val: photo.analysis.bodyFatRange, color:'#f59e0b' },
+                                  { label:'KFA', val: photo.analysis.bodyFatRange, color:'#4a8c5c' },
                                   { label:'Muskeltonus', val: photo.analysis.muscleTonus, color:'#10b981' },
                                   { label:'Level', val: photo.analysis.fitnessLevel, color:'#60a5fa' },
                                 ].map((item) => (

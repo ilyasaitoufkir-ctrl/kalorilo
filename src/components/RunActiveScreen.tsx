@@ -26,7 +26,7 @@ function GpsSignal({ accuracy, gpsStatus }: { accuracy: number | null; gpsStatus
     : accuracy < 12 ? 3
     : accuracy < 20 ? 2
     : accuracy < 35 ? 1 : 0
-  const color = bars >= 3 ? '#10b981' : bars >= 2 ? '#f59e0b' : '#f97316'
+  const color = bars >= 3 ? '#10b981' : bars >= 2 ? '#4a8c5c' : '#f97316'
 
   const label = gpsStatus === 'searching' ? 'GPS sucht…'
     : gpsStatus === 'weak'      ? 'GPS schwach'
@@ -56,7 +56,7 @@ function StopConfirm({ onCancel, onConfirm }: { onCancel: () => void; onConfirm:
     <div className="fixed inset-0 z-[200] flex items-center justify-center px-6"
       style={{ background: 'rgba(0,0,0,0.88)', backdropFilter: 'blur(8px)' }}>
       <div className="w-full max-w-sm rounded-3xl p-7 text-center"
-        style={{ background: '#111', border: '1px solid #2a2a2a', boxShadow: '0 24px 80px rgba(0,0,0,0.9)' }}>
+        style={{ background: '#ffffff', border: '1px solid #2a2a2a', boxShadow: '0 24px 80px rgba(0,0,0,0.9)' }}>
         <div style={{ fontSize: 52, marginBottom: 12 }}>🏁</div>
         <h3 className="text-xl font-black mb-2" style={{ color: '#fff' }}>Lauf beenden?</h3>
         <p className="text-sm mb-7" style={{ color: '#666', lineHeight: 1.7 }}>
@@ -144,7 +144,7 @@ export default function RunActiveScreen({ run, goal }: Props) {
     : null
 
   return (
-    <div className="fixed inset-0 z-[110] flex flex-col" style={{ background: '#000' }}>
+    <div className="fixed inset-0 z-[110] flex flex-col" style={{ background: 'var(--bg)' }}>
 
       {/* ── Top bar ── */}
       <div className="flex items-center justify-between px-4"
@@ -164,7 +164,7 @@ export default function RunActiveScreen({ run, goal }: Props) {
 
         {isPaused ? (
           <span className="px-3 py-1 rounded-full text-xs font-black"
-            style={{ background: 'rgba(245,158,11,0.18)', color: '#f59e0b', border: '1px solid rgba(245,158,11,0.35)' }}>
+            style={{ background: 'rgba(245,158,11,0.18)', color: '#4a8c5c', border: '1px solid rgba(74,140,92,0.3)' }}>
             Pausiert
           </span>
         ) : (
@@ -177,7 +177,7 @@ export default function RunActiveScreen({ run, goal }: Props) {
 
       {/* ── Goal progress bar ── */}
       {goalPct !== null && (
-        <div style={{ height: 3, background: '#111' }}>
+        <div style={{ height: 3, background: '#ffffff' }}>
           <div style={{
             height: '100%', width: `${goalPct * 100}%`,
             background: goalPct >= 1
@@ -242,7 +242,7 @@ export default function RunActiveScreen({ run, goal }: Props) {
         {/* Main row: 3 stats */}
         <div className="grid grid-cols-3" style={{ borderBottom: '1px solid #141414' }}>
           {[
-            { label: 'Distanz', value: distDisplay.value, sub: distDisplay.unit, color: '#f59e0b' },
+            { label: 'Distanz', value: distDisplay.value, sub: distDisplay.unit, color: '#4a8c5c' },
             { label: 'Pace /km', value: fmtPace(currentPace), sub: 'aktuell', color: '#fff' },
             { label: 'Ø Pace /km', value: fmtPace(avgPace), sub: 'gesamt', color: '#aaa' },
           ].map((s, i) => (
@@ -282,8 +282,8 @@ export default function RunActiveScreen({ run, goal }: Props) {
             <div className="flex gap-2">
               {splits.slice(-3).map((s) => (
                 <div key={s.km} className="flex-1 rounded-xl py-2 text-center"
-                  style={{ background: '#111', border: '1px solid #1c1c1c' }}>
-                  <p style={{ fontSize: 11, fontWeight: 900, color: '#f59e0b' }}>{fmtPace(s.pace)}</p>
+                  style={{ background: '#ffffff', border: '1px solid #1c1c1c' }}>
+                  <p style={{ fontSize: 11, fontWeight: 900, color: '#4a8c5c' }}>{fmtPace(s.pace)}</p>
                   <p style={{ fontSize: 9, color: '#444', fontWeight: 700 }}>KM {s.km}</p>
                 </div>
               ))}
@@ -298,14 +298,14 @@ export default function RunActiveScreen({ run, goal }: Props) {
               <p style={{ fontSize: 11, color: '#555', fontWeight: 700 }}>
                 Ziel: {goal.type === 'distance' ? `${goal.value} km` : `${goal.value} min`}
               </p>
-              <p style={{ fontSize: 11, color: goalPct >= 1 ? '#10b981' : '#f59e0b', fontWeight: 800 }}>
+              <p style={{ fontSize: 11, color: goalPct >= 1 ? '#10b981' : '#4a8c5c', fontWeight: 800 }}>
                 {Math.round(goalPct * 100)}%
               </p>
             </div>
-            <div className="h-1.5 rounded-full overflow-hidden" style={{ background: '#1a1a1a' }}>
+            <div className="h-1.5 rounded-full overflow-hidden" style={{ background: '#f0f7f0' }}>
               <div style={{
                 height: '100%', width: `${goalPct * 100}%`,
-                background: goalPct >= 1 ? '#10b981' : '#f59e0b',
+                background: goalPct >= 1 ? '#10b981' : '#4a8c5c',
                 transition: 'width 0.5s ease', borderRadius: '99px',
               }} />
             </div>
@@ -327,7 +327,7 @@ export default function RunActiveScreen({ run, goal }: Props) {
             <button onClick={run.pause}
               className="flex-1 flex items-center justify-center gap-2 rounded-2xl font-black glass-press"
               style={{ fontSize: 18, paddingTop: 20, paddingBottom: 20,
-                background: 'rgba(245,158,11,0.12)', border: '1.5px solid rgba(245,158,11,0.4)', color: '#f59e0b' }}>
+                background: 'rgba(74,140,92,0.1)', border: '1.5px solid rgba(245,158,11,0.4)', color: '#4a8c5c' }}>
               <Pause size={24} /> Pause
             </button>
           )}

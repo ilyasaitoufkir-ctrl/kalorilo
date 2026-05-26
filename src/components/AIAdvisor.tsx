@@ -255,23 +255,23 @@ export default function AIAdvisor() {
   ]
 
   const INSIGHT_COLORS: Record<string, string> = {
-    success:'rgba(16,185,129,0.12)', warning:'rgba(245,158,11,0.12)',
+    success:'rgba(16,185,129,0.12)', warning:'rgba(74,140,92,0.1)',
     info:'rgba(59,130,246,0.12)',    tip:'rgba(139,92,246,0.12)',
   }
   const INSIGHT_BORDERS: Record<string, string> = {
-    success:'rgba(16,185,129,0.25)', warning:'rgba(245,158,11,0.25)',
+    success:'rgba(16,185,129,0.25)', warning:'rgba(74,140,92,0.22)',
     info:'rgba(59,130,246,0.25)',    tip:'rgba(139,92,246,0.25)',
   }
 
-  const glassInput = { background:'rgba(255,255,255,0.05)', border:'1px solid rgba(255,255,255,0.08)', borderRadius:20, color:'var(--text-1)', padding:'14px 18px', width:'100%', fontSize:15, fontWeight:500 } as const
+  const glassInput = { background:'rgba(255,255,255,0.05)', border:'1px solid rgba(74,140,92,0.1)', borderRadius:20, color:'var(--text-1)', padding:'14px 18px', width:'100%', fontSize:15, fontWeight:500 } as const
 
   return (
     <div className="flex flex-col overflow-x-hidden" style={{ height:'100dvh', background:'var(--bg)', paddingBottom:'calc(110px + max(env(safe-area-inset-bottom),20px))' }}>
 
       {/* Header */}
-      <div className="pt-safe px-5 pb-4 flex-shrink-0" style={{ background:'#000', borderBottom:'1px solid #1a1a1a' }}>
+      <div className="pt-safe px-5 pb-4 flex-shrink-0" style={{ background:'var(--bg)', borderBottom:'1px solid rgba(125,184,138,0.15)' }}>
         <h1 className="text-2xl font-black mb-3" style={{ color:'var(--text-1)' }}>🤖 KI-Berater</h1>
-        <div className="flex gap-1.5 p-1.5 rounded-2xl" style={{ background:'rgba(255,255,255,0.04)', border:'1px solid rgba(255,255,255,0.06)' }}>
+        <div className="flex gap-1.5 p-1.5 rounded-2xl" style={{ background:'rgba(74,140,92,0.06)', border:'1px solid rgba(74,140,92,0.08)' }}>
           {TABS.map((t)=>(
             <button key={t.id} onClick={()=>setTab(t.id)}
               className="flex-1 py-2.5 rounded-xl text-xs font-bold transition-all"
@@ -306,7 +306,7 @@ export default function AIAdvisor() {
               <div key={i} className={`flex ${msg.role==='user' ? 'justify-end' : 'justify-start'}`}>
                 {msg.role==='assistant' && (
                   <div className="w-8 h-8 rounded-full flex items-center justify-center text-sm mr-2 mt-1 flex-shrink-0"
-                    style={{ background:'rgba(245,158,11,0.15)', border:'1px solid rgba(245,158,11,0.2)' }}>🤖</div>
+                    style={{ background:'rgba(74,140,92,0.15)', border:'1px solid rgba(74,140,92,0.18)' }}>🤖</div>
                 )}
                 <div className={`max-w-[83%] px-4 py-3 text-sm leading-relaxed ${msg.role==='user' ? 'bubble-user' : 'bubble-ai'}`}>
                   <p className="whitespace-pre-wrap">{msg.content}</p>
@@ -316,7 +316,7 @@ export default function AIAdvisor() {
             {loading && (
               <div className="flex justify-start items-center gap-2">
                 <div className="w-8 h-8 rounded-full flex items-center justify-center text-sm flex-shrink-0"
-                  style={{ background:'rgba(245,158,11,0.15)', border:'1px solid rgba(245,158,11,0.2)' }}>🤖</div>
+                  style={{ background:'rgba(74,140,92,0.15)', border:'1px solid rgba(74,140,92,0.18)' }}>🤖</div>
                 <div className="bubble-ai px-4 py-3 flex items-center gap-2">
                   <Loader size={13} className="animate-spin" style={{ color:'var(--text-3)' }}/>
                   <span className="text-sm" style={{ color:'var(--text-3)' }}>Denkt nach…</span>
@@ -325,7 +325,7 @@ export default function AIAdvisor() {
             )}
             <div ref={bottomRef}/>
           </div>
-          <div className="flex-shrink-0 px-4 py-3" style={{ background:'var(--bg)', borderTop:'1px solid rgba(255,255,255,0.06)' }}>
+          <div className="flex-shrink-0 px-4 py-3" style={{ background:'var(--bg)', borderTop:'1px solid rgba(74,140,92,0.08)' }}>
             {messages.length>0 && (
               <button onClick={clearMsgs} className="flex items-center gap-1 text-xs mb-2 glass-press" style={{ color:'var(--text-3)' }}>
                 <RefreshCw size={11}/>Chat leeren
@@ -353,8 +353,8 @@ export default function AIAdvisor() {
           {(briefingLoading || morningBriefing) && (
             <div className="glass p-4" style={{ background:'rgba(251,191,36,0.06)', borderColor:'rgba(251,191,36,0.25)' }}>
               <div className="flex items-center gap-2 mb-3">
-                <Sun size={16} style={{ color:'#fbbf24' }}/>
-                <p className="text-xs font-black tracking-widest uppercase" style={{ color:'#fbbf24' }}>Guten Morgen · Tagesbriefing</p>
+                <Sun size={16} style={{ color:'#7db88a' }}/>
+                <p className="text-xs font-black tracking-widest uppercase" style={{ color:'#7db88a' }}>Guten Morgen · Tagesbriefing</p>
                 {briefingLoading && <Loader size={12} className="animate-spin ml-auto" style={{ color:'var(--text-3)' }}/>}
               </div>
               {briefingLoading && !morningBriefing && (
@@ -376,13 +376,13 @@ export default function AIAdvisor() {
                     ))}
                   </div>
                   {morningBriefing.supplementTip && (
-                    <div className="mt-3 pt-3" style={{ borderTop:'1px solid rgba(255,255,255,0.06)' }}>
+                    <div className="mt-3 pt-3" style={{ borderTop:'1px solid rgba(74,140,92,0.08)' }}>
                       <p className="text-xs" style={{ color:'var(--text-3)' }}>💊 {morningBriefing.supplementTip}</p>
                     </div>
                   )}
                   {morningBriefing.todayFocus && (
                     <div className="mt-2 rounded-2xl px-3 py-2" style={{ background:'rgba(251,191,36,0.1)', border:'1px solid rgba(251,191,36,0.2)' }}>
-                      <p className="text-xs font-black" style={{ color:'#fbbf24' }}>🎯 Fokus heute: {morningBriefing.todayFocus}</p>
+                      <p className="text-xs font-black" style={{ color:'#7db88a' }}>🎯 Fokus heute: {morningBriefing.todayFocus}</p>
                     </div>
                   )}
                 </>
@@ -401,7 +401,7 @@ export default function AIAdvisor() {
                   { label:'Ballaststoffe', value:`${medTargets.fiberTarget}g`, sub:'DGE 2023', color:'#8b5cf6' },
                   { label:'Max. Zucker', value:`${medTargets.maxSugar}g`, sub:'WHO 2023', color:'#ef4444' },
                 ].map((t) => (
-                  <div key={t.label} className="rounded-2xl p-3" style={{ background:'rgba(255,255,255,0.03)', border:'1px solid rgba(255,255,255,0.06)' }}>
+                  <div key={t.label} className="rounded-2xl p-3" style={{ background:'rgba(255,255,255,0.03)', border:'1px solid rgba(74,140,92,0.08)' }}>
                     <p className="text-xs font-bold" style={{ color: t.color }}>{t.value}</p>
                     <p className="text-xs" style={{ color:'var(--text-1)' }}>{t.label}</p>
                     <p style={{ fontSize:10, color:'var(--text-3)' }}>{t.sub}</p>
@@ -412,10 +412,10 @@ export default function AIAdvisor() {
           )}
 
           {/* Hero */}
-          <div className="glass p-5" style={{ background:'rgba(245,158,11,0.06)', borderColor:'rgba(245,158,11,0.2)' }}>
+          <div className="glass p-5" style={{ background:'rgba(74,140,92,0.05)', borderColor:'rgba(74,140,92,0.18)' }}>
             <div className="flex items-center gap-3 mb-3">
               <div className="w-14 h-14 rounded-3xl flex items-center justify-center text-3xl flex-shrink-0"
-                style={{ background:'rgba(245,158,11,0.12)', border:'1px solid rgba(245,158,11,0.2)' }}>🧠</div>
+                style={{ background:'rgba(74,140,92,0.1)', border:'1px solid rgba(74,140,92,0.18)' }}>🧠</div>
               <div>
                 <p className="font-black" style={{ color:'var(--text-1)' }}>7-Tage-Analyse</p>
                 <p className="text-xs" style={{ color:'var(--text-3)' }}>Muster · Wochentage · Sport-Essen-Zusammenhang</p>
@@ -442,7 +442,7 @@ export default function AIAdvisor() {
               <div className="glass p-4 flex items-center gap-4">
                 <div className="flex-shrink-0 relative w-16 h-16">
                   <svg width="64" height="64" style={{ transform:'rotate(-90deg)' }}>
-                    <circle cx="32" cy="32" r="26" fill="none" stroke="rgba(255,255,255,0.06)" strokeWidth="8"/>
+                    <circle cx="32" cy="32" r="26" fill="none" stroke="rgba(74,140,92,0.08)" strokeWidth="8"/>
                     <circle cx="32" cy="32" r="26" fill="none" stroke="#f59e0b" strokeWidth="8"
                       strokeDasharray={`${2*Math.PI*26*coachReport.weeklyScore/100} ${2*Math.PI*26}`}
                       strokeLinecap="round"/>
@@ -494,10 +494,10 @@ export default function AIAdvisor() {
               {/* Weekly challenge */}
               {coachReport.weeklyChallenge && (
                 <div className="glass p-4 flex items-start gap-3"
-                  style={{ background:'rgba(245,158,11,0.08)', borderColor:'rgba(245,158,11,0.3)' }}>
+                  style={{ background:'rgba(74,140,92,0.06)', borderColor:'rgba(74,140,92,0.25)' }}>
                   <div className="w-10 h-10 rounded-2xl flex items-center justify-center flex-shrink-0"
-                    style={{ background:'rgba(245,158,11,0.15)', border:'1px solid rgba(245,158,11,0.2)' }}>
-                    <Zap size={18} style={{ color:'#f59e0b' }}/>
+                    style={{ background:'rgba(74,140,92,0.15)', border:'1px solid rgba(74,140,92,0.18)' }}>
+                    <Zap size={18} style={{ color:'#4a8c5c' }}/>
                   </div>
                   <div style={{ minWidth:0 }}>
                     <p className="text-sm font-black" style={{ color:'var(--gold)' }}>Deine Challenge</p>
@@ -540,7 +540,7 @@ export default function AIAdvisor() {
           <div className="glass p-5">
             <div className="flex items-center gap-3 mb-3">
               <div className="w-12 h-12 rounded-2xl flex items-center justify-center text-2xl flex-shrink-0"
-                style={{ background:'rgba(245,158,11,0.1)', border:'1px solid rgba(245,158,11,0.15)' }}>📅</div>
+                style={{ background:'rgba(74,140,92,0.08)', border:'1px solid rgba(74,140,92,0.15)' }}>📅</div>
               <div style={{ minWidth:0 }}>
                 <p className="font-black" style={{ color:'var(--text-1)' }}>7-Tage-Ernährungsplan</p>
                 <p className="text-xs" style={{ color:'var(--text-3)' }}>{target} kcal/Tag · {profile?.goal==='lose'?'Abnehmen':'Halten'}</p>
@@ -598,7 +598,7 @@ export default function AIAdvisor() {
               </div>
               <div className="grid grid-cols-2 gap-3">
                 {[
-                  { type:'recipe' as const, icon:'🍳', label:'Rezept vorschlagen', color:'#f59e0b' },
+                  { type:'recipe' as const, icon:'🍳', label:'Rezept vorschlagen', color:'#4a8c5c' },
                   { type:'shopping' as const, icon:'🛒', label:'Einkaufsliste', color:'#10b981' },
                 ].map((opt)=>(
                   <button key={opt.type} onClick={()=>handleFridgeAction(opt.type)} disabled={fridgeLoading}
