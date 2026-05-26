@@ -1,0 +1,34 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <!-- iOS rounded background -->
+  <rect width="512" height="512" rx="115" fill="#7db88a"/>
+
+  <!-- Leaf stem -->
+  <rect x="250" y="246" width="12" height="64" rx="6" fill="white"/>
+
+  <!-- Leaf body (slightly tilted) -->
+  <ellipse cx="258" cy="182" rx="40" ry="76" fill="white" transform="rotate(-8 258 220)"/>
+
+  <!-- Leaf center vein -->
+  <line x1="257" y1="118" x2="255" y2="248" stroke="#7db88a" stroke-width="4" stroke-linecap="round"/>
+
+  <!-- Small branch veins -->
+  <line x1="257" y1="148" x2="278" y2="162" stroke="#7db88a" stroke-width="2.5" stroke-linecap="round"/>
+  <line x1="256" y1="170" x2="276" y2="182" stroke="#7db88a" stroke-width="2.5" stroke-linecap="round"/>
+  <line x1="256" y1="148" x2="236" y2="162" stroke="#7db88a" stroke-width="2.5" stroke-linecap="round"/>
+  <line x1="256" y1="170" x2="237" y2="182" stroke="#7db88a" stroke-width="2.5" stroke-linecap="round"/>
+
+  <!-- Dumbbell bar -->
+  <rect x="144" y="298" width="224" height="20" rx="10" fill="white"/>
+
+  <!-- Left outer weight -->
+  <rect x="100" y="252" width="60" height="112" rx="14" fill="white"/>
+
+  <!-- Left inner weight collar -->
+  <rect x="144" y="268" width="16" height="80" rx="8" fill="white"/>
+
+  <!-- Right outer weight -->
+  <rect x="352" y="252" width="60" height="112" rx="14" fill="white"/>
+
+  <!-- Right inner weight collar -->
+  <rect x="352" y="268" width="16" height="80" rx="8" fill="white"/>
+</svg>
