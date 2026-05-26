@@ -1,11 +1,13 @@
 import { useState, useRef, useEffect, useMemo } from 'react'
-import { Send, Loader, RefreshCw, Sparkles, Refrigerator, TrendingUp, ChevronRight, Zap } from 'lucide-react'
+import { Send, Loader, RefreshCw, Sparkles, Refrigerator, TrendingUp, ChevronRight, Zap, Sun } from 'lucide-react'
 import { useStore } from '../store/useStore'
 import {
   askNutritionAdvisor, generateWeeklyPlan,
   analyzeFridge, getRecipesFromIngredients, getShoppingList,
-  generateCoachInsights, type CoachReport,
+  generateCoachInsights, generateMorningBriefing,
+  type CoachReport, type MorningBriefing,
 } from '../utils/api'
+import { computeTargets, buildMedicalSystemPrompt } from '../utils/medicalKnowledge'
 import { formatDate, getLast7Days, getLast30Days, getDayName, imageToBase64 } from '../utils/calculations'
 import toast from 'react-hot-toast'
 
@@ -33,8 +35,11 @@ export default function AIAdvisor() {
   const [fridgeLoading, setFridgeLoading] = useState(false)
   const [fridgePreview, setFridgePreview] = useState<string|null>(null)
   // Coach state
-  const [coachReport, setCoachReport]   = useState<CoachReport|null>(null)
-  const [coachLoading, setCoachLoading] = useState(false)
+  const [coachReport, setCoachReport]       = useState<CoachReport|null>(null)
+  const [coachLoading, setCoachLoading]     = useState(false)
+  const [morningBriefing, setMorningBriefing]   = useState<MorningBriefing|null>(null)
+  const [briefingLoading, setBriefingLoading]   = useState(false)
+  const [briefingDate, setBriefingDate]         = useState('')
   const fileRef   = useRef<HTMLInputElement>(null)
   const bottomRef = useRef<HTMLDivElement>(null)
 
@@ -60,6 +65,10 @@ export default function AIAdvisor() {
   const context = `Name:${profile?.name}, Ziel:${profile?.goal==='lose'?'Abnehmen':profile?.goal==='gain'?'Zunehmen':'Halten'}, Kalorienziel:${target}, Heute:${Math.round(todayCals)} kcal, Noch:${Math.round(target-todayCals)} kcal`
   const apiKey  = apiKeys.anthropic || apiKeys.openai
 
+  // Medical knowledge base — computed once per profile change
+  const medTargets = useMemo(() => profile ? computeTargets(profile, target) : null, [profile, target])
+  const medSystem  = useMemo(() => buildMedicalSystemPrompt(profile ?? null, medTargets, target), [profile, medTargets, target])
+
   useEffect(() => { bottomRef.current?.scrollIntoView({ behavior:'smooth' }) }, [messages])
 
   const send = async (text?: string) => {
@@ -70,7 +79,7 @@ export default function AIAdvisor() {
     setInput('')
     setLoading(true)
     try {
-      const reply = await askNutritionAdvisor(msg, context, apiKey)
+      const reply = await askNutritionAdvisor(msg, context, apiKey, medSystem)
       addMessage({ role:'assistant', content:reply, timestamp:Date.now() })
     } catch (e) {
       const err = e instanceof Error ? e.message : 'Fehler'
@@ -175,6 +184,43 @@ export default function AIAdvisor() {
     }
     setCoachLoading(false)
   }
+
+  // Build yesterday's data for morning briefing
+  const buildYesterdayData = () => {
+    const yesterday = new Date(); yesterday.setDate(yesterday.getDate() - 1)
+    const yDate = yesterday.toISOString().split('T')[0]
+    const foods  = allFoodLogs.filter((l) => l.date === yDate)
+    const acts   = allActivities.filter((l) => l.date === yDate)
+    if (foods.length === 0 && acts.length === 0) return null
+    const cals   = Math.round(foods.reduce((s, f) => s + (f.macros?.calories ?? 0), 0))
+    const prot   = Math.round(foods.reduce((s, f) => s + (f.macros?.protein  ?? 0), 0))
+    const carbs  = Math.round(foods.reduce((s, f) => s + (f.macros?.carbs    ?? 0), 0))
+    const fat    = Math.round(foods.reduce((s, f) => s + (f.macros?.fat      ?? 0), 0))
+    const burned = Math.round(acts.reduce((s, a) => s + a.caloriesBurned, 0))
+    const sport  = acts.map((a) => `${a.sport.name} ${a.duration}min`).join(', ')
+    const delta  = cals - target
+    return `Gestern (${yDate}): ${cals} kcal (${delta > 0 ? '+' : ''}${delta} vs Ziel ${target}), Protein ${prot}g (Ziel: ${medTargets?.proteinMin ?? '?'}–${medTargets?.proteinMax ?? '?'}g), Carbs ${carbs}g, Fett ${fat}g, Verbrannt ${burned} kcal${sport ? `, Sport: ${sport}` : ', kein Sport'}`
+  }
+
+  const runMorningBriefing = async () => {
+    if (!apiKey) return
+    const yData = buildYesterdayData()
+    if (!yData) return
+    setBriefingLoading(true)
+    try {
+      const briefing = await generateMorningBriefing(medSystem, yData, apiKey)
+      setMorningBriefing(briefing)
+      setBriefingDate(today)
+    } catch { /* silent fail */ }
+    setBriefingLoading(false)
+  }
+
+  // Auto-generate morning briefing once per day when coach tab opens
+  useEffect(() => {
+    if (tab === 'coach' && apiKey && briefingDate !== today && !briefingLoading) {
+      runMorningBriefing()
+    }
+  }, [tab])
 
   const handleFridgePhoto = async (file: File) => {
     if (!apiKey) { toast.error('API Key fehlt'); return }
@@ -302,14 +348,77 @@ export default function AIAdvisor() {
       {/* ── Coach ── */}
       {tab==='coach' && (
         <div className="flex-1 overflow-y-auto overflow-x-hidden px-4 pt-4 space-y-3 scroll-pb">
+
+          {/* ── Morning Briefing ── */}
+          {(briefingLoading || morningBriefing) && (
+            <div className="glass p-4" style={{ background:'rgba(251,191,36,0.06)', borderColor:'rgba(251,191,36,0.25)' }}>
+              <div className="flex items-center gap-2 mb-3">
+                <Sun size={16} style={{ color:'#fbbf24' }}/>
+                <p className="text-xs font-black tracking-widest uppercase" style={{ color:'#fbbf24' }}>Guten Morgen · Tagesbriefing</p>
+                {briefingLoading && <Loader size={12} className="animate-spin ml-auto" style={{ color:'var(--text-3)' }}/>}
+              </div>
+              {briefingLoading && !morningBriefing && (
+                <p className="text-xs" style={{ color:'var(--text-3)' }}>Analysiere gestrige Daten…</p>
+              )}
+              {morningBriefing && (
+                <>
+                  <p className="text-sm font-semibold mb-3 leading-relaxed" style={{ color:'var(--text-1)' }}>{morningBriefing.greeting}</p>
+                  <div className="space-y-2.5">
+                    {morningBriefing.items.map((item, i) => (
+                      <div key={i} className="flex items-start gap-2.5">
+                        <span className="text-xl flex-shrink-0 mt-0.5">{item.emoji}</span>
+                        <div style={{ minWidth:0 }}>
+                          <p className="text-xs font-black" style={{ color:'var(--text-1)' }}>{item.title}</p>
+                          <p className="text-xs mt-0.5 leading-relaxed" style={{ color:'var(--text-2)' }}>{item.text}</p>
+                          <p className="text-xs mt-0.5 font-semibold" style={{ color:'rgba(251,191,36,0.7)' }}>Quelle: {item.source}</p>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                  {morningBriefing.supplementTip && (
+                    <div className="mt-3 pt-3" style={{ borderTop:'1px solid rgba(255,255,255,0.06)' }}>
+                      <p className="text-xs" style={{ color:'var(--text-3)' }}>💊 {morningBriefing.supplementTip}</p>
+                    </div>
+                  )}
+                  {morningBriefing.todayFocus && (
+                    <div className="mt-2 rounded-2xl px-3 py-2" style={{ background:'rgba(251,191,36,0.1)', border:'1px solid rgba(251,191,36,0.2)' }}>
+                      <p className="text-xs font-black" style={{ color:'#fbbf24' }}>🎯 Fokus heute: {morningBriefing.todayFocus}</p>
+                    </div>
+                  )}
+                </>
+              )}
+            </div>
+          )}
+
+          {/* ── Personalized Targets ── */}
+          {medTargets && profile && (
+            <div className="glass p-4">
+              <p className="label mb-3">📊 Deine Zielwerte (DGE 2023 · ISSN)</p>
+              <div className="grid grid-cols-2 gap-2">
+                {[
+                  { label:'Protein', value:`${medTargets.proteinMin}–${medTargets.proteinMax}g`, sub:'ISSN 2017', color:'#10b981' },
+                  { label:'Wasser', value:`${(medTargets.waterTarget/1000).toFixed(1)}L`, sub:'DGE 2023', color:'#38bdf8' },
+                  { label:'Ballaststoffe', value:`${medTargets.fiberTarget}g`, sub:'DGE 2023', color:'#8b5cf6' },
+                  { label:'Max. Zucker', value:`${medTargets.maxSugar}g`, sub:'WHO 2023', color:'#ef4444' },
+                ].map((t) => (
+                  <div key={t.label} className="rounded-2xl p-3" style={{ background:'rgba(255,255,255,0.03)', border:'1px solid rgba(255,255,255,0.06)' }}>
+                    <p className="text-xs font-bold" style={{ color: t.color }}>{t.value}</p>
+                    <p className="text-xs" style={{ color:'var(--text-1)' }}>{t.label}</p>
+                    <p style={{ fontSize:10, color:'var(--text-3)' }}>{t.sub}</p>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
           {/* Hero */}
           <div className="glass p-5" style={{ background:'rgba(245,158,11,0.06)', borderColor:'rgba(245,158,11,0.2)' }}>
             <div className="flex items-center gap-3 mb-3">
               <div className="w-14 h-14 rounded-3xl flex items-center justify-center text-3xl flex-shrink-0"
                 style={{ background:'rgba(245,158,11,0.12)', border:'1px solid rgba(245,158,11,0.2)' }}>🧠</div>
               <div>
-                <p className="font-black" style={{ color:'var(--text-1)' }}>Dein persönlicher KI-Coach</p>
-                <p className="text-xs" style={{ color:'var(--text-3)' }}>Analysiert Mahlzeiten, Sport & Muster der letzten 7 Tage</p>
+                <p className="font-black" style={{ color:'var(--text-1)' }}>7-Tage-Analyse</p>
+                <p className="text-xs" style={{ color:'var(--text-3)' }}>Muster · Wochentage · Sport-Essen-Zusammenhang</p>
               </div>
             </div>
             <button onClick={runCoachAnalysis} disabled={coachLoading || !apiKey}

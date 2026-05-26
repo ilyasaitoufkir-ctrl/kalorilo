@@ -208,20 +208,26 @@ export async function getShoppingList(ingredients: string[], goal: string, apiKe
 }
 
 // ── Claude – AI Nutrition Advisor ──────────────────────────────────────────
-export async function askNutritionAdvisor(message: string, context: string, apiKey: string): Promise<string> {
+export async function askNutritionAdvisor(
+  message: string,
+  context: string,
+  apiKey: string,
+  medicalSystemPrompt?: string,
+): Promise<string> {
   if (!apiKey?.trim()) throw new Error('Kein API Key eingetragen. Bitte unter Profil → API Keys eintragen.')
-  // Versuche zuerst Anthropic, dann OpenAI
+  const system = medicalSystemPrompt
+    ? `${medicalSystemPrompt}\n\n=== HEUTE ===\n${context}`
+    : `Du bist ein evidenzbasierter Ernährungsberater. Zitiere Quellen (DGE 2023, WHO, ISSN). Kontext: ${context}. Antworte auf Deutsch.`
   try {
     const res = await anthropicPost(apiKey, {
       model: ANTHROPIC_MODEL,
       max_tokens: 1024,
-      system: `Du bist ein freundlicher Ernährungsberater. Kontext: ${context}. Antworte kurz und hilfreich auf Deutsch.`,
+      system,
       messages: [{ role: 'user', content: message }],
     })
     const data = await res.json()
     return data.content?.[0]?.text ?? 'Keine Antwort'
-  } catch (e) {
-    // Fallback: OpenAI
+  } catch {
     const res = await fetch('https://api.openai.com/v1/chat/completions', {
       method: 'POST',
       headers: { Authorization: `Bearer ${apiKey}`, 'content-type': 'application/json' },
@@ -229,7 +235,7 @@ export async function askNutritionAdvisor(message: string, context: string, apiK
         model: 'gpt-4o',
         max_tokens: 1024,
         messages: [
-          { role: 'system', content: `Du bist ein freundlicher Ernährungsberater. Kontext: ${context}. Antworte kurz und hilfreich auf Deutsch.` },
+          { role: 'system', content: system },
           { role: 'user', content: message },
         ],
       }),
@@ -359,6 +365,66 @@ Regeln: 3–5 Insights + 2–3 Patterns. Immer mit echten Zahlen aus den Daten. 
   try {
     const parsed = JSON.parse(json)
     return { ...fallback, ...parsed, patterns: parsed.patterns ?? [], weeklyChallenge: parsed.weeklyChallenge ?? '' }
+  } catch { return fallback }
+}
+
+// ── Morning Briefing – tägliche personalisierte Empfehlung ───────────────
+export interface MorningBriefingItem {
+  emoji: string
+  title: string
+  text: string
+  source: string
+}
+
+export interface MorningBriefing {
+  greeting: string
+  items: MorningBriefingItem[]
+  todayFocus: string
+  supplementTip: string
+}
+
+export async function generateMorningBriefing(
+  medicalSystemPrompt: string,
+  yesterdayData: string,
+  apiKey: string,
+): Promise<MorningBriefing> {
+  const res = await anthropicPost(apiKey, {
+    model: ANTHROPIC_MODEL,
+    max_tokens: 1600,
+    system: medicalSystemPrompt,
+    messages: [{
+      role: 'user',
+      content: `Erstelle einen personalisierten Guten-Morgen-Bericht basierend auf den gestrigen Daten.
+
+=== GESTRIGE DATEN ===
+${yesterdayData}
+
+Analysiere die Daten und erstelle einen motivierenden Morgen-Bericht. Vergleiche mit den medizinischen Richtlinien aus deiner Wissensdatenbank.
+
+Antworte NUR mit validem JSON (kein Markdown):
+{
+  "greeting": "Guten Morgen [Name]! Kurze motivierende Begrüßung mit Bezug auf gestrige Daten.",
+  "items": [
+    {
+      "emoji": "💪",
+      "title": "Protein gestern",
+      "text": "Konkrete Beobachtung mit Zahlen + Vergleich zum Ziel + heutiger Tipp. Z.B.: Du hast gestern 95g Protein gegessen – dein Ziel sind 160g. Füge heute zum Frühstück 3 Eier (18g) hinzu.",
+      "source": "ISSN 2017"
+    }
+  ],
+  "todayFocus": "Eine einzige konkrete Empfehlung für den heutigen Tag mit messbarem Ziel.",
+  "supplementTip": "Ein evidenzbasierter Supplement-Tipp mit Quelle. Z.B.: Vitamin D3 (1000 IE) mit dem Frühstück – laut DGE 2023 haben 60% der Deutschen einen Mangel."
+}
+
+Regeln: 3–4 Items, immer mit echten gestrigen Zahlen, immer mit Quellenangabe, motivierend und positiv.`,
+    }],
+  })
+  const raw = (await res.json()).content?.[0]?.text ?? '{}'
+  const json = raw.match(/\{[\s\S]*\}/)?.[0] ?? '{}'
+  const fallback: MorningBriefing = { greeting: 'Guten Morgen!', items: [], todayFocus: '', supplementTip: '' }
+  try {
+    const parsed = JSON.parse(json)
+    return { ...fallback, ...parsed, items: parsed.items ?? [] }
   } catch { return fallback }
 }
 
