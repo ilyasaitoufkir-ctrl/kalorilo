@@ -248,7 +248,7 @@ export default function SportTracker() {
 
   const run = useRunTracker(weight)
 
-  // When run finishes, build a RunSession and show summary
+  // When run finishes: build session data but do NOT save yet → show summary first
   const handleRunFinish = () => {
     run.finish()
     if (run.distance < 0.05) {
@@ -258,21 +258,6 @@ export default function SportTracker() {
     }
     const bestPace = run.splits.length > 0 ? Math.min(...run.splits.map(s => s.pace)) : run.avgPace
     const logId = uid()
-
-    // Save as ActivityLog so calories appear in dashboard
-    const runningActivity = SPORTS_DATABASE.find(s => s.name === 'Laufen') ?? {
-      id: 'run', name: 'Laufen', icon: '🏃', metLight: 7, metMedium: 9.8, metIntense: 12.8, category: 'Ausdauer',
-    }
-    addActivityLog({
-      id: logId,
-      date: today,
-      sport: runningActivity,
-      duration: Math.round(run.elapsed / 60),
-      intensity: 'medium',
-      caloriesBurned: run.calories,
-      timestamp: Date.now(),
-    })
-
     const session: RunSession = {
       id: uid(),
       date: today,
@@ -289,14 +274,35 @@ export default function SportTracker() {
       caloriesBurned: run.calories,
       activityLogId: logId,
     }
-    addRunSession(session)
     setSavedSession(session)
   }
 
-  const handleSummaryDone = () => {
+  // User taps "Lauf speichern" in summary
+  const handleSaveSession = (session: RunSession) => {
+    const runningActivity = SPORTS_DATABASE.find(s => s.name === 'Laufen') ?? {
+      id: 'run', name: 'Laufen', icon: '🏃', metLight: 7, metMedium: 9.8, metIntense: 12.8, category: 'Ausdauer',
+    }
+    addActivityLog({
+      id: session.activityLogId,
+      date: today,
+      sport: runningActivity,
+      duration: Math.round(session.duration / 60),
+      intensity: 'medium',
+      caloriesBurned: session.caloriesBurned,
+      timestamp: Date.now(),
+    })
+    addRunSession(session)
+    toast.success('Lauf gespeichert! 🏃')
     setSavedSession(null)
     run.reset()
     setTab('runs')
+  }
+
+  // User taps "Nicht speichern" in summary
+  const handleDiscardSession = () => {
+    setSavedSession(null)
+    run.reset()
+    setTab('activities')
   }
 
   // ── Render: run start screen ──
@@ -325,7 +331,13 @@ export default function SportTracker() {
 
   // ── Render: post-run summary ──
   if (savedSession) {
-    return <RunSummary session={savedSession} onDone={handleSummaryDone} />
+    return (
+      <RunSummary
+        session={savedSession}
+        onSave={handleSaveSession}
+        onDiscard={handleDiscardSession}
+      />
+    )
   }
 
   // ── Render: normal sport tab ──

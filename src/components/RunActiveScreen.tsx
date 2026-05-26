@@ -58,9 +58,9 @@ function StopConfirm({ onCancel, onConfirm }: { onCancel: () => void; onConfirm:
       <div className="w-full max-w-sm rounded-3xl p-7 text-center"
         style={{ background: '#ffffff', border: '1px solid #2a2a2a', boxShadow: '0 24px 80px rgba(0,0,0,0.9)' }}>
         <div style={{ fontSize: 52, marginBottom: 12 }}>🏁</div>
-        <h3 className="text-xl font-black mb-2" style={{ color: '#fff' }}>Lauf beenden?</h3>
-        <p className="text-sm mb-7" style={{ color: '#666', lineHeight: 1.7 }}>
-          Deine Strecke und Statistiken werden<br />automatisch gespeichert.
+        <h3 className="text-xl font-black mb-2" style={{ color: 'var(--text-1)' }}>Lauf wirklich beenden?</h3>
+        <p className="text-sm mb-7" style={{ color: 'var(--text-3)', lineHeight: 1.7 }}>
+          Du kannst danach entscheiden ob du<br />den Lauf speichern möchtest.
         </p>
         <div className="flex gap-3">
           <button onClick={onCancel}

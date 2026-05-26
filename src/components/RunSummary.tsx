@@ -11,10 +11,11 @@ import toast from 'react-hot-toast'
 
 interface Props {
   session: RunSession
-  onDone: () => void
+  onSave: (session: RunSession) => void
+  onDiscard: () => void
 }
 
-export default function RunSummary({ session, onDone }: Props) {
+export default function RunSummary({ session, onSave, onDiscard }: Props) {
   const runSessions = useStore((s) => s.runSessions)
   const whoopData   = useStore((s) => s.whoopData)
 
@@ -294,12 +295,23 @@ export default function RunSummary({ session, onDone }: Props) {
         {/* ── Action buttons ── */}
         <div className="flex gap-3">
           <button onClick={handleShare}
-            className="flex items-center justify-center gap-2 rounded-2xl font-bold text-sm px-5 glass-press"
-            style={{ height: 54, background: 'rgba(59,130,246,0.1)', border: '1px solid rgba(59,130,246,0.25)', color: '#60a5fa', flexShrink: 0 }}>
-            <Share2 size={18} />Teilen
+            className="flex items-center justify-center gap-2 rounded-2xl font-bold text-sm px-4 glass-press"
+            style={{ height: 56, background: 'rgba(59,130,246,0.08)', border: '1px solid rgba(59,130,246,0.2)', color: '#60a5fa', flexShrink: 0 }}>
+            <Share2 size={17} />
           </button>
-          <button onClick={onDone} className="btn-gold flex-1 py-4 text-base" style={{ minHeight: 54 }}>
-            Fertig ✓
+          <button
+            onClick={onDiscard}
+            className="flex-1 flex items-center justify-center gap-2 rounded-2xl font-bold text-sm glass-press"
+            style={{ height: 56, background: 'rgba(239,68,68,0.08)', border: '1px solid rgba(239,68,68,0.2)', color: '#ef4444' }}
+          >
+            ❌ Nicht speichern
+          </button>
+          <button
+            onClick={() => onSave(session)}
+            className="flex-1 flex items-center justify-center gap-2 rounded-2xl font-black text-sm glass-press"
+            style={{ height: 56, background: 'linear-gradient(135deg,#7db88a,#4a8c5c)', color: '#fff', border: 'none', boxShadow: '0 4px 16px rgba(74,140,92,0.3)' }}
+          >
+            ✅ Speichern
           </button>
         </div>
       </div>
