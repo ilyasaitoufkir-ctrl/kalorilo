@@ -1,12 +1,12 @@
 import { useState, useRef, useEffect, useMemo } from 'react'
-import { Send, Loader, RefreshCw, Sparkles, Refrigerator, TrendingUp, ChevronRight } from 'lucide-react'
+import { Send, Loader, RefreshCw, Sparkles, Refrigerator, TrendingUp, ChevronRight, Zap } from 'lucide-react'
 import { useStore } from '../store/useStore'
 import {
   askNutritionAdvisor, generateWeeklyPlan,
   analyzeFridge, getRecipesFromIngredients, getShoppingList,
   generateCoachInsights, type CoachReport,
 } from '../utils/api'
-import { formatDate, getLast7Days, getDayName, imageToBase64 } from '../utils/calculations'
+import { formatDate, getLast7Days, getLast30Days, getDayName, imageToBase64 } from '../utils/calculations'
 import toast from 'react-hot-toast'
 
 const today = formatDate()
@@ -90,28 +90,75 @@ export default function AIAdvisor() {
     setPlanLoading(false)
   }
 
-  // Build coach data string from last 7 days
   const buildCoachData = () => {
-    const last7 = getLast7Days()
+    const last7  = getLast7Days()
+    const last30 = getLast30Days()
     const lines: string[] = []
-    lines.push(`=== Letzte 7 Tage ===`)
+
+    lines.push(`=== Detaillierte Daten letzte 7 Tage ===`)
     last7.forEach((date) => {
+      const foods  = allFoodLogs.filter((l) => l.date === date)
+      const acts   = allActivities.filter((l) => l.date === date)
+      const cals   = Math.round(foods.reduce((s, f) => s + (f.macros?.calories ?? 0), 0))
+      const prot   = Math.round(foods.reduce((s, f) => s + (f.macros?.protein  ?? 0), 0))
+      const carbs  = Math.round(foods.reduce((s, f) => s + (f.macros?.carbs    ?? 0), 0))
+      const fat    = Math.round(foods.reduce((s, f) => s + (f.macros?.fat      ?? 0), 0))
+      const burned = Math.round(acts.reduce((s, a) => s + a.caloriesBurned, 0))
+      const sport  = acts.map((a) => `${a.sport.name} ${a.duration}min`).join(', ')
+      const delta  = cals - target
+      const deltaStr = delta > 0 ? `+${delta}` : `${delta}`
+      const dayOfWeek = new Date(date).toLocaleDateString('de-DE', { weekday: 'long' })
+      lines.push(`${dayOfWeek} (${date}): ${cals} kcal (${deltaStr} vs Ziel), Protein ${prot}g, Carbs ${carbs}g, Fett ${fat}g, Verbrannt ${burned} kcal${sport ? `, Sport: ${sport}` : ', kein Sport'}`)
+    })
+
+    // 30-day aggregated patterns for weekday analysis
+    lines.push(`\n=== 30-Tage Wochentag-Muster ===`)
+    const byDow: Record<string, number[]> = {}
+    last30.forEach((date) => {
+      const foods = allFoodLogs.filter((l) => l.date === date)
+      if (foods.length === 0) return
+      const cals  = foods.reduce((s, f) => s + (f.macros?.calories ?? 0), 0)
+      const dow   = new Date(date).toLocaleDateString('de-DE', { weekday: 'long' })
+      if (!byDow[dow]) byDow[dow] = []
+      byDow[dow].push(cals)
+    })
+    const dowOrder = ['Montag','Dienstag','Mittwoch','Donnerstag','Freitag','Samstag','Sonntag']
+    dowOrder.forEach((dow) => {
+      const vals = byDow[dow]
+      if (!vals || vals.length === 0) return
+      const avg = Math.round(vals.reduce((a, b) => a + b, 0) / vals.length)
+      const delta = avg - target
+      const deltaStr = delta > 0 ? `+${delta}` : `${delta}`
+      lines.push(`${dow}: ⌀ ${avg} kcal (${deltaStr} vs Ziel, ${vals.length} Einträge)`)
+    })
+
+    // Sport vs rest day calories
+    const sportDayCals: number[] = [], restDayCals: number[] = []
+    last30.forEach((date) => {
       const foods = allFoodLogs.filter((l) => l.date === date)
       const acts  = allActivities.filter((l) => l.date === date)
-      const cals  = foods.reduce((s, f) => s + (f.macros?.calories ?? 0), 0)
-      const prot  = foods.reduce((s, f) => s + (f.macros?.protein  ?? 0), 0)
-      const burned= acts.reduce((s, a) => s + a.caloriesBurned, 0)
-      const sport = acts.map((a) => `${a.sport.name} ${a.duration}min`).join(', ')
-      const dow   = getDayName(date)
-      lines.push(`${dow} (${date}): ${Math.round(cals)} kcal, ${Math.round(prot)}g Protein, ${Math.round(burned)} kcal verbrannt${sport ? `, Sport: ${sport}` : ''}`)
+      if (foods.length === 0) return
+      const cals = foods.reduce((s, f) => s + (f.macros?.calories ?? 0), 0)
+      if (acts.length > 0) sportDayCals.push(cals)
+      else restDayCals.push(cals)
     })
+    if (sportDayCals.length > 0 && restDayCals.length > 0) {
+      const avgSport = Math.round(sportDayCals.reduce((a, b) => a + b, 0) / sportDayCals.length)
+      const avgRest  = Math.round(restDayCals.reduce((a, b) => a + b, 0) / restDayCals.length)
+      lines.push(`\nSporttage ⌀: ${avgSport} kcal (${sportDayCals.length} Tage)`)
+      lines.push(`Ruhetage ⌀:  ${avgRest} kcal (${restDayCals.length} Tage)`)
+    }
+
     if (weightHistory.length > 0) {
-      const recent = weightHistory.slice(-3)
-      lines.push(`\nGewicht: ${recent.map((w) => `${w.date}: ${w.weight}kg`).join(', ')}`)
+      const recent = weightHistory.slice(-5)
+      lines.push(`\nGewichtsverlauf: ${recent.map((w) => `${getDayName(w.date)} ${w.weight}kg`).join(' → ')}`)
     }
+
     if (whoopData) {
-      lines.push(`Whoop: Recovery ${whoopData.recovery}%, Schlaf ${whoopData.sleepQuality}%, HRV ${whoopData.hrv}ms`)
+      lines.push(`\nWhoop heute: Recovery ${whoopData.recovery}%, Schlaf ${whoopData.sleepQuality}%, HRV ${whoopData.hrv}ms`)
     }
+
+    lines.push(`\nKalorienziel: ${target} kcal/Tag`)
     return lines.join('\n')
   }
 
@@ -302,7 +349,7 @@ export default function AIAdvisor() {
               </div>
 
               {/* Insights */}
-              <p className="label px-1">Erkannte Muster & Insights</p>
+              <p className="label px-1">Insights dieser Woche</p>
               <div className="space-y-2">
                 {coachReport.insights.map((ins, i) => (
                   <div key={i} className="glass p-4 flex items-start gap-3"
@@ -315,6 +362,40 @@ export default function AIAdvisor() {
                   </div>
                 ))}
               </div>
+
+              {/* Patterns */}
+              {coachReport.patterns && coachReport.patterns.length > 0 && (
+                <>
+                  <p className="label px-1">Erkannte Verhaltensmuster</p>
+                  <div className="space-y-2">
+                    {coachReport.patterns.map((p, i) => (
+                      <div key={i} className="glass p-4 flex items-start gap-3"
+                        style={{ background:'rgba(139,92,246,0.08)', borderColor:'rgba(139,92,246,0.2)' }}>
+                        <span className="text-2xl flex-shrink-0 mt-0.5">{p.emoji}</span>
+                        <div style={{ minWidth:0 }}>
+                          <p className="text-sm font-black" style={{ color:'var(--text-1)' }}>{p.title}</p>
+                          <p className="text-xs mt-1 leading-relaxed" style={{ color:'var(--text-2)' }}>{p.detail}</p>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </>
+              )}
+
+              {/* Weekly challenge */}
+              {coachReport.weeklyChallenge && (
+                <div className="glass p-4 flex items-start gap-3"
+                  style={{ background:'rgba(245,158,11,0.08)', borderColor:'rgba(245,158,11,0.3)' }}>
+                  <div className="w-10 h-10 rounded-2xl flex items-center justify-center flex-shrink-0"
+                    style={{ background:'rgba(245,158,11,0.15)', border:'1px solid rgba(245,158,11,0.2)' }}>
+                    <Zap size={18} style={{ color:'#f59e0b' }}/>
+                  </div>
+                  <div style={{ minWidth:0 }}>
+                    <p className="text-sm font-black" style={{ color:'var(--gold)' }}>Deine Challenge</p>
+                    <p className="text-xs mt-1 leading-relaxed" style={{ color:'var(--text-1)' }}>{coachReport.weeklyChallenge}</p>
+                  </div>
+                </div>
+              )}
 
               {/* Next week focus */}
               <div className="glass p-4" style={{ background:'rgba(59,130,246,0.08)', borderColor:'rgba(59,130,246,0.2)' }}>

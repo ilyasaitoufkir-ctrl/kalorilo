@@ -290,12 +290,20 @@ export interface CoachInsight {
   description: string
 }
 
+export interface CoachPattern {
+  emoji: string
+  title: string
+  detail: string
+}
+
 export interface CoachReport {
   greeting: string
   insights: CoachInsight[]
+  patterns: CoachPattern[]
   weeklyScore: number
   weekSummary: string
   focus: string
+  weeklyChallenge: string
 }
 
 export async function generateCoachInsights(
@@ -307,10 +315,10 @@ export async function generateCoachInsights(
 ): Promise<CoachReport> {
   const res = await anthropicPost(apiKey, {
     model: ANTHROPIC_MODEL,
-    max_tokens: 1800,
+    max_tokens: 2400,
     messages: [{
       role: 'user',
-      content: `Du bist ein persönlicher Ernährungs-Coach. Analysiere die Daten und erstelle einen personalisierten Wochenbericht.
+      content: `Du bist ein persönlicher, empathischer Ernährungs-Coach. Analysiere die Daten gründlich und erkenne echte Verhaltensmuster.
 
 Nutzer: ${userName}
 Ziel: ${goal}
@@ -318,23 +326,40 @@ Kalorienziel: ${calorieTarget} kcal/Tag
 
 ${weekData}
 
-Antworte NUR mit validem JSON ohne Markdown:
+AUFGABE: Erkenne echte Muster. Denke wie ein erfahrener Coach:
+- Wochentags-Muster: Isst ${userName} montags/freitags/am Wochenende mehr oder weniger?
+- Zusammenhänge: An Sport-Tagen – isst er mehr oder weniger? Holt er nach dem Sport die Kalorien auf?
+- Schlaf-Essen: Wenn Whoop-Schlaf schlecht (<75%) – isst er dann mehr?
+- Konsistenz: Welche Tage hält er das Ziel, welche nicht?
+- Protein-Muster: An welchen Tagen ist Protein zu niedrig?
+
+Antworte NUR mit validem JSON (kein Markdown, keine Codeblocks):
 {
-  "greeting": "Hey ${userName}, ich habe deine Daten analysiert...",
+  "greeting": "Hey ${userName}! Ich habe deine Daten der letzten Tage analysiert – hier sind meine Beobachtungen:",
   "insights": [
-    {"type": "warning", "emoji": "⚠️", "title": "Kurze Überschrift", "description": "Konkrete, persönliche Beobachtung mit Zahlen aus den Daten."}
+    {"type": "warning", "emoji": "⚠️", "title": "Konkrete Überschrift mit Zahl", "description": "Persönliche Beobachtung mit echten Zahlen. Z.B.: An 4 von 7 Tagen hast du das Kalorienziel um durchschnittlich 340 kcal überschritten."}
+  ],
+  "patterns": [
+    {"emoji": "📅", "title": "Wochentags-Muster", "detail": "Konkret: z.B. Montags konsumierst du im Schnitt 400 kcal mehr als an anderen Tagen. Freitag/Samstag tendenziell am wenigsten Sport."},
+    {"emoji": "🏃", "title": "Nach dem Sport", "detail": "Konkret: An Sporttagen isst du X kcal mehr/weniger als an Ruhetagen."},
+    {"emoji": "😴", "title": "Schlaf & Ernährung", "detail": "Nur wenn Whoop-Daten vorhanden – sonst Protein-Muster oder Wasseraufnahme."}
   ],
   "weeklyScore": 72,
-  "weekSummary": "Diese Woche in 2 Sätzen zusammengefasst.",
-  "focus": "Nächste Woche: eine konkrete Empfehlung."
+  "weekSummary": "Diese Woche in 2 konkreten Sätzen mit Zahlen.",
+  "focus": "Eine einzige konkrete Empfehlung für nächste Woche mit messbarem Ziel.",
+  "weeklyChallenge": "Deine Challenge: Eine simple, motivierende Aufgabe für die nächsten 7 Tage. Z.B.: Trinke jeden Tag vor dem Mittagessen ein Glas Wasser."
 }
 
-Regeln: 3–5 Insights, konkret mit echten Zahlen aus den Daten, persönlich angesprochen. Erkenne echte Muster (Wochentage, nach Sport, Schlafdauer).`,
+Regeln: 3–5 Insights + 2–3 Patterns. Immer mit echten Zahlen aus den Daten. Persönlich mit Namen. Motivierend aber ehrlich.`,
     }],
   })
   const raw = (await res.json()).content?.[0]?.text ?? '{}'
-  const json = raw.match(/\{[\s\S]*\}/)?.[0] ?? '{"greeting":"","insights":[],"weeklyScore":0,"weekSummary":"","focus":""}'
-  try { return JSON.parse(json) } catch { return { greeting: '', insights: [], weeklyScore: 0, weekSummary: raw.slice(0, 200), focus: '' } }
+  const json = raw.match(/\{[\s\S]*\}/)?.[0] ?? '{}'
+  const fallback: CoachReport = { greeting: '', insights: [], patterns: [], weeklyScore: 0, weekSummary: raw.slice(0, 200), focus: '', weeklyChallenge: '' }
+  try {
+    const parsed = JSON.parse(json)
+    return { ...fallback, ...parsed, patterns: parsed.patterns ?? [], weeklyChallenge: parsed.weeklyChallenge ?? '' }
+  } catch { return fallback }
 }
 
 // ── Body Photo Analysis – Körperzusammensetzung schätzen ──────────────────
