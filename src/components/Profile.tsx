@@ -6,6 +6,7 @@ import { getBMI, getBMICategory } from '../utils/calculations'
 import { buildAuthUrl, syncWhoopData, refreshAccessToken } from '../lib/whoop'
 import type { UserProfile, Gender, ActivityLevel, Goal } from '../types'
 import toast from 'react-hot-toast'
+import SupplementChecklist from './SupplementChecklist'
 
 const ACTIVITY_OPTIONS: { value: ActivityLevel; emoji: string; label: string; desc: string }[] = [
   { value:'sedentary',   emoji:'🛋️', label:'Sitzend',      desc:'Bürojob, kaum Bewegung'  },
@@ -44,7 +45,7 @@ export default function Profile() {
   const setDarkMode    = useStore((s) => s.setDarkMode)
   const setActiveTab   = useStore((s) => s.setActiveTab)
 
-  const [section, setSection] = useState<'profile'|'goals'|'apikeys'|'appearance'|'whoop'|'reminders'>('profile')
+  const [section, setSection] = useState<'profile'|'goals'|'supplements'|'apikeys'|'appearance'|'whoop'|'reminders'>('profile')
   const [form, setForm] = useState<Partial<UserProfile>>(storeProfile ?? { name:'',age:25,weight:75,height:175,gender:'male',activityLevel:'moderate',goal:'lose',targetWeight:70,targetWeeks:12 })
   const [keys, setKeys] = useState(apiKeys)
   const [whoopForm, setWhoopForm] = useState({ recovery:'',hrv:'',restingHR:'',sleepQuality:'',strain:'' })
@@ -64,12 +65,13 @@ export default function Profile() {
   }
 
   const SECTIONS = [
-    { id:'profile' as const,    label:'👤 Profil'       },
-    { id:'goals' as const,      label:'🎯 Ziele'        },
-    { id:'apikeys' as const,    label:'🔑 API Keys'     },
-    { id:'appearance' as const, label:'🌙 Design'       },
-    { id:'whoop' as const,      label:'⌚ Whoop'        },
-    { id:'reminders' as const,  label:'🔔 Erinnerungen' },
+    { id:'profile' as const,     label:'👤 Profil'       },
+    { id:'goals' as const,       label:'🎯 Ziele'        },
+    { id:'supplements' as const, label:'💊 Supplements'  },
+    { id:'apikeys' as const,     label:'🔑 API Keys'     },
+    { id:'appearance' as const,  label:'🌙 Design'       },
+    { id:'whoop' as const,       label:'⌚ Whoop'        },
+    { id:'reminders' as const,   label:'🔔 Erinnerungen' },
   ]
 
   return (
@@ -203,6 +205,9 @@ export default function Profile() {
             </button>
           </div>
         )}
+
+        {/* Supplements */}
+        {section==='supplements' && <SupplementChecklist />}
 
         {/* API Keys */}
         {section==='apikeys' && (

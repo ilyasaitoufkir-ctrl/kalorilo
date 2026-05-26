@@ -103,6 +103,13 @@ interface AppState {
   addRunSession: (session: RunSession) => void
   removeRunSession: (id: string) => void
 
+  // Supplements
+  supplements: { id: string; name: string }[]
+  supplementChecked: Record<string, string> // id → date checked
+  addSupplement: (name: string) => void
+  removeSupplement: (id: string) => void
+  toggleSupplement: (id: string) => void
+
   // Selectors
   getFoodLogsForDate: (date: string) => FoodLog[]
   getActivityLogsForDate: (date: string) => ActivityLog[]
@@ -210,6 +217,28 @@ export const useStore = create<AppState>()(
       runSessions: [],
       addRunSession: (session) => set((s) => ({ runSessions: [session, ...s.runSessions] })),
       removeRunSession: (id) => set((s) => ({ runSessions: s.runSessions.filter((r) => r.id !== id) })),
+
+      supplements: [
+        { id: 'sup-1', name: 'Vitamin D3' },
+        { id: 'sup-2', name: 'Omega-3' },
+        { id: 'sup-3', name: 'Magnesium' },
+      ],
+      supplementChecked: {},
+      addSupplement: (name) => set((s) => ({
+        supplements: [...s.supplements, { id: `sup-${Date.now()}`, name }],
+      })),
+      removeSupplement: (id) => set((s) => {
+        const checked = { ...s.supplementChecked }
+        delete checked[id]
+        return { supplements: s.supplements.filter((s) => s.id !== id), supplementChecked: checked }
+      }),
+      toggleSupplement: (id) => set((s) => {
+        const today = new Date().toISOString().split('T')[0]
+        const checked = { ...s.supplementChecked }
+        if (checked[id] === today) delete checked[id]
+        else checked[id] = today
+        return { supplementChecked: checked }
+      }),
 
       clearUserData: () => set({
         profile: null,
@@ -322,6 +351,8 @@ export const useStore = create<AppState>()(
         beforeAfterPhotos: state.beforeAfterPhotos,
         weeklyPlans: state.weeklyPlans,
         runSessions: state.runSessions,
+        supplements: state.supplements,
+        supplementChecked: state.supplementChecked,
       }),
     }
   )
