@@ -89,6 +89,97 @@ export async function fetchByBarcode(barcode: string): Promise<FoodItem | null> 
   }
 }
 
+// ── Claude Vision – Restaurant Menu Scanner ───────────────────────────────
+export type MenuDishRating = 'good' | 'ok' | 'bad'
+
+export interface MenuDish {
+  name: string
+  calories: number
+  protein: number
+  fat: number
+  carbs: number
+  rating: MenuDishRating
+  reason: string
+}
+
+export interface MenuAnalysis {
+  dishes: MenuDish[]
+  summary: string
+}
+
+export async function analyzeMenuPhoto(
+  base64Image: string,
+  remainingCalories: number,
+  remainingProtein: number,
+  calorieTarget: number,
+  apiKey: string,
+): Promise<MenuAnalysis> {
+  const res = await anthropicPost(apiKey, {
+    model: ANTHROPIC_MODEL,
+    max_tokens: 2500,
+    messages: [{
+      role: 'user',
+      content: [
+        { type: 'image', source: { type: 'base64', media_type: 'image/jpeg', data: base64Image } },
+        {
+          type: 'text',
+          text: `Du bist ein Ernährungsberater. Analysiere diese Speisekarte.
+
+HEUTIGER RESTBEDARF DES NUTZERS:
+- Verbleibende Kalorien: ${remainingCalories} kcal (von ${calorieTarget} kcal Tagesziel)
+- Verbleibendes Eiweiß: ${remainingProtein}g
+
+AUFGABE:
+1. Lese alle Gerichte von der Karte aus
+2. Schätze Kalorien, Eiweiß, Fett, Kohlenhydrate pro Gericht (typische Restaurantportionen)
+3. Bewerte jedes Gericht: "good" / "ok" / "bad"
+   - good ✅: Kalorien ≤ verbleibende Kalorien +100 UND Eiweiß ≥ 20g
+   - ok ⚠️: Kalorien ≤ verbleibende Kalorien +300 ODER Eiweiß 10–19g
+   - bad ❌: Kalorien > verbleibende Kalorien +300 ODER Eiweiß <10g und viele Kalorien
+4. Sortiere: good zuerst, dann ok, dann bad
+
+Antworte NUR mit validem JSON (kein Markdown):
+{
+  "dishes": [
+    {
+      "name": "Hähnchen Bowl",
+      "calories": 620,
+      "protein": 48,
+      "fat": 18,
+      "carbs": 55,
+      "rating": "good",
+      "reason": "Passt perfekt – ${remainingCalories} kcal übrig, hoher Proteingehalt"
+    }
+  ],
+  "summary": "Kurze Zusammenfassung in 1–2 Sätzen auf Deutsch."
+}
+
+Wenn Text nicht lesbar: schätze anhand der Gerichte die du erkennst. Maximal 15 Gerichte.`,
+        },
+      ],
+    }],
+  })
+  const raw = (await res.json()).content?.[0]?.text ?? '{}'
+  const json = raw.match(/\{[\s\S]*\}/)?.[0] ?? '{}'
+  const fallback: MenuAnalysis = { dishes: [], summary: '' }
+  try {
+    const parsed = JSON.parse(json)
+    const dishes: MenuDish[] = (parsed.dishes ?? []).map((d: Partial<MenuDish>) => ({
+      name: d.name ?? 'Unbekannt',
+      calories: Number(d.calories) || 0,
+      protein: Number(d.protein) || 0,
+      fat: Number(d.fat) || 0,
+      carbs: Number(d.carbs) || 0,
+      rating: (['good', 'ok', 'bad'].includes(d.rating ?? '') ? d.rating : 'ok') as MenuDishRating,
+      reason: d.reason ?? '',
+    }))
+    // ensure sort order: good → ok → bad
+    const order: Record<MenuDishRating, number> = { good: 0, ok: 1, bad: 2 }
+    dishes.sort((a, b) => order[a.rating] - order[b.rating])
+    return { dishes, summary: parsed.summary ?? '' }
+  } catch { return fallback }
+}
+
 // ── Claude Vision – Plate Analysis ────────────────────────────────────────
 export interface PlateAnalysisResult {
   description: string

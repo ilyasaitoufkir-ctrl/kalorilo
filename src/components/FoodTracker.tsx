@@ -10,6 +10,7 @@ import BarcodeScanner from './BarcodeScanner'
 import type { FoodItem, MealType } from '../types'
 import toast from 'react-hot-toast'
 import FoodFinder from './FoodFinder'
+import MenuScanner from './MenuScanner'
 
 const today = formatDate()
 
@@ -524,17 +525,25 @@ function AddSheet({ mealType, onClose }: { mealType: MealType; onClose: () => vo
 
 // ── Main FoodTracker ───────────────────────────────────────────────────────
 export default function FoodTracker() {
-  const [addingMeal, setAddingMeal]     = useState<MealType|null>(null)
-  const [expandedMeal, setExpandedMeal] = useState<MealType>('breakfast')
-  const [showFinder, setShowFinder]     = useState(false)
-  const allFoodLogs  = useStore((s) => s.foodLogs)
+  const [addingMeal, setAddingMeal]       = useState<MealType|null>(null)
+  const [expandedMeal, setExpandedMeal]   = useState<MealType>('breakfast')
+  const [showFinder, setShowFinder]       = useState(false)
+  const [showMenuScanner, setShowMenuScanner] = useState(false)
+  const allFoodLogs   = useStore((s) => s.foodLogs)
   const removeFoodLog = useStore((s) => s.removeFoodLog)
+  const profile       = useStore((s) => s.profile)
+  const getDailyCalorieTarget = useStore((s) => s.getDailyCalorieTarget)
 
   const foodLogs   = useMemo(()=>allFoodLogs.filter((l)=>l.date===today),[allFoodLogs])
   const totalCals  = useMemo(()=>foodLogs.reduce((s,f)=>s+(f.macros?.calories??0),0),[foodLogs])
   const totalProt  = useMemo(()=>foodLogs.reduce((s,f)=>s+(f.macros?.protein??0),0),[foodLogs])
   const totalCarbs = useMemo(()=>foodLogs.reduce((s,f)=>s+(f.macros?.carbs??0),0),[foodLogs])
   const totalFat   = useMemo(()=>foodLogs.reduce((s,f)=>s+(f.macros?.fat??0),0),[foodLogs])
+
+  const calorieTarget   = getDailyCalorieTarget()
+  const proteinTarget   = profile ? Math.round(Number(profile.weight) * 1.6) : 120
+  const remainingCals   = Math.round(calorieTarget - totalCals)
+  const remainingProt   = Math.round(proteinTarget - totalProt)
 
   return (
     <div className="h-dvh overflow-y-auto overflow-x-hidden pb-nav anim-fade" style={{ background:'var(--bg)' }}>
@@ -550,13 +559,22 @@ export default function FoodTracker() {
             </div>
           ))}
         </div>
-        <button
-          onClick={() => setShowFinder(true)}
-          className="w-full flex items-center justify-center gap-2 rounded-2xl font-bold text-sm"
-          style={{ height: 50, background: 'rgba(16,185,129,0.1)', border: '1px solid rgba(16,185,129,0.25)', color: '#10b981' }}
-        >
-          <span>📍</span> Food in der Nähe
-        </button>
+        <div className="flex gap-2">
+          <button
+            onClick={() => setShowFinder(true)}
+            className="flex-1 flex items-center justify-center gap-2 rounded-2xl font-bold text-sm"
+            style={{ height: 50, background: 'rgba(16,185,129,0.1)', border: '1px solid rgba(16,185,129,0.25)', color: '#10b981' }}
+          >
+            <span>📍</span> Food in der Nähe
+          </button>
+          <button
+            onClick={() => setShowMenuScanner(true)}
+            className="flex-1 flex items-center justify-center gap-2 rounded-2xl font-bold text-sm"
+            style={{ height: 50, background: 'rgba(139,92,246,0.1)', border: '1px solid rgba(139,92,246,0.25)', color: '#8b5cf6' }}
+          >
+            <span>📸</span> Menü scannen
+          </button>
+        </div>
       </div>
 
       <div className="px-4 py-4 space-y-3">
@@ -611,6 +629,14 @@ export default function FoodTracker() {
 
       {addingMeal && <AddSheet mealType={addingMeal} onClose={()=>setAddingMeal(null)} />}
       {showFinder && <FoodFinder onClose={() => setShowFinder(false)} />}
+      {showMenuScanner && (
+        <MenuScanner
+          onClose={() => setShowMenuScanner(false)}
+          remainingCalories={remainingCals}
+          remainingProtein={remainingProt}
+          calorieTarget={calorieTarget}
+        />
+      )}
     </div>
   )
 }
