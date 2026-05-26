@@ -45,35 +45,45 @@ export default function Onboarding() {
     } as UserProfile)
   }
 
-  const inputStyle = { background:'rgba(255,255,255,0.07)', border:'1px solid rgba(255,255,255,0.12)', borderRadius:18, color:'#f1f5f9', padding:'16px', width:'100%', fontSize:16, fontWeight:600, outline:'none' } as const
+  const inputStyle = {
+    background: 'rgba(74,140,92,0.05)',
+    border: '1px solid rgba(125,184,138,0.25)',
+    borderRadius: 16,
+    color: 'var(--text-1)',
+    padding: '16px',
+    width: '100%',
+    fontSize: 16,
+    fontWeight: 600,
+    outline: 'none',
+  } as const
 
   return (
     <div className="h-dvh flex flex-col overflow-y-auto overflow-x-hidden" style={{ background:'var(--bg)' }}>
       {/* Background orb */}
-      <div className="fixed" style={{ top:-100, left:'50%', transform:'translateX(-50%)', width:500, height:500, background:'radial-gradient(circle,rgba(245,158,11,0.06) 0%,transparent 70%)', pointerEvents:'none', zIndex:0 }}/>
+      <div className="fixed" style={{ top:-100, left:'50%', transform:'translateX(-50%)', width:500, height:500, background:'radial-gradient(circle,rgba(74,140,92,0.08) 0%,transparent 70%)', pointerEvents:'none', zIndex:0 }}/>
 
       <div className="flex flex-col justify-between flex-1 relative z-10 px-6 pt-safe pb-safe">
         {/* Logo */}
         <div className="text-center pt-10 pb-6">
           <div className="text-6xl mb-3">🥗</div>
-          <h1 className="text-3xl font-black tracking-tight" style={{ color:'#f1f5f9' }}>Kalorilo</h1>
-          <p className="text-sm mt-1" style={{ color:'#475569' }}>Dein smarter Ernährungsbegleiter</p>
+          <h1 className="text-3xl font-black tracking-tight" style={{ color:'var(--text-1)' }}>Kalorilo</h1>
+          <p className="text-sm mt-1" style={{ color:'var(--text-3)' }}>Dein smarter Ernährungsbegleiter</p>
         </div>
 
         {/* Card */}
         <div className="rounded-3xl p-6 flex-1 flex flex-col"
-          style={{ background:'rgba(255,255,255,0.04)', border:'1px solid rgba(255,255,255,0.08)', backdropFilter:'blur(20px)' }}>
+          style={{ background:'#ffffff', border:'1px solid rgba(125,184,138,0.2)', boxShadow:'0 4px 24px rgba(74,140,92,0.08)' }}>
 
           {/* Progress */}
           <div className="flex gap-1.5 mb-6">
             {steps.map((_,i)=>(
               <div key={i} className="flex-1 h-1.5 rounded-full transition-all duration-400"
-                style={{ background: i<=step ? 'var(--grad-gold)' : 'rgba(255,255,255,0.06)' }}/>
+                style={{ background: i<=step ? 'linear-gradient(90deg,#7db88a,#4a8c5c)' : 'rgba(74,140,92,0.12)' }}/>
             ))}
           </div>
 
-          <h2 className="text-xl font-black mb-1" style={{ color:'#f1f5f9' }}>{steps[step].title}</h2>
-          <p className="text-sm mb-6" style={{ color:'#475569' }}>{steps[step].sub}</p>
+          <h2 className="text-xl font-black mb-1" style={{ color:'var(--text-1)' }}>{steps[step].title}</h2>
+          <p className="text-sm mb-6" style={{ color:'var(--text-3)' }}>{steps[step].sub}</p>
 
           <div className="flex-1 space-y-3">
             {step===0 && (
@@ -88,7 +98,9 @@ export default function Onboarding() {
                   {(['male','female'] as Gender[]).map((g)=>(
                     <button key={g} onClick={()=>setForm({...form,gender:g})}
                       className="flex-1 py-4 rounded-2xl font-bold transition-all"
-                      style={form.gender===g ? { background:'var(--grad-gold)',color:'#fff' } : { background:'rgba(255,255,255,0.06)',border:'1px solid rgba(255,255,255,0.1)',color:'#94a3b8' }}>
+                      style={form.gender===g
+                        ? { background:'linear-gradient(135deg,#7db88a,#4a8c5c)', color:'#fff' }
+                        : { background:'rgba(74,140,92,0.06)', border:'1px solid rgba(125,184,138,0.2)', color:'var(--text-2)' }}>
                       {g==='male'?'♂ Mann':'♀ Frau'}
                     </button>
                   ))}
@@ -96,7 +108,7 @@ export default function Onboarding() {
                 <div className="grid grid-cols-3 gap-2">
                   {[{l:'Alter',k:'age',p:'25'},{l:'Gewicht kg',k:'weight',p:'75'},{l:'Größe cm',k:'height',p:'175'}].map((f)=>(
                     <div key={f.k}>
-                      <p className="text-xs font-bold mb-1.5" style={{ color:'#475569' }}>{f.l}</p>
+                      <p className="text-xs font-bold mb-1.5" style={{ color:'var(--text-2)' }}>{f.l}</p>
                       <input type="number" inputMode="decimal" value={(form as any)[f.k]} onChange={(e)=>setForm({...form,[f.k]:e.target.value})}
                         style={{ ...inputStyle, textAlign:'center', padding:'12px 8px' }} placeholder={f.p}/>
                     </div>
@@ -111,15 +123,15 @@ export default function Onboarding() {
                   <button key={a.value} onClick={()=>setForm({...form,activityLevel:a.value})}
                     className="w-full flex items-center gap-3 p-3.5 rounded-2xl text-left transition-all"
                     style={form.activityLevel===a.value
-                      ? { background:'var(--gold-dim)', border:'1px solid rgba(245,158,11,0.3)' }
-                      : { background:'rgba(255,255,255,0.04)', border:'1px solid rgba(255,255,255,0.06)' }
+                      ? { background:'rgba(74,140,92,0.08)', border:'1px solid rgba(74,140,92,0.25)' }
+                      : { background:'rgba(74,140,92,0.03)', border:'1px solid rgba(125,184,138,0.12)' }
                     }>
                     <span className="text-xl">{a.emoji}</span>
                     <div>
-                      <p className="text-sm font-bold" style={{ color:'#f1f5f9' }}>{a.label}</p>
-                      <p className="text-xs" style={{ color:'#475569' }}>{a.desc}</p>
+                      <p className="text-sm font-bold" style={{ color:'var(--text-1)' }}>{a.label}</p>
+                      <p className="text-xs" style={{ color:'var(--text-3)' }}>{a.desc}</p>
                     </div>
-                    {form.activityLevel===a.value && <span className="ml-auto" style={{ color:'var(--gold)' }}>✓</span>}
+                    {form.activityLevel===a.value && <span className="ml-auto font-bold" style={{ color:'#4a8c5c' }}>✓</span>}
                   </button>
                 ))}
               </div>
@@ -132,22 +144,22 @@ export default function Onboarding() {
                     <button key={g} onClick={()=>setForm({...form,goal:g})}
                       className="py-4 rounded-2xl text-center transition-all"
                       style={form.goal===g
-                        ? { background:'var(--gold-dim)', border:'1px solid rgba(245,158,11,0.3)' }
-                        : { background:'rgba(255,255,255,0.04)', border:'1px solid rgba(255,255,255,0.06)' }
+                        ? { background:'rgba(74,140,92,0.08)', border:'1px solid rgba(74,140,92,0.25)' }
+                        : { background:'rgba(74,140,92,0.03)', border:'1px solid rgba(125,184,138,0.12)' }
                       }>
                       <p className="text-2xl mb-1">{emoji}</p>
-                      <p className="text-xs font-bold" style={{ color:'#f1f5f9' }}>{label}</p>
+                      <p className="text-xs font-bold" style={{ color:'var(--text-1)' }}>{label}</p>
                     </button>
                   ))}
                 </div>
                 <div className="grid grid-cols-2 gap-2">
                   <div>
-                    <p className="text-xs font-bold mb-1.5" style={{ color:'#475569' }}>Zielgewicht (kg)</p>
+                    <p className="text-xs font-bold mb-1.5" style={{ color:'var(--text-2)' }}>Zielgewicht (kg)</p>
                     <input type="number" inputMode="decimal" value={form.targetWeight} onChange={(e)=>setForm({...form,targetWeight:e.target.value})}
                       style={inputStyle} placeholder="70"/>
                   </div>
                   <div>
-                    <p className="text-xs font-bold mb-1.5" style={{ color:'#475569' }}>In Wochen</p>
+                    <p className="text-xs font-bold mb-1.5" style={{ color:'var(--text-2)' }}>In Wochen</p>
                     <input type="number" inputMode="numeric" value={form.targetWeeks} onChange={(e)=>setForm({...form,targetWeeks:e.target.value})}
                       style={inputStyle} placeholder="12"/>
                   </div>
@@ -160,12 +172,12 @@ export default function Onboarding() {
             onClick={() => { if (!isValid()) return; if (step<steps.length-1) setStep(step+1); else finish() }}
             disabled={!isValid()}
             className="mt-6 w-full py-5 rounded-3xl font-black text-lg flex items-center justify-center gap-2 disabled:opacity-30 transition-all"
-            style={{ background:'var(--grad-gold)', color:'#fff', boxShadow:'var(--shadow-gold)', minHeight:60 }}>
+            style={{ background:'linear-gradient(135deg,#7db88a,#4a8c5c)', color:'#fff', boxShadow:'0 6px 24px rgba(74,140,92,0.3)', minHeight:60 }}>
             {step<steps.length-1 ? <><span>Weiter</span><ChevronRight size={20}/></> : <span>Los geht's! 🚀</span>}
           </button>
         </div>
 
-        <p className="text-center text-xs py-4" style={{ color:'#334155' }}>Daten werden nur lokal gespeichert</p>
+        <p className="text-center text-xs py-4" style={{ color:'var(--text-3)' }}>Daten werden nur lokal gespeichert</p>
       </div>
     </div>
   )
