@@ -159,7 +159,7 @@ function AddSheet({ mealType, onClose }: { mealType: MealType; onClose: () => vo
         {/* Header */}
         <div className="flex items-center gap-3 px-5 pb-4 pt-1 flex-shrink-0">
           {view !== 'main' && (
-            <button onClick={() => { setView('main'); setSelected(null); setPhotoResult(null) }}
+            <button onClick={() => { setView('main'); setSelected(null) }}
               className="glass-sm glass-press w-10 h-10 flex items-center justify-center flex-shrink-0">
               <ArrowLeft size={17} style={{ color:'var(--text-2)' }} />
             </button>

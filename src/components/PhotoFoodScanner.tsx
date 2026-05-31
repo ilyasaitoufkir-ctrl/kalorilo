@@ -26,7 +26,7 @@ function ConfidenceBar({ value }: { value: number }) {
   )
 }
 
-export default function PhotoFoodScanner({ mealType, onConfirm, onClose }: Props) {
+export default function PhotoFoodScanner({ onConfirm, onClose }: Props) {
   const apiKeys = useStore((s) => s.apiKeys)
   const portionHistory = useStore((s) => s.portionHistory)
   const updatePortionHistory = useStore((s) => s.updatePortionHistory)
