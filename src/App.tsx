@@ -9,6 +9,7 @@ import Navigation from './components/Navigation'
 import Dashboard from './components/Dashboard'
 import FoodTracker from './components/FoodTracker'
 import SportTracker from './components/SportTracker'
+import TrainingPage from './components/TrainingPage'
 import AIAdvisor from './components/AIAdvisor'
 import Statistics from './components/Statistics'
 import Profile from './components/Profile'
@@ -19,7 +20,7 @@ import WhoopCallback from './components/WhoopCallback'
 import ErrorBoundary from './components/ErrorBoundary'
 import type { TabId } from './types'
 
-const TAB_ORDER: TabId[] = ['home', 'food', 'sport', 'ai', 'profile']
+const TAB_ORDER: TabId[] = ['home', 'food', 'sport', 'training', 'ai', 'profile']
 
 function MainApp() {
   const profile      = useStore((s) => s.profile)
@@ -83,13 +84,14 @@ function MainApp() {
       onTouchEnd={handleTouchEnd}
       onClick={handleTap}
     >
-      {tab === 'home'    && <Dashboard />}
-      {tab === 'food'    && <FoodTracker />}
-      {tab === 'sport'   && <SportTracker />}
-      {tab === 'ai'      && <AIAdvisor />}
-      {tab === 'profile' && <Profile />}
-      {tab === 'stats'   && <Statistics />}
-      {tab === 'friends' && <Friends />}
+      {tab === 'home'     && <Dashboard />}
+      {tab === 'food'     && <FoodTracker />}
+      {tab === 'sport'    && <SportTracker />}
+      {tab === 'training' && <TrainingPage />}
+      {tab === 'ai'       && <AIAdvisor />}
+      {tab === 'profile'  && <Profile />}
+      {tab === 'stats'    && <Statistics />}
+      {tab === 'friends'  && <Friends />}
       <Navigation />
     </div>
   )

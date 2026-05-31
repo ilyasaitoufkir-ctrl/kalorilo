@@ -1,13 +1,14 @@
-import { Home, Utensils, Dumbbell, Bot, User } from 'lucide-react'
+import { Home, Utensils, Dumbbell, Bot, User, Flame } from 'lucide-react'
 import { useStore } from '../store/useStore'
 import type { TabId } from '../types'
 
 const TABS: { id: TabId; icon: React.ElementType; label: string }[] = [
-  { id: 'home',    icon: Home,     label: 'Start'  },
-  { id: 'food',    icon: Utensils, label: 'Essen'  },
-  { id: 'sport',   icon: Dumbbell, label: 'Sport'  },
-  { id: 'ai',      icon: Bot,      label: 'KI'     },
-  { id: 'profile', icon: User,     label: 'Profil' },
+  { id: 'home',     icon: Home,     label: 'Start'    },
+  { id: 'food',     icon: Utensils, label: 'Essen'    },
+  { id: 'sport',    icon: Dumbbell, label: 'Sport'    },
+  { id: 'training', icon: Flame,    label: 'Training' },
+  { id: 'ai',       icon: Bot,      label: 'Kalo'     },
+  { id: 'profile',  icon: User,     label: 'Profil'   },
 ]
 
 export default function Navigation() {
@@ -23,8 +24,8 @@ export default function Navigation() {
             <button
               key={id}
               onClick={() => { setActiveTab(id); navigator.vibrate?.(8) }}
-              className="flex flex-col items-center gap-1 py-1.5 px-4 rounded-2xl transition-all duration-200 relative"
-              style={{ minWidth: 56 }}
+              className="flex flex-col items-center gap-0.5 py-1.5 px-2 rounded-xl transition-all duration-200 relative"
+              style={{ minWidth: 44 }}
             >
               {/* Active gold glow background */}
               {active && (

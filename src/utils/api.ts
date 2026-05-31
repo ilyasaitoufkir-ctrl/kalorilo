@@ -770,6 +770,43 @@ Antworte NUR als JSON (kein Markdown):
   } catch { throw new Error('KI konnte das Foto nicht analysieren') }
 }
 
+// ── KI-Trainingsplan ──────────────────────────────────────────────────────
+export async function generateTrainingPlan(
+  name: string,
+  goal: string,
+  weight: number,
+  daysPerWeek: number,
+  apiKey: string,
+): Promise<string> {
+  const res = await anthropicPost(apiKey, {
+    model: ANTHROPIC_MODEL,
+    max_tokens: 2000,
+    messages: [{
+      role: 'user',
+      content: `Erstelle einen ${daysPerWeek}-Tage Trainingsplan für ${name} (Ziel: ${goal}, Gewicht: ${weight}kg).
+
+Formatiere ihn exakt so:
+TAG 1 – Brust & Trizeps
+• Bankdrücken – 4 Sätze × 8-12 Wdh
+• Kabelzug oben – 3 Sätze × 12-15 Wdh
+...
+
+TAG 2 – Rücken & Bizeps
+...
+
+Regeln:
+- ${daysPerWeek} Trainingstage, Rest-Tage verteilen
+- Ziel: ${goal} → Kalorien- und Übungsauswahl entsprechend
+- Übungsnamen auf Deutsch
+- Je Tag 5-7 Übungen mit Sätzen & Wdh
+- Am Ende: kurze Ernährungsempfehlung (3 Sätze)
+Nur den Plan zurückgeben, kein Intro.`,
+    }],
+  })
+  const data = await res.json()
+  return data.content?.[0]?.text ?? 'Kein Plan generiert'
+}
+
 // ── KI-Nährwert-Vorschlag für unbekannte Produkte ─────────────────────────
 export async function getAINutrients(
   productName: string,
