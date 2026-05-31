@@ -1,5 +1,7 @@
 import { useEffect, useRef, useState, useCallback } from 'react'
 import { X, Zap, ZapOff, Loader } from 'lucide-react'
+import { BrowserMultiFormatReader } from '@zxing/browser'
+import { NotFoundException } from '@zxing/library'
 
 interface Props {
   onDetected: (barcode: string) => void
@@ -7,17 +9,19 @@ interface Props {
 }
 
 export default function BarcodeScanner({ onDetected, onClose }: Props) {
-  const videoRef   = useRef<HTMLVideoElement>(null)
-  const doneRef    = useRef(false)
-  const timerRef   = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const videoRef    = useRef<HTMLVideoElement>(null)
+  const doneRef     = useRef(false)
+  const timerRef    = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const zxingRef    = useRef<{ stop: () => void } | null>(null)
 
   const [status, setStatus]             = useState<'starting' | 'scanning' | 'detected' | 'error'>('starting')
   const [errorMsg, setErrorMsg]         = useState('')
   const [detectedCode, setDetectedCode] = useState('')
   const [torch, setTorch]               = useState(false)
 
-  const stopStream = useCallback(() => {
+  const stopAll = useCallback(() => {
     if (timerRef.current) clearTimeout(timerRef.current)
+    zxingRef.current?.stop()
     const s = videoRef.current?.srcObject as MediaStream | null
     s?.getTracks().forEach((t) => t.stop())
     if (videoRef.current) videoRef.current.srcObject = null
@@ -27,32 +31,21 @@ export default function BarcodeScanner({ onDetected, onClose }: Props) {
     doneRef.current = false
 
     const start = async () => {
-      // Secure context required
       if (!window.isSecureContext) {
         setStatus('error')
-        setErrorMsg('Kamera benötigt HTTPS.\nBitte kalorilo.vercel.app im Browser öffnen.')
+        setErrorMsg('Kamera benötigt HTTPS.\nBitte die App im Browser (https://...) öffnen.')
         return
       }
 
-      // getUserMedia required
       if (!navigator.mediaDevices?.getUserMedia) {
         setStatus('error')
-        setErrorMsg('Kamera nicht unterstützt.\nBitte Safari auf iPhone nutzen.')
-        return
-      }
-
-      // Native BarcodeDetector required
-      if (!('BarcodeDetector' in window)) {
-        setStatus('error')
-        setErrorMsg(
-          'Automatischer Barcode-Scanner benötigt iOS 17+ oder Chrome.\n\n' +
-          'Tipp: Barcode-Nummer manuell im Textfeld eingeben.'
-        )
+        setErrorMsg('Kamera nicht unterstützt.\nBitte Safari oder Chrome nutzen.')
         return
       }
 
       try {
-        const stream = await navigator.mediaDevices.getUserMedia({
+        // Start camera stream — immer Rückkamera bevorzugen
+        const mediaStream = await navigator.mediaDevices.getUserMedia({
           video: {
             facingMode: { ideal: 'environment' },
             width:  { ideal: 1280 },
@@ -61,43 +54,62 @@ export default function BarcodeScanner({ onDetected, onClose }: Props) {
           audio: false,
         })
 
-        if (doneRef.current) { stream.getTracks().forEach((t) => t.stop()); return }
+        if (doneRef.current) { mediaStream.getTracks().forEach((t) => t.stop()); return }
 
         const video = videoRef.current!
-        video.srcObject = stream
+        video.srcObject = mediaStream
         await video.play()
 
-        if (doneRef.current) { stopStream(); return }
+        if (doneRef.current) { stopAll(); return }
 
         setStatus('scanning')
 
-        // Native BarcodeDetector — no external library needed
-        const detector = new (window as any).BarcodeDetector({
-          formats: ['ean_13', 'ean_8', 'upc_a', 'upc_e', 'code_128', 'code_39', 'qr_code'],
-        })
+        if ('BarcodeDetector' in window) {
+          // ── Nativer BarcodeDetector (Chrome, Safari iOS 17+, macOS Sonoma) ──
+          const detector = new (window as any).BarcodeDetector({
+            formats: ['ean_13', 'ean_8', 'upc_a', 'upc_e', 'code_128', 'code_39', 'qr_code'],
+          })
 
-        const scan = async () => {
-          if (doneRef.current) return
-          try {
-            // Only scan when video has data
-            if (video.readyState >= 2) { // HAVE_CURRENT_DATA
-              const codes: { rawValue: string }[] = await detector.detect(video)
-              if (codes.length > 0 && !doneRef.current) {
-                doneRef.current = true
-                const code = codes[0].rawValue
-                setDetectedCode(code)
-                setStatus('detected')
-                stopStream()
-                setTimeout(() => onDetected(code), 550)
-                return
+          const scan = async () => {
+            if (doneRef.current) return
+            try {
+              if (video.readyState >= 2) {
+                const codes: { rawValue: string }[] = await detector.detect(video)
+                if (codes.length > 0 && !doneRef.current) {
+                  doneRef.current = true
+                  const code = codes[0].rawValue
+                  setDetectedCode(code)
+                  setStatus('detected')
+                  stopAll()
+                  setTimeout(() => onDetected(code), 550)
+                  return
+                }
               }
-            }
-          } catch { /* frame not ready – ignore */ }
-          timerRef.current = setTimeout(scan, 180)
-        }
+            } catch { /* frame not ready */ }
+            timerRef.current = setTimeout(scan, 180)
+          }
+          timerRef.current = setTimeout(scan, 600)
 
-        // Short warm-up delay then start scanning
-        timerRef.current = setTimeout(scan, 600)
+        } else {
+          // ── ZXing Fallback (Safari < iOS 17, Firefox, alle anderen) ──
+          const reader = new BrowserMultiFormatReader()
+          const controls = await reader.decodeFromVideoElement(video, (result, error) => {
+            if (result && !doneRef.current) {
+              doneRef.current = true
+              const code = result.getText()
+              setDetectedCode(code)
+              setStatus('detected')
+              controls.stop()
+              setTimeout(() => onDetected(code), 550)
+              return
+            }
+            // NotFoundException = kein Barcode im Frame — normal, ignorieren
+            if (error && !(error instanceof NotFoundException) && !doneRef.current) {
+              console.warn('[BarcodeScanner]', error)
+            }
+          })
+          zxingRef.current = controls
+        }
 
       } catch (e: any) {
         if (doneRef.current) return
@@ -107,7 +119,7 @@ export default function BarcodeScanner({ onDetected, onClose }: Props) {
         } else if (e?.name === 'NotFoundError') {
           setErrorMsg('Keine Kamera gefunden.')
         } else if (e?.name === 'NotReadableError') {
-          setErrorMsg('Kamera wird gerade von einer anderen App genutzt.')
+          setErrorMsg('Kamera wird von einer anderen App genutzt.')
         } else {
           setErrorMsg(`Kamera-Fehler: ${e?.message ?? 'Unbekannt'}`)
         }
@@ -115,8 +127,8 @@ export default function BarcodeScanner({ onDetected, onClose }: Props) {
     }
 
     start()
-    return () => { doneRef.current = true; stopStream() }
-  }, [stopStream, onDetected])
+    return () => { doneRef.current = true; stopAll() }
+  }, [stopAll, onDetected])
 
   const toggleTorch = async () => {
     const s = videoRef.current?.srcObject as MediaStream | null
@@ -125,15 +137,15 @@ export default function BarcodeScanner({ onDetected, onClose }: Props) {
     try {
       await (track as any).applyConstraints({ advanced: [{ torch: !torch }] })
       setTorch((v) => !v)
-    } catch { /* torch not supported on this device */ }
+    } catch { /* torch nicht unterstützt */ }
   }
 
-  const handleClose = () => { doneRef.current = true; stopStream(); onClose() }
+  const handleClose = () => { doneRef.current = true; stopAll(); onClose() }
 
   return (
     <div className="fixed inset-0 z-[120]" style={{ background: '#000' }}>
 
-      {/* Video – always in DOM so camera can attach */}
+      {/* Video – immer im DOM damit Kamera anhängen kann */}
       <video
         ref={videoRef}
         autoPlay
@@ -161,12 +173,12 @@ export default function BarcodeScanner({ onDetected, onClose }: Props) {
         />
       )}
 
-      {/* Scan frame */}
+      {/* Scan-Rahmen */}
       {(status === 'scanning' || status === 'detected') && (
         <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
           <div style={{ position: 'relative', width: 'min(76vw, 320px)', height: 170 }}>
 
-            {/* Corner brackets */}
+            {/* Ecken */}
             {(['tl', 'tr', 'bl', 'br'] as const).map((c) => (
               <div key={c} style={{
                 position: 'absolute', width: 34, height: 34,
@@ -185,7 +197,7 @@ export default function BarcodeScanner({ onDetected, onClose }: Props) {
               }} />
             ))}
 
-            {/* Animated scan line */}
+            {/* Animierte Scan-Linie */}
             {status === 'scanning' && (
               <div style={{
                 position: 'absolute', left: 4, right: 4, height: 2,
@@ -196,7 +208,7 @@ export default function BarcodeScanner({ onDetected, onClose }: Props) {
               }} />
             )}
 
-            {/* Detected flash */}
+            {/* Erkannt-Flash */}
             {status === 'detected' && (
               <div style={{
                 position: 'absolute', inset: 0,
@@ -215,7 +227,7 @@ export default function BarcodeScanner({ onDetected, onClose }: Props) {
         </div>
       )}
 
-      {/* Hint text */}
+      {/* Hinweis-Text */}
       {status === 'scanning' && (
         <p style={{
           position: 'absolute', bottom: '30%', left: 0, right: 0,
@@ -226,7 +238,7 @@ export default function BarcodeScanner({ onDetected, onClose }: Props) {
         </p>
       )}
 
-      {/* Starting spinner */}
+      {/* Spinner beim Start */}
       {status === 'starting' && (
         <div className="absolute inset-0 flex flex-col items-center justify-center gap-4">
           <Loader size={42} className="animate-spin" style={{ color: '#4a8c5c' }} />
@@ -234,7 +246,7 @@ export default function BarcodeScanner({ onDetected, onClose }: Props) {
         </div>
       )}
 
-      {/* Error */}
+      {/* Fehler */}
       {status === 'error' && (
         <div className="absolute inset-0 flex flex-col items-center justify-center px-8 text-center gap-5">
           <span style={{ fontSize: 56 }}>📷</span>
@@ -257,7 +269,7 @@ export default function BarcodeScanner({ onDetected, onClose }: Props) {
         </div>
       )}
 
-      {/* Top bar */}
+      {/* Top-Bar */}
       <div style={{
         position: 'absolute', top: 0, left: 0, right: 0, zIndex: 10,
         paddingTop: 'max(env(safe-area-inset-top), 16px)',
@@ -275,7 +287,7 @@ export default function BarcodeScanner({ onDetected, onClose }: Props) {
         </button>
       </div>
 
-      {/* Bottom bar: torch */}
+      {/* Taschenlampe */}
       {status === 'scanning' && (
         <div style={{
           position: 'absolute', bottom: 0, left: 0, right: 0,
