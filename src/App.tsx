@@ -4,6 +4,7 @@ import { useStore } from './store/useStore'
 import { useDarkMode } from './hooks/useDarkMode'
 import { useWhoopSync } from './hooks/useWhoopSync'
 import { useFirestoreSync } from './hooks/useFirestoreSync'
+import { useBroadcasts } from './hooks/useBroadcasts'
 import { CodeAuthProvider, useCodeAuth } from './contexts/CodeAuthContext'
 import Navigation from './components/Navigation'
 import Dashboard from './components/Dashboard'
@@ -32,6 +33,7 @@ function MainApp() {
   useDarkMode()
   useWhoopSync()
   useFirestoreSync(code)
+  useBroadcasts(code)
 
   const touchStartX = useRef(0)
   const touchStartY = useRef(0)
