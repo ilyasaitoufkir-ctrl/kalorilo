@@ -206,3 +206,49 @@ export interface FridgeScanResult {
   ingredients: string[]
   rawResponse: string
 }
+
+// ── Kalo AI Companion ──────────────────────────────────────────────────────
+export interface UserPersonality {
+  favoriteFoods: string[]
+  weaknesses: string[]           // z.B. "abends Süßigkeiten"
+  stressEatingPattern: boolean
+  hungerTimes: string[]
+  motivations: string[]
+  successPatterns: string[]
+  failPatterns: string[]
+  moodHistory: { date: string; mood: string; note?: string }[]
+  dailyQuestion: string
+  dailyQuestionDate: string
+}
+
+export const DEFAULT_PERSONALITY: UserPersonality = {
+  favoriteFoods: [],
+  weaknesses: [],
+  stressEatingPattern: false,
+  hungerTimes: [],
+  motivations: [],
+  successPatterns: [],
+  failPatterns: [],
+  moodHistory: [],
+  dailyQuestion: '',
+  dailyQuestionDate: '',
+}
+
+// ── Precise Photo Scanner ──────────────────────────────────────────────────
+export interface PlateIngredient {
+  name: string
+  weight_g: number
+  calories: number
+  protein: number
+  carbs: number
+  fat: number
+  confidence: number   // 0–1
+}
+
+export interface DetailedPlateAnalysis {
+  dish: string
+  ingredients: PlateIngredient[]
+  total: { calories: number; protein: number; carbs: number; fat: number }
+  confidence_overall: number
+  notes: string
+}

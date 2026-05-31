@@ -1,12 +1,13 @@
-import { useState, useRef, useMemo } from 'react'
-import { Search, Camera, Trash2, X, ScanLine, PenLine, Plus, ArrowLeft, Mic, MicOff, Loader, RefreshCw, ChevronRight } from 'lucide-react'
+import { useState, useMemo } from 'react'
+import { Search, Camera, Trash2, X, ScanLine, PenLine, Plus, ArrowLeft, Mic, Loader, ChevronRight } from 'lucide-react'
 import { useStore } from '../store/useStore'
 import { ALL_FOODS, FOOD_CATEGORIES, BRANDED_PRODUCTS, searchFoods, calculateMacros } from '../data/foodDatabase'
-import { formatDate, uid, imageToBase64 } from '../utils/calculations'
-import { fetchByBarcode, analyzePlate, correctPlateAnalysis, searchUSDA, getAINutrients } from '../utils/api'
-import { useVoice } from '../hooks/useVoice'
+import { formatDate, uid } from '../utils/calculations'
+import { fetchByBarcode, searchUSDA, getAINutrients } from '../utils/api'
+
 import VoiceInput from './VoiceInput'
 import BarcodeScanner from './BarcodeScanner'
+import PhotoFoodScanner from './PhotoFoodScanner'
 import type { FoodItem, MealType } from '../types'
 import toast from 'react-hot-toast'
 import FoodFinder from './FoodFinder'
@@ -21,11 +22,6 @@ const MEALS: { id: MealType; emoji: string; label: string }[] = [
   { id: 'snack',     emoji: '🍎', label: 'Snack'       },
 ]
 
-interface PhotoResult {
-  description: string
-  macros: { calories: number; protein: number; fat: number; carbs: number }
-  items: { name: string; amount: string; calories: number }[]
-}
 
 // ── Add Sheet ──────────────────────────────────────────────────────────────
 function AddSheet({ mealType, onClose }: { mealType: MealType; onClose: () => void }) {
@@ -35,19 +31,16 @@ function AddSheet({ mealType, onClose }: { mealType: MealType; onClose: () => vo
   const [selected, setSelected] = useState<FoodItem|null>(null)
   const [amount, setAmount]     = useState('100')
   const [loading, setLoading]   = useState(false)
-  const [correcting, setCorrecting] = useState(false)
+  const [showPhotoScanner, setShowPhotoScanner] = useState(false)
   const [barcodeVal, setBarcodeVal]       = useState('')
   const [barcodeStatus, setBarcodeStatus] = useState<'idle'|'found'|'notfound'>('idle')
   const [productNameSuggestion, setProductNameSuggestion] = useState('')
   const [showCameraScanner, setShowCameraScanner] = useState(false)
-  const [photoResult, setPhotoResult] = useState<PhotoResult|null>(null)
-  const [lastCorrection, setLastCorrection] = useState('')
   const [manualForm, setManualForm] = useState({ name:'', cal:'', protein:'', fat:'', carbs:'' })
   const [activeCategory, setActiveCategory] = useState('⭐ Markenartikel')
-  const fileRef = useRef<HTMLInputElement>(null)
   const addFoodLog = useStore((s) => s.addFoodLog)
   const apiKeys    = useStore((s) => s.apiKeys)
-  const { listening, startListening, stopListening, isSupported: voiceSupported } = useVoice()
+
 
   const handleSearch = (q: string) => { setQuery(q); setResults(q.length>=2 ? searchFoods(q) : []) }
   const pick = (f: FoodItem) => { setSelected(f); setAmount(String(f.serving??100)) }
@@ -117,28 +110,13 @@ function AddSheet({ mealType, onClose }: { mealType: MealType; onClose: () => vo
     setLoading(false)
   }
 
-  const handlePhoto = async (file: File) => {
-    setLoading(true)
-    try {
-      const r = await analyzePlate(await imageToBase64(file), apiKeys.anthropic)
-      setPhotoResult({ description:r.description, macros:r.macros, items:r.items??[] })
-    } catch (e) { toast.error(e instanceof Error ? e.message : 'Fehler', { duration: 5000 }) }
-    setLoading(false)
-  }
-
-  const handleVoiceCorrection = (text: string) => {
-    if (!photoResult||!apiKeys.anthropic) return
-    setLastCorrection(text); setCorrecting(true)
-    correctPlateAnalysis(photoResult.description, photoResult.macros, photoResult.items, text, apiKeys.anthropic)
-      .then((u) => { setPhotoResult({ description:u.description, macros:u.macros, items:u.items??[] }); toast.success('Kalorien aktualisiert!') })
-      .catch((e) => toast.error(e instanceof Error ? e.message : 'Fehler', { duration:5000 }))
-      .finally(() => setCorrecting(false))
-  }
-
-  const savePhoto = () => {
-    if (!photoResult) return
-    addFoodLog({ id:uid(), date:today, mealType, foodItem:{ id:uid(), name:photoResult.description, category:'KI-Schätzung', macros:photoResult.macros }, amount:100, macros:photoResult.macros, timestamp:Date.now(), aiEstimated:true })
-    toast.success('Mahlzeit gespeichert!'); onClose()
+  const handlePhotoScannerConfirm = (items: { name: string; amount: number; calories: number; protein: number; fat: number; carbs: number }[], description: string) => {
+    items.forEach((item) => {
+      const m = { calories: item.calories, protein: item.protein, fat: item.fat, carbs: item.carbs, fiber: 0 }
+      addFoodLog({ id: uid(), date: today, mealType, foodItem: { id: uid(), name: item.name, category: 'KI-Schätzung', macros: m }, amount: item.amount, macros: m, timestamp: Date.now(), aiEstimated: true })
+    })
+    toast.success(`${items.length} Zutaten aus „${description}" gespeichert!`)
+    onClose()
   }
 
   const saveManual = () => {
@@ -160,6 +138,15 @@ function AddSheet({ mealType, onClose }: { mealType: MealType; onClose: () => vo
       <BarcodeScanner
         onDetected={handleCameraScan}
         onClose={() => setShowCameraScanner(false)}
+      />
+    )}
+
+    {/* ── Precise Photo Scanner overlay ── */}
+    {showPhotoScanner && (
+      <PhotoFoodScanner
+        mealType={mealType}
+        onConfirm={handlePhotoScannerConfirm}
+        onClose={() => setShowPhotoScanner(false)}
       />
     )}
 
@@ -208,7 +195,7 @@ function AddSheet({ mealType, onClose }: { mealType: MealType; onClose: () => vo
               {[
                 { icon:Search,   label:'Lebensmittel suchen',  sub:'100+ Einträge + Marken',            action:()=>setView('search'),             color:'#3b82f6' },
                 { icon:ScanLine, label:'Barcode-Kamera',        sub:'Kamera öffnet sich direkt',          action:()=>setShowCameraScanner(true),    color:'#10b981' },
-                { icon:Camera,   label:'KI-Teller-Foto',        sub:'Claude AI analysiert',               action:()=>setView('photo'),              color:'#8b5cf6' },
+                { icon:Camera,   label:'KI-Teller-Foto',        sub:'Claude AI analysiert genau',         action:()=>setShowPhotoScanner(true),     color:'#8b5cf6' },
                 { icon:PenLine,  label:'Manuell eintragen',     sub:'Eigene Kalorien & Makros',           action:()=>setView('manual'),             color:'#4a8c5c' },
               ].map((opt) => (
                 <button key={opt.label} onClick={opt.action} style={btnStyle}
@@ -447,75 +434,6 @@ function AddSheet({ mealType, onClose }: { mealType: MealType; onClose: () => vo
             </div>
           )}
 
-          {/* Photo */}
-          {view === 'photo' && (
-            <div className="space-y-3">
-              <div className="rounded-2xl p-4" style={{ background:'rgba(139,92,246,0.08)', border:'1px solid rgba(139,92,246,0.15)' }}>
-                <p className="text-sm font-semibold" style={{ color:'var(--text-1)' }}>KI analysiert deinen Teller automatisch</p>
-                <p className="text-xs mt-1" style={{ color:'var(--text-3)' }}>⚠️ Schätzung ±15% · per Sprache korrigierbar</p>
-              </div>
-              {!photoResult ? (
-                <>
-                  <input ref={fileRef} type="file" accept="image/*" capture="environment" className="hidden"
-                    onChange={(e)=>e.target.files?.[0]&&handlePhoto(e.target.files[0])} />
-                  <button onClick={()=>fileRef.current?.click()} disabled={loading}
-                    className="w-full py-10 rounded-3xl flex flex-col items-center gap-3 glass-press transition-all disabled:opacity-50"
-                    style={{ border:'2px dashed rgba(139,92,246,0.3)', background:'rgba(139,92,246,0.05)' }}>
-                    {loading ? <><Loader size={32} className="animate-spin" style={{ color:'#8b5cf6' }}/><span style={{ color:'var(--text-2)' }}>Analysiert…</span></>
-                      : <><Camera size={36} style={{ color:'#8b5cf6' }}/><span className="font-bold" style={{ color:'var(--text-1)' }}>Foto aufnehmen</span></>}
-                  </button>
-                </>
-              ) : (
-                <div className="space-y-3">
-                  <div className="glass p-4">
-                    <p className="font-black mb-3" style={{ color:'var(--text-1)' }}>🎯 {photoResult.description}</p>
-                    <div className="grid grid-cols-4 gap-2 mb-3">
-                      {[['kcal',photoResult.macros.calories,'#4a8c5c'],['E',`${photoResult.macros.protein}g`,'#3b82f6'],['KH',`${photoResult.macros.carbs}g`,'#10b981'],['F',`${photoResult.macros.fat}g`,'#ef4444']].map(([l,v,c])=>(
-                        <div key={String(l)} className="rounded-2xl py-3 text-center" style={{ background:'var(--glass)' }}>
-                          <p className="text-sm font-black" style={{ color:String(c) }}>{v}</p>
-                          <p className="text-[10px]" style={{ color:'var(--text-3)' }}>{l}</p>
-                        </div>
-                      ))}
-                    </div>
-                    {photoResult.items.length>0 && (
-                      <div className="mb-3 space-y-1">
-                        {photoResult.items.map((item,i)=>(
-                          <div key={i} className="flex justify-between text-xs">
-                            <span style={{ color:'var(--text-2)' }}>• {item.name} ({item.amount})</span>
-                            <span className="font-bold" style={{ color:'var(--text-1)' }}>{item.calories} kcal</span>
-                          </div>
-                        ))}
-                      </div>
-                    )}
-                    <div className="flex gap-2">
-                      <button onClick={()=>{ setPhotoResult(null); setLastCorrection('') }}
-                        className="btn-ghost flex items-center gap-1.5 px-4 py-3 text-sm" style={btnStyle}>
-                        <RefreshCw size={14}/>Neu
-                      </button>
-                      <button onClick={savePhoto} className="btn-gold flex-1 py-3 text-sm" style={btnStyle}>Speichern ✓</button>
-                    </div>
-                  </div>
-
-                  {/* Voice correction */}
-                  <div className="glass p-4">
-                    <p className="text-sm font-black mb-1" style={{ color:'var(--text-1)' }}>Etwas fehlt? Per Sprache korrigieren</p>
-                    <p className="text-xs mb-3" style={{ color:'var(--text-3)' }}>z.B. „Der Käse fehlt" · „Reis war 200g"</p>
-                    <button onClick={() => listening ? stopListening() : startListening(handleVoiceCorrection, (err)=>toast.error(err,{duration:8000}))}
-                      disabled={correcting||!voiceSupported}
-                      className="w-full py-4 rounded-2xl font-black text-sm flex items-center justify-center gap-2.5 glass-press transition-all disabled:opacity-50"
-                      style={{ background: listening?'#ef4444':correcting?'#8b5cf6':'linear-gradient(135deg,#f59e0b,#3b82f6)', color:'#fff' }}>
-                      {correcting ? <><Loader size={16} className="animate-spin"/>KI rechnet nach…</>
-                        : listening ? <><MicOff size={16}/>Stoppen</>
-                        : <><Mic size={16}/>🎤 Korrektur sprechen</>}
-                    </button>
-                    {lastCorrection && !listening && !correcting && (
-                      <p className="text-xs mt-2 italic text-center" style={{ color:'var(--text-3)' }}>„{lastCorrection}"</p>
-                    )}
-                  </div>
-                </div>
-              )}
-            </div>
-          )}
         </div>
       </div>
     </div>

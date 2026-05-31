@@ -1,4 +1,4 @@
-import type { FoodItem, Macros, MealType, BodyAnalysis } from '../types'
+import type { FoodItem, Macros, MealType, BodyAnalysis, UserPersonality, PlateIngredient, DetailedPlateAnalysis } from '../types'
 
 // ── Voice Input Parsing ────────────────────────────────────────────────────
 export interface VoiceParseResult {
@@ -571,6 +571,203 @@ export async function searchUSDA(query: string): Promise<FoodItem | null> {
       serving: 100,
     }
   } catch { return null }
+}
+
+// ── Kalo – Persönlicher KI-Begleiter ──────────────────────────────────────
+
+export async function askKalo(
+  message: string,
+  profile: { name: string; goal: string },
+  personality: UserPersonality,
+  conversationHistory: { role: 'user' | 'assistant'; content: string }[],
+  context: string,
+  apiKey: string,
+): Promise<string> {
+  const goalLabel = profile.goal === 'lose' ? 'Abnehmen' : profile.goal === 'gain' ? 'Zunehmen' : 'Gewicht halten'
+  const system = `Du bist Kalo, der persönliche KI-Ernährungsbegleiter von ${profile.name}.
+
+Was du über ${profile.name} weißt:
+- Ziel: ${goalLabel}
+- Lieblingsspeisen: ${personality.favoriteFoods.join(', ') || 'noch unbekannt'}
+- Schwachstellen: ${personality.weaknesses.join(', ') || 'noch unbekannt'}
+- Hungerzeitpunkte: ${personality.hungerTimes.join(', ') || 'noch unbekannt'}
+- Motivationen: ${personality.motivations.join(', ') || 'noch unbekannt'}
+- Erfolgsstrategien: ${personality.successPatterns.join(', ') || 'noch unbekannt'}
+- Was nicht klappt: ${personality.failPatterns.join(', ') || 'noch unbekannt'}
+- Stress-Essen: ${personality.stressEatingPattern ? 'Ja, bekanntes Muster' : 'nicht bekannt'}
+
+Heutige Daten: ${context}
+
+DEINE PERSÖNLICHKEIT:
+- Du bist wie ein guter Freund – nicht wie eine App
+- Immer freundlich & motivierend, niemals kritisch oder negativ
+- Beziehe dich auf frühere Gespräche wenn relevant
+- Erkenne Emotionen und reagiere einfühlsam
+- Humorvoll wenn passend
+- Nie generische Antworten – immer personalisiert auf ${profile.name}
+- Sprich ${profile.name} beim Vornamen an
+- Lerne bei jedem Gespräch mehr über ${profile.name}
+- Wenn du ein Muster erkennst, erwähne es natürlich: „Ich merke, du hast öfter abends Hunger…"
+
+Antworte immer auf Deutsch. Kurz & prägnant (max 4 Sätze außer bei komplexen Fragen).`
+
+  const messages = [
+    ...conversationHistory.slice(-12).map((m) => ({ role: m.role as 'user' | 'assistant', content: m.content })),
+    { role: 'user' as const, content: message },
+  ]
+  const res = await anthropicPost(apiKey, { model: ANTHROPIC_MODEL, max_tokens: 600, system, messages })
+  const data = await res.json()
+  return data.content?.[0]?.text ?? 'Keine Antwort'
+}
+
+export async function generateDailyKaloQuestion(
+  profileName: string,
+  personality: UserPersonality,
+  context: string,
+  apiKey: string,
+): Promise<string> {
+  const res = await anthropicPost(apiKey, {
+    model: ANTHROPIC_MODEL,
+    max_tokens: 120,
+    messages: [{
+      role: 'user',
+      content: `Du bist Kalo, KI-Begleiter von ${profileName}.
+Bekannte Schwachstellen: ${personality.weaknesses.join(', ') || 'unbekannt'}
+Heutige Daten: ${context}
+
+Stelle eine kurze persönliche Frage um mehr über ${profileName} zu lernen.
+Themen: Hunger, Stimmung, Cravings, Erfolge, Herausforderungen, Schlaf, Stress.
+Nur die Frage selbst zurückgeben, max 1 Satz, freundlich, auf Deutsch.`,
+    }],
+  })
+  const data = await res.json()
+  return data.content?.[0]?.text?.trim() ?? `Wie fühlst du dich heute, ${profileName}?`
+}
+
+export async function extractPersonalityInsights(
+  conversationHistory: { role: 'user' | 'assistant'; content: string }[],
+  current: UserPersonality,
+  apiKey: string,
+): Promise<Partial<UserPersonality>> {
+  const recent = conversationHistory.slice(-8)
+  if (recent.length < 2) return {}
+  const res = await anthropicPost(apiKey, {
+    model: ANTHROPIC_MODEL,
+    max_tokens: 400,
+    messages: [{
+      role: 'user',
+      content: `Analysiere diese Unterhaltung und extrahiere neu erwähnte Erkenntnisse.
+
+Gespräch:
+${recent.map((m) => `${m.role === 'user' ? 'Person' : 'Kalo'}: ${m.content}`).join('\n')}
+
+Bereits bekannt:
+- Lieblingsspeisen: ${current.favoriteFoods.join(', ')}
+- Schwachstellen: ${current.weaknesses.join(', ')}
+- Hungerzeitpunkte: ${current.hungerTimes.join(', ')}
+
+Extrahiere NUR NEU erwähnte Informationen. Antworte NUR mit JSON (kein Markdown):
+{"favoriteFoods":[],"weaknesses":[],"hungerTimes":[],"motivations":[],"successPatterns":[],"failPatterns":[],"stressEatingPattern":null}
+Leere Arrays wenn nichts Neues.`,
+    }],
+  })
+  const text = (await res.json()).content?.[0]?.text ?? '{}'
+  const json = text.match(/\{[\s\S]*\}/)?.[0] ?? '{}'
+  try { return JSON.parse(json) } catch { return {} }
+}
+
+export async function generateWeeklyKaloReport(
+  profileName: string,
+  goal: string,
+  personality: UserPersonality,
+  weekData: string,
+  apiKey: string,
+): Promise<string> {
+  const res = await anthropicPost(apiKey, {
+    model: ANTHROPIC_MODEL,
+    max_tokens: 800,
+    messages: [{
+      role: 'user',
+      content: `Du bist Kalo, persönlicher Begleiter von ${profileName} (Ziel: ${goal}).
+
+Wochendaten:
+${weekData}
+
+Bekannte Schwachstellen: ${personality.weaknesses.join(', ') || 'keine'}
+Bekannte Erfolgsstrategien: ${personality.successPatterns.join(', ') || 'keine'}
+
+Erstelle einen persönlichen Wochenabschluss für ${profileName} auf Deutsch:
+1. Was war diese Woche konkret gut (nicht generisch!)
+2. Ein erkanntes Muster (positiv oder was zu verbessern ist)
+3. Einen konkreten Tipp für nächste Woche
+4. Motivierender Abschluss mit Namen
+
+Max 200 Wörter. Freundlich wie ein guter Freund, niemals kritisch.`,
+    }],
+  })
+  const data = await res.json()
+  return data.content?.[0]?.text ?? 'Kein Bericht verfügbar'
+}
+
+// ── Präziser Foto-Scanner – Multi-Step Analyse ────────────────────────────
+
+export async function analyzePlateDetailed(
+  base64Image: string,
+  portionHistory: Record<string, number>,
+  apiKey: string,
+): Promise<DetailedPlateAnalysis> {
+  const historyHint = Object.entries(portionHistory).slice(0, 8)
+    .map(([food, g]) => `${food}: typisch ${g}g`).join(', ')
+
+  const res = await anthropicPost(apiKey, {
+    model: ANTHROPIC_MODEL,
+    max_tokens: 2000,
+    messages: [{
+      role: 'user',
+      content: [
+        { type: 'image', source: { type: 'base64', media_type: 'image/jpeg', data: base64Image } },
+        {
+          type: 'text',
+          text: `Analysiere dieses Essensfoto sehr präzise.
+${historyHint ? `\nBekannte Portionsgrößen dieser Person: ${historyHint}` : ''}
+
+1. Liste ALLE sichtbaren Zutaten einzeln auf
+2. Schätze Gewicht jeder Zutat in Gramm (nutze Referenzobjekte: Teller≈26cm, Gabel≈19cm)
+3. Berechne Kalorien, Protein, Fett, Kohlenhydrate pro Zutat
+4. Gib Konfidenz-Score an (0.0–1.0 wie sicher du bist)
+5. Markiere unsichere Schätzungen in notes
+
+Antworte NUR als JSON (kein Markdown):
+{"dish":"Name","ingredients":[{"name":"Hähnchenbrust","weight_g":180,"calories":198,"protein":37,"carbs":0,"fat":4,"confidence":0.9}],"total":{"calories":520,"protein":45,"carbs":38,"fat":12},"confidence_overall":0.85,"notes":"Soße schwer zu schätzen"}`,
+        },
+      ],
+    }],
+  })
+  const text = (await res.json()).content?.[0]?.text ?? '{}'
+  const json = text.match(/\{[\s\S]*\}/)?.[0] ?? '{}'
+  try {
+    const p = JSON.parse(json)
+    return {
+      dish: p.dish ?? 'Gericht',
+      ingredients: (p.ingredients ?? []).map((i: Partial<PlateIngredient>) => ({
+        name: i.name ?? 'Zutat',
+        weight_g: Number(i.weight_g) || 100,
+        calories: Number(i.calories) || 0,
+        protein: Number(i.protein) || 0,
+        carbs: Number(i.carbs) || 0,
+        fat: Number(i.fat) || 0,
+        confidence: Math.min(1, Math.max(0, Number(i.confidence) || 0.5)),
+      })),
+      total: {
+        calories: Number(p.total?.calories) || 0,
+        protein: Number(p.total?.protein) || 0,
+        carbs: Number(p.total?.carbs) || 0,
+        fat: Number(p.total?.fat) || 0,
+      },
+      confidence_overall: Math.min(1, Math.max(0, Number(p.confidence_overall) || 0.7)),
+      notes: p.notes ?? '',
+    }
+  } catch { throw new Error('KI konnte das Foto nicht analysieren') }
 }
 
 // ── KI-Nährwert-Vorschlag für unbekannte Produkte ─────────────────────────

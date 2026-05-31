@@ -3,8 +3,10 @@ import { persist } from 'zustand/middleware'
 import type {
   UserProfile, FoodLog, ActivityLog, WeightEntry, WaterLog,
   CustomRecipe, AIMessage, WhoopData, ApiKeys, Reminder,
-  CheatDay, BeforeAfterPhoto, WeeklyPlan, TabId, DailyStats, RunSession
+  CheatDay, BeforeAfterPhoto, WeeklyPlan, TabId, DailyStats, RunSession,
+  UserPersonality,
 } from '../types'
+import { DEFAULT_PERSONALITY } from '../types'
 
 interface AppState {
   // Navigation
@@ -109,6 +111,19 @@ interface AppState {
   addSupplement: (name: string) => void
   removeSupplement: (id: string) => void
   toggleSupplement: (id: string) => void
+
+  // Kalo AI personality
+  userPersonality: UserPersonality
+  updatePersonality: (updates: Partial<UserPersonality>) => void
+
+  // Kalo conversation (separate from general AI)
+  kaloMessages: AIMessage[]
+  addKaloMessage: (msg: AIMessage) => void
+  clearKaloMessages: () => void
+
+  // Portion history (photo scanner learning)
+  portionHistory: Record<string, number>  // food name → typical grams
+  updatePortionHistory: (food: string, grams: number) => void
 
   // Selectors
   getFoodLogsForDate: (date: string) => FoodLog[]
@@ -240,13 +255,33 @@ export const useStore = create<AppState>()(
         return { supplementChecked: checked }
       }),
 
+      // Kalo personality
+      userPersonality: DEFAULT_PERSONALITY,
+      updatePersonality: (updates) => set((s) => ({
+        userPersonality: { ...s.userPersonality, ...updates },
+      })),
+
+      // Kalo messages (separate chat history)
+      kaloMessages: [],
+      addKaloMessage: (msg) => set((s) => ({
+        kaloMessages: [...s.kaloMessages.slice(-150), msg],
+      })),
+      clearKaloMessages: () => set({ kaloMessages: [] }),
+
+      // Portion history
+      portionHistory: {},
+      updatePortionHistory: (food, grams) => set((s) => ({
+        portionHistory: { ...s.portionHistory, [food.toLowerCase()]: grams },
+      })),
+
       clearUserData: () => set({
         profile: null,
         foodLogs: [], activityLogs: [], weightHistory: [], waterLogs: [],
-        customRecipes: [], aiMessages: [], whoopData: null,
+        customRecipes: [], aiMessages: [], kaloMessages: [], whoopData: null,
         cheatDays: [], beforeAfterPhotos: [], weeklyPlans: [], runSessions: [],
         apiKeys: defaultApiKeys, activeTab: 'home',
         whoopTokens: null, groupIds: [],
+        userPersonality: DEFAULT_PERSONALITY, portionHistory: {},
       }),
 
       getFoodLogsForDate: (date) => get().foodLogs.filter((l) => l.date === date),
