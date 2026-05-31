@@ -1,9 +1,9 @@
 import { useState, useRef } from 'react'
-import { Loader, Key, ChevronRight, CheckCircle, XCircle } from 'lucide-react'
+import { Loader, Key, ChevronRight, CheckCircle, XCircle, ShieldOff } from 'lucide-react'
 import { useCodeAuth } from '../contexts/CodeAuthContext'
 
 export default function CodeEntryScreen() {
-  const { enterCode } = useCodeAuth()
+  const { enterCode, revoked } = useCodeAuth()
   const [input, setInput]     = useState('')
   const [loading, setLoading] = useState(false)
   const [error, setError]     = useState('')
@@ -53,6 +53,20 @@ export default function CodeEntryScreen() {
         <h1 className="text-3xl font-black" style={{ color: 'var(--text-1)' }}>Kalorilo</h1>
         <p className="text-sm mt-1" style={{ color: 'var(--text-3)' }}>Dein persönlicher Ernährungs-Coach</p>
       </div>
+
+      {/* Revoked banner */}
+      {revoked && (
+        <div className="w-full max-w-sm mb-4 p-4 flex gap-3 items-start"
+          style={{ borderRadius: 20, background: 'rgba(239,68,68,0.08)', border: '1.5px solid rgba(239,68,68,0.25)' }}>
+          <ShieldOff size={18} style={{ color: '#ef4444', flexShrink: 0, marginTop: 1 }} />
+          <div>
+            <p className="text-sm font-black" style={{ color: '#ef4444' }}>Zugang deaktiviert</p>
+            <p className="text-xs mt-0.5 leading-relaxed" style={{ color: 'var(--text-3)' }}>
+              Dein Zugang wurde deaktiviert. Bitte wende dich an den Administrator um einen neuen Code zu erhalten.
+            </p>
+          </div>
+        </div>
+      )}
 
       {/* Card */}
       <div className="w-full max-w-sm glass p-6 space-y-5" style={{ borderRadius: 28 }}>

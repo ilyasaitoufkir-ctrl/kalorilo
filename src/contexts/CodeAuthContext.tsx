@@ -6,6 +6,7 @@ import { useStore } from '../store/useStore'
 export interface CodeAuthCtx {
   code: string | null
   loading: boolean
+  revoked: boolean          // stored code was found but deactivated since last login
   isConfigured: boolean
   enterCode: (code: string) => Promise<{ success: boolean; error?: string }>
   logout: () => void
@@ -106,8 +107,9 @@ function errorMessage(result: ValidationResult): string {
 }
 
 export function CodeAuthProvider({ children }: { children: ReactNode }) {
-  const [code, setCode] = useState<string | null>(null)
+  const [code, setCode]       = useState<string | null>(null)
   const [loading, setLoading] = useState(true)
+  const [revoked, setRevoked] = useState(false)
 
   useEffect(() => {
     const stored = localStorage.getItem(LS_KEY)
@@ -115,17 +117,16 @@ export function CodeAuthProvider({ children }: { children: ReactNode }) {
 
     const normalized = normalize(stored)
 
-    // Re-validate stored code on every app start
     validateCode(normalized).then(async (result) => {
       if (result === 'ok' || result === 'offline_fallback') {
-        // Update localStorage with normalized version in case it was stored differently
         localStorage.setItem(LS_KEY, normalized)
         setCode(normalized)
         await loadUserData(normalized)
         touchCode(normalized)
       } else {
-        // Code was deactivated since last login → force re-entry
         localStorage.removeItem(LS_KEY)
+        // Show "revoked" message only when code existed but was deactivated
+        if (result === 'inactive') setRevoked(true)
       }
       setLoading(false)
     })
@@ -158,11 +159,12 @@ export function CodeAuthProvider({ children }: { children: ReactNode }) {
   const logout = () => {
     localStorage.removeItem(LS_KEY)
     setCode(null)
+    setRevoked(false)
     useStore.getState().clearUserData()
   }
 
   return (
-    <Ctx.Provider value={{ code, loading, isConfigured: isFirebaseConfigured, enterCode, logout }}>
+    <Ctx.Provider value={{ code, loading, revoked, isConfigured: isFirebaseConfigured, enterCode, logout }}>
       {children}
     </Ctx.Provider>
   )

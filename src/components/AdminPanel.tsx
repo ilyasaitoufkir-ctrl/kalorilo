@@ -4,9 +4,10 @@ import {
 } from 'firebase/firestore'
 import { db, isFirebaseConfigured } from '../lib/firebase'
 import {
-  Shield, Plus, RefreshCw, ToggleLeft, ToggleRight, Trash2, Copy, Check,
+  Shield, Plus, RefreshCw, Trash2, Copy, Check,
   LogOut, Wifi, WifiOff, Users, BarChart2, MessageSquare, Key,
-  Activity, Send, RotateCcw, AlertTriangle,
+  Activity, Send, RotateCcw, AlertTriangle, Lock, Unlock, UserX,
+  ToggleLeft, ToggleRight,
 } from 'lucide-react'
 
 // ── Types ────────────────────────────────────────────────────────────────────
@@ -58,6 +59,41 @@ function goalLabel(goal?: string) {
   if (goal === 'maintain') return 'Halten'
   return '—'
 }
+
+// ── Confirm dialog ────────────────────────────────────────────────────────────
+interface ConfirmState { title: string; body: string; confirm: string; danger?: boolean; onConfirm: () => void }
+function ConfirmDialog({ state, onClose }: { state: ConfirmState; onClose: () => void }) {
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center px-6"
+      style={{ background: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(4px)' }}
+      onClick={onClose}>
+      <div className="w-full max-w-sm glass p-6 space-y-4" style={{ borderRadius: 24 }}
+        onClick={e => e.stopPropagation()}>
+        <div className="flex items-center gap-3">
+          <div className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0"
+            style={{ background: state.danger ? 'rgba(239,68,68,0.12)' : 'rgba(74,140,92,0.12)' }}>
+            {state.danger ? <UserX size={20} style={{ color: '#ef4444' }} /> : <Shield size={20} style={{ color: '#4a8c5c' }} />}
+          </div>
+          <div>
+            <p className="font-black text-base" style={{ color: 'var(--text-1)' }}>{state.title}</p>
+            <p className="text-xs mt-0.5" style={{ color: 'var(--text-3)' }}>{state.body}</p>
+          </div>
+        </div>
+        <div className="flex gap-2">
+          <button onClick={onClose} className="flex-1 py-3 rounded-xl font-bold text-sm"
+            style={{ background: 'rgba(255,255,255,0.06)', color: 'var(--text-2)' }}>
+            Abbrechen
+          </button>
+          <button onClick={() => { state.onConfirm(); onClose() }}
+            className="flex-1 py-3 rounded-xl font-black text-sm"
+            style={{ background: state.danger ? 'linear-gradient(135deg,#ef4444,#f87171)' : 'linear-gradient(135deg,#4a8c5c,#7db88a)', color: '#fff' }}>
+            {state.confirm}
+          </button>
+        </div>
+      </div>
+    </div>
+  )
+}
 function lsLoad(): CodeRecord[] {
   try { return JSON.parse(localStorage.getItem(LS_CODES) ?? '[]') } catch { return [] }
 }
@@ -97,6 +133,9 @@ export default function AdminPanel() {
   const [creating, setCreating]     = useState(false)
   const [copied, setCopied]         = useState<string | null>(null)
   const [codeError, setCodeError]   = useState<string | null>(null)
+
+  // Confirm dialog
+  const [dialog, setDialog]         = useState<ConfirmState | null>(null)
 
   // Users
   const [users, setUsers]           = useState<UserRecord[]>([])
@@ -159,7 +198,6 @@ export default function AdminPanel() {
   }
 
   const deleteCode = async (code: string) => {
-    if (!confirm(`Code ${code} löschen?`)) return
     setCodes(prev => prev.filter(c => c.code !== code))
     lsSave(lsLoad().filter(c => c.code !== code))
     if (db) { try { await withTimeout(deleteDoc(doc(db, 'adminCodes', code))) } catch {} }
@@ -214,7 +252,6 @@ export default function AdminPanel() {
   }, [])
 
   const resetUserData = async (code: string) => {
-    if (!confirm(`Nutzerdaten für ${code} zurücksetzen? Dies kann nicht rückgängig gemacht werden.`)) return
     if (!db) return
     try {
       await withTimeout(setDoc(doc(db, 'users', code), { lastActive: Date.now(), profile: null }, { merge: false }))
@@ -305,6 +342,7 @@ export default function AdminPanel() {
 
   return (
     <div className="min-h-dvh max-w-2xl mx-auto pb-24" style={{ background: 'var(--bg)' }}>
+      {dialog && <ConfirmDialog state={dialog} onClose={() => setDialog(null)} />}
       {/* Header */}
       <div className="flex items-center justify-between px-4 pt-6 pb-3">
         <div className="flex items-center gap-2">
@@ -386,13 +424,11 @@ export default function AdminPanel() {
         {/* ── USERS ─────────────────────────────────────────────────── */}
         {tab === 'users' && (
           <>
-            <div className="flex gap-2">
-              <button onClick={fetchUsers}
-                className="flex-1 py-2.5 rounded-xl text-sm font-bold flex items-center justify-center gap-1"
-                style={{ background: 'rgba(74,140,92,0.1)', color: '#4a8c5c' }}>
-                <RefreshCw size={13} className={loadingUsers ? 'animate-spin' : ''} /> Aktualisieren
-              </button>
-            </div>
+            <button onClick={fetchUsers}
+              className="w-full py-2.5 rounded-xl text-sm font-bold flex items-center justify-center gap-1"
+              style={{ background: 'rgba(74,140,92,0.1)', color: '#4a8c5c' }}>
+              <RefreshCw size={13} className={loadingUsers ? 'animate-spin' : ''} /> Aktualisieren
+            </button>
 
             {loadingUsers && (
               <p className="text-center text-sm py-4" style={{ color: 'var(--text-3)' }}>
@@ -403,35 +439,87 @@ export default function AdminPanel() {
             {users.map(u => {
               const act = activityLabel(u.lastActive)
               return (
-                <div key={u.code} className="glass p-4" style={{ borderRadius: 18, opacity: u.active ? 1 : 0.5 }}>
-                  <div className="flex items-start justify-between gap-2">
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2 flex-wrap mb-0.5">
-                        <span className="font-mono font-black text-sm" style={{ color: 'var(--text-1)' }}>{u.code}</span>
-                        {u.name && <span className="text-xs font-semibold" style={{ color: '#4a8c5c' }}>{u.name}</span>}
-                        <span className="text-xs px-1.5 py-0.5 rounded-full font-semibold"
-                          style={{ background: `${act.color}22`, color: act.color }}>
-                          {act.label}
-                        </span>
-                      </div>
-                      <div className="flex gap-3 text-xs" style={{ color: 'var(--text-3)' }}>
-                        <span>Ziel: {goalLabel(u.goal)}</span>
-                        <span>Login: {fmtDate(u.lastActive)}</span>
-                      </div>
+                <div key={u.code} className="glass p-4" style={{ borderRadius: 18 }}>
+                  {/* Status + name row */}
+                  <div className="flex items-center gap-2 mb-2 flex-wrap">
+                    <span className="text-xs px-2 py-0.5 rounded-full font-black"
+                      style={{
+                        background: u.active ? 'rgba(74,140,92,0.15)' : 'rgba(239,68,68,0.12)',
+                        color: u.active ? '#4a8c5c' : '#ef4444',
+                      }}>
+                      {u.active ? '✅ Aktiv' : '❌ Gesperrt'}
+                    </span>
+                    {u.name && <span className="text-sm font-bold" style={{ color: 'var(--text-1)' }}>{u.name}</span>}
+                    <span className="text-xs px-1.5 py-0.5 rounded-full font-semibold"
+                      style={{ background: `${act.color}22`, color: act.color }}>
+                      {act.label}
+                    </span>
+                  </div>
+
+                  {/* Code + meta */}
+                  <div className="mb-3">
+                    <span className="font-mono font-black text-sm" style={{ color: 'var(--text-2)' }}>{u.code}</span>
+                    <div className="flex gap-3 text-xs mt-0.5" style={{ color: 'var(--text-3)' }}>
+                      {u.goal && <span>Ziel: {goalLabel(u.goal)}</span>}
+                      <span>Login: {fmtDate(u.lastActive)}</span>
                     </div>
-                    <div className="flex gap-1 shrink-0">
-                      <button onClick={() => toggleCode(u.code, u.active)}
-                        className="w-7 h-7 rounded-lg flex items-center justify-center"
-                        style={{ background: u.active ? 'rgba(74,140,92,0.1)' : 'rgba(150,150,150,0.1)' }}>
-                        {u.active ? <ToggleRight size={14} style={{ color: '#4a8c5c' }} /> : <ToggleLeft size={14} style={{ color: '#888' }} />}
+                  </div>
+
+                  {/* Action buttons */}
+                  <div className="flex gap-2">
+                    {u.active ? (
+                      <button
+                        onClick={() => setDialog({
+                          title: 'Zugang sperren?',
+                          body: `Nutzer mit Code ${u.code} verliert sofort Zugang zur App.`,
+                          confirm: 'Sperren',
+                          danger: true,
+                          onConfirm: () => toggleCode(u.code, true),
+                        })}
+                        className="flex-1 py-2 rounded-xl text-xs font-black flex items-center justify-center gap-1"
+                        style={{ background: 'rgba(239,68,68,0.1)', color: '#ef4444' }}>
+                        <Lock size={12} /> Sperren
                       </button>
-                      <button onClick={() => resetUserData(u.code)}
-                        className="w-7 h-7 rounded-lg flex items-center justify-center"
-                        style={{ background: 'rgba(239,68,68,0.08)' }}
-                        title="Daten zurücksetzen">
-                        <RotateCcw size={12} style={{ color: '#ef4444' }} />
+                    ) : (
+                      <button
+                        onClick={() => setDialog({
+                          title: 'Zugang reaktivieren?',
+                          body: `Nutzer mit Code ${u.code} bekommt wieder Zugang zur App.`,
+                          confirm: 'Reaktivieren',
+                          onConfirm: () => toggleCode(u.code, false),
+                        })}
+                        className="flex-1 py-2 rounded-xl text-xs font-black flex items-center justify-center gap-1"
+                        style={{ background: 'rgba(74,140,92,0.1)', color: '#4a8c5c' }}>
+                        <Unlock size={12} /> Reaktivieren
                       </button>
-                    </div>
+                    )}
+                    <button
+                      onClick={() => setDialog({
+                        title: 'Daten zurücksetzen?',
+                        body: 'Profil und alle Einträge werden gelöscht. Der Code bleibt aktiv.',
+                        confirm: 'Zurücksetzen',
+                        danger: true,
+                        onConfirm: () => resetUserData(u.code),
+                      })}
+                      className="py-2 px-3 rounded-xl text-xs font-black flex items-center justify-center gap-1"
+                      style={{ background: 'rgba(245,158,11,0.1)', color: '#f59e0b' }}>
+                      <RotateCcw size={12} /> Reset
+                    </button>
+                    <button
+                      onClick={() => setDialog({
+                        title: 'Code löschen?',
+                        body: `⚠️ Bist du sicher? Nutzer mit Code ${u.code} verliert sofort Zugang und kann nicht mehr einloggen!`,
+                        confirm: 'Löschen',
+                        danger: true,
+                        onConfirm: () => {
+                          deleteCode(u.code)
+                          setUsers(prev => prev.filter(x => x.code !== u.code))
+                        },
+                      })}
+                      className="py-2 px-3 rounded-xl text-xs font-black flex items-center justify-center gap-1"
+                      style={{ background: 'rgba(239,68,68,0.1)', color: '#ef4444' }}>
+                      <Trash2 size={12} /> Löschen
+                    </button>
                   </div>
                 </div>
               )
