@@ -19,12 +19,61 @@ export function useCodeAuth() {
   return c
 }
 
-const LS_KEY = 'kalorilo_access_code'
+const LS_KEY        = 'kalorilo_access_code'
+const LS_ADMIN_CODES = 'kalorilo_admin_codes'
+
+// Normalize: uppercase, no spaces, no leading/trailing whitespace
+function normalize(raw: string): string {
+  return raw.trim().toUpperCase().replace(/\s+/g, '')
+}
+
+// Check localStorage codes (case-insensitive, checks active flag)
+function checkLocalStorage(code: string): 'ok' | 'inactive' | 'not_found' {
+  try {
+    const list: { code: string; active?: boolean }[] = JSON.parse(localStorage.getItem(LS_ADMIN_CODES) ?? '[]')
+    const match = list.find(c => c.code.toUpperCase() === code.toUpperCase())
+    if (!match) return 'not_found'
+    if (match.active === false) return 'inactive'
+    return 'ok'
+  } catch { return 'not_found' }
+}
+
+type ValidationResult = 'ok' | 'inactive' | 'not_found' | 'offline_fallback'
+
+async function validateCode(code: string): Promise<ValidationResult> {
+  // 1. localStorage check first (admin-generated codes, offline mode)
+  const local = checkLocalStorage(code)
+  if (local === 'ok')       return 'ok'
+  if (local === 'inactive') return 'inactive'
+
+  // 2. No Firebase configured → accept any properly formatted code
+  if (!db || !isFirebaseConfigured) {
+    return code.startsWith('KAL-') && code.length >= 8 ? 'offline_fallback' : 'not_found'
+  }
+
+  // 3. Firestore lookup with timeout
+  try {
+    const snap = await Promise.race([
+      getDoc(doc(db, 'adminCodes', code)),
+      new Promise<never>((_, reject) => setTimeout(() => reject(new Error('timeout')), 7000)),
+    ])
+    if (!snap.exists()) return 'not_found'
+    if (snap.data().active === false) return 'inactive'
+    return 'ok'
+  } catch (e) {
+    // Firestore unreachable — allow properly formatted codes to avoid locking users out
+    console.warn('[CodeAuth] Firestore unreachable, using fallback:', e)
+    return code.startsWith('KAL-') && code.length >= 8 ? 'offline_fallback' : 'not_found'
+  }
+}
 
 async function loadUserData(code: string) {
   if (!db) return
   try {
-    const snap = await getDoc(doc(db, 'users', code))
+    const snap = await Promise.race([
+      getDoc(doc(db, 'users', code)),
+      new Promise<never>((_, reject) => setTimeout(() => reject(new Error('timeout')), 8000)),
+    ])
     if (!snap.exists()) return
     const d = snap.data()
     const s = useStore.getState()
@@ -38,35 +87,7 @@ async function loadUserData(code: string) {
     if (d.cheatDays)     useStore.setState({ cheatDays: d.cheatDays })
     if (d.reminders)     useStore.setState({ reminders: d.reminders })
   } catch (e) {
-    console.error('[CodeAuth] loadUserData failed:', e)
-  }
-}
-
-const LS_ADMIN_CODES = 'kalorilo_admin_codes'
-
-function isCodeInLocalStorage(code: string): boolean {
-  try {
-    const list: { code: string; active: boolean }[] = JSON.parse(localStorage.getItem(LS_ADMIN_CODES) ?? '[]')
-    return list.some(c => c.code === code && c.active !== false)
-  } catch { return false }
-}
-
-async function validateCode(code: string): Promise<boolean> {
-  // Always check localStorage first (works offline + admin-generated codes)
-  if (isCodeInLocalStorage(code)) return true
-  // No Firebase → accept any KAL- code so the app still works
-  if (!db) return true
-  try {
-    const snap = await Promise.race([
-      getDoc(doc(db, 'adminCodes', code)),
-      new Promise<never>((_, reject) => setTimeout(() => reject(new Error('timeout')), 6000)),
-    ])
-    if (!snap.exists()) return false
-    if (snap.data().active === false) return false
-    return true
-  } catch {
-    // Firestore unreachable – fall back to accepting any KAL- code
-    return code.startsWith('KAL-')
+    console.warn('[CodeAuth] loadUserData failed (non-critical):', e)
   }
 }
 
@@ -78,6 +99,12 @@ async function touchCode(code: string) {
   } catch { /* non-critical */ }
 }
 
+function errorMessage(result: ValidationResult): string {
+  if (result === 'inactive')   return 'Dieser Code wurde deaktiviert. Bitte kontaktiere den Administrator.'
+  if (result === 'not_found')  return 'Dieser Code ist ungültig. Bitte prüfe die Schreibweise.'
+  return 'Unbekannter Fehler.'
+}
+
 export function CodeAuthProvider({ children }: { children: ReactNode }) {
   const [code, setCode] = useState<string | null>(null)
   const [loading, setLoading] = useState(true)
@@ -86,19 +113,18 @@ export function CodeAuthProvider({ children }: { children: ReactNode }) {
     const stored = localStorage.getItem(LS_KEY)
     if (!stored) { setLoading(false); return }
 
-    if (!isFirebaseConfigured) {
-      // Firebase not set up → accept stored code as-is (offline mode)
-      setCode(stored)
-      setLoading(false)
-      return
-    }
+    const normalized = normalize(stored)
 
-    validateCode(stored).then(async (valid) => {
-      if (valid) {
-        setCode(stored)
-        await loadUserData(stored)
-        touchCode(stored)
+    // Re-validate stored code on every app start
+    validateCode(normalized).then(async (result) => {
+      if (result === 'ok' || result === 'offline_fallback') {
+        // Update localStorage with normalized version in case it was stored differently
+        localStorage.setItem(LS_KEY, normalized)
+        setCode(normalized)
+        await loadUserData(normalized)
+        touchCode(normalized)
       } else {
+        // Code was deactivated since last login → force re-entry
         localStorage.removeItem(LS_KEY)
       }
       setLoading(false)
@@ -106,22 +132,26 @@ export function CodeAuthProvider({ children }: { children: ReactNode }) {
   }, [])
 
   const enterCode = async (raw: string): Promise<{ success: boolean; error?: string }> => {
-    const c = raw.trim().toUpperCase().replace(/\s/g, '')
-    if (c.length < 4) return { success: false, error: 'Code zu kurz – mindestens 4 Zeichen' }
+    const c = normalize(raw)
 
-    if (!isFirebaseConfigured) {
-      localStorage.setItem(LS_KEY, c)
-      setCode(c)
-      return { success: true }
+    if (c.length < 4) {
+      return { success: false, error: 'Code zu kurz – mindestens 4 Zeichen.' }
     }
 
-    const valid = await validateCode(c)
-    if (!valid) return { success: false, error: 'Code nicht gefunden oder deaktiviert' }
+    const result = await validateCode(c)
 
+    if (result === 'not_found' || result === 'inactive') {
+      return { success: false, error: errorMessage(result) }
+    }
+
+    // Save normalized code to localStorage
     localStorage.setItem(LS_KEY, c)
     setCode(c)
-    await loadUserData(c)
+
+    // Load user data (non-blocking — app shows onboarding if no profile)
+    loadUserData(c).catch(() => {})
     touchCode(c)
+
     return { success: true }
   }
 
