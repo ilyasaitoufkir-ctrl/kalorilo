@@ -64,31 +64,36 @@ export default function AdminPanel() {
     setPw('')
   }
 
+  const withTimeout = <T,>(promise: Promise<T>, ms = 8000): Promise<T> =>
+    Promise.race([
+      promise,
+      new Promise<T>((_, reject) =>
+        setTimeout(() => reject(new Error('Timeout – Firestore antwortet nicht. Bitte Firestore Rules prüfen.')), ms)
+      ),
+    ])
+
   const fetchCodes = async () => {
-    console.log('[AdminPanel] fetchCodes: db =', !!db)
     if (!db) {
-      setError('Firebase nicht konfiguriert. Bitte VITE_FIREBASE_* Umgebungsvariablen setzen.')
+      setError('Firebase nicht konfiguriert. Bitte VITE_FIREBASE_* Umgebungsvariablen in Vercel setzen.')
       return
     }
     setLoading(true)
     setError(null)
     try {
-      const snap = await getDocs(collection(db, 'adminCodes'))
-      console.log('[AdminPanel] fetchCodes: got', snap.size, 'docs')
+      const snap = await withTimeout(getDocs(collection(db, 'adminCodes')))
       const list: CodeRecord[] = snap.docs.map(d => ({ code: d.id, ...(d.data() as Omit<CodeRecord, 'code'>) }))
       list.sort((a, b) => b.createdAt - a.createdAt)
       setCodes(list)
     } catch (e: unknown) {
       const msg = e instanceof Error ? e.message : String(e)
       console.error('[AdminPanel] fetchCodes failed:', e)
-      setError(`Laden fehlgeschlagen: ${msg}`)
+      setError(msg)
     } finally {
       setLoading(false)
     }
   }
 
   const createCode = async () => {
-    console.log('[AdminPanel] createCode: db =', !!db, 'isFirebaseConfigured =', isFirebaseConfigured)
     if (!db) {
       setError('Firebase nicht konfiguriert – Code kann nicht gespeichert werden.')
       return
@@ -97,21 +102,19 @@ export default function AdminPanel() {
     setError(null)
     try {
       const code = generateCode()
-      console.log('[AdminPanel] Creating code:', code)
       const rec: Omit<CodeRecord, 'code'> = {
         active: true,
         createdAt: Date.now(),
         ...(note.trim() ? { note: note.trim() } : {}),
       }
-      await setDoc(doc(db, 'adminCodes', code), rec)
-      console.log('[AdminPanel] Code created successfully:', code)
+      await withTimeout(setDoc(doc(db, 'adminCodes', code), rec))
       setCodes(prev => [{ code, ...rec }, ...prev])
       setNote('')
       copyToClipboard(code)
     } catch (e: unknown) {
       const msg = e instanceof Error ? e.message : String(e)
       console.error('[AdminPanel] createCode failed:', e)
-      setError(`Fehler beim Erstellen: ${msg}`)
+      setError(msg)
     } finally {
       setCreating(false)
     }
@@ -241,14 +244,14 @@ export default function AdminPanel() {
         </div>
       )}
 
-      {/* Firestore rules hint */}
-      {isFirebaseConfigured && (
-        <div className="glass p-3 mb-4" style={{ borderRadius: 14, border: '1px solid rgba(74,140,92,0.15)' }}>
-          <p className="text-xs font-semibold mb-1" style={{ color: 'var(--text-2)' }}>Firestore Rules prüfen</p>
-          <p className="text-xs" style={{ color: 'var(--text-3)' }}>
-            Falls Fehler auftreten: Firebase Console → Firestore → Rules → temporär öffnen:
+      {/* Firestore rules hint – only when there's a timeout/permission error */}
+      {error && error.includes('Timeout') && (
+        <div className="glass p-3 mb-4" style={{ borderRadius: 14, border: '1px solid rgba(245,158,11,0.25)' }}>
+          <p className="text-xs font-semibold mb-1" style={{ color: '#f59e0b' }}>Firestore Rules öffnen</p>
+          <p className="text-xs mb-1" style={{ color: 'var(--text-3)' }}>
+            Firebase Console → Firestore → Regeln → ersetzen mit:
           </p>
-          <pre className="text-xs mt-1 p-2 rounded-lg overflow-x-auto" style={{ background: 'rgba(0,0,0,0.3)', color: '#7db88a' }}>{`match /{document=**} {
+          <pre className="text-xs p-2 rounded-lg overflow-x-auto" style={{ background: 'rgba(0,0,0,0.3)', color: '#7db88a' }}>{`match /{document=**} {
   allow read, write: if true;
 }`}</pre>
         </div>
