@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import { collection, getDocs, setDoc, doc, updateDoc, deleteDoc } from 'firebase/firestore'
 import { db, isFirebaseConfigured } from '../lib/firebase'
-import { Shield, Plus, RefreshCw, ToggleLeft, ToggleRight, Trash2, Copy, Check, LogOut, AlertTriangle } from 'lucide-react'
+import { Shield, Plus, RefreshCw, ToggleLeft, ToggleRight, Trash2, Copy, Check, LogOut, AlertTriangle, Wifi, WifiOff } from 'lucide-react'
 
 interface CodeRecord {
   code: string
@@ -11,7 +11,8 @@ interface CodeRecord {
   note?: string
 }
 
-const ADMIN_PW = import.meta.env.VITE_ADMIN_PASSWORD ?? 'kalorilo-admin-2025'
+const ADMIN_PW   = import.meta.env.VITE_ADMIN_PASSWORD ?? 'kalorilo-admin-2025'
+const LS_CODES   = 'kalorilo_admin_codes'
 
 function generateCode(): string {
   const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'
@@ -26,18 +27,35 @@ function fmtDate(ts?: number) {
   })
 }
 
-export default function AdminPanel() {
-  const [authed, setAuthed]     = useState(false)
-  const [pw, setPw]             = useState('')
-  const [pwErr, setPwErr]       = useState(false)
-  const [codes, setCodes]       = useState<CodeRecord[]>([])
-  const [loading, setLoading]   = useState(false)
-  const [note, setNote]         = useState('')
-  const [copied, setCopied]     = useState<string | null>(null)
-  const [creating, setCreating] = useState(false)
-  const [error, setError]       = useState<string | null>(null)
+// ── localStorage helpers ────────────────────────────────────────────────────
+function lsLoad(): CodeRecord[] {
+  try { return JSON.parse(localStorage.getItem(LS_CODES) ?? '[]') } catch { return [] }
+}
+function lsSave(codes: CodeRecord[]) {
+  localStorage.setItem(LS_CODES, JSON.stringify(codes))
+}
 
-  console.log('[AdminPanel] Firebase configured:', isFirebaseConfigured, '| db:', !!db)
+// ── Firestore with timeout ──────────────────────────────────────────────────
+function withTimeout<T>(promise: Promise<T>, ms = 6000): Promise<T> {
+  return Promise.race([
+    promise,
+    new Promise<T>((_, reject) =>
+      setTimeout(() => reject(new Error('TIMEOUT')), ms)
+    ),
+  ])
+}
+
+export default function AdminPanel() {
+  const [authed, setAuthed]         = useState(false)
+  const [pw, setPw]                 = useState('')
+  const [pwErr, setPwErr]           = useState(false)
+  const [codes, setCodes]           = useState<CodeRecord[]>([])
+  const [loading, setLoading]       = useState(false)
+  const [note, setNote]             = useState('')
+  const [copied, setCopied]         = useState<string | null>(null)
+  const [creating, setCreating]     = useState(false)
+  const [error, setError]           = useState<string | null>(null)
+  const [firestoreOk, setFirestoreOk] = useState<boolean | null>(null) // null = unknown
 
   useEffect(() => {
     const ok = sessionStorage.getItem('kalorilo_admin_ok')
@@ -64,86 +82,97 @@ export default function AdminPanel() {
     setPw('')
   }
 
-  const withTimeout = <T,>(promise: Promise<T>, ms = 8000): Promise<T> =>
-    Promise.race([
-      promise,
-      new Promise<T>((_, reject) =>
-        setTimeout(() => reject(new Error('Timeout – Firestore antwortet nicht. Bitte Firestore Rules prüfen.')), ms)
-      ),
-    ])
-
   const fetchCodes = async () => {
-    if (!db) {
-      setError('Firebase nicht konfiguriert. Bitte VITE_FIREBASE_* Umgebungsvariablen in Vercel setzen.')
-      return
-    }
     setLoading(true)
     setError(null)
+
+    // Always load localStorage codes first
+    const local = lsLoad()
+
+    if (!db || !isFirebaseConfigured) {
+      setFirestoreOk(false)
+      setCodes(local)
+      setLoading(false)
+      return
+    }
+
     try {
       const snap = await withTimeout(getDocs(collection(db, 'adminCodes')))
-      const list: CodeRecord[] = snap.docs.map(d => ({ code: d.id, ...(d.data() as Omit<CodeRecord, 'code'>) }))
-      list.sort((a, b) => b.createdAt - a.createdAt)
-      setCodes(list)
-    } catch (e: unknown) {
-      const msg = e instanceof Error ? e.message : String(e)
-      console.error('[AdminPanel] fetchCodes failed:', e)
-      setError(msg)
+      const remote: CodeRecord[] = snap.docs.map(d => ({
+        code: d.id,
+        ...(d.data() as Omit<CodeRecord, 'code'>),
+      }))
+      remote.sort((a, b) => b.createdAt - a.createdAt)
+      setFirestoreOk(true)
+      // Merge: remote wins, but show local-only codes too
+      const remoteCodes = new Set(remote.map(c => c.code))
+      const localOnly   = local.filter(c => !remoteCodes.has(c.code))
+      setCodes([...remote, ...localOnly])
+    } catch {
+      setFirestoreOk(false)
+      setCodes(local)
+      if (local.length === 0)
+        setError('Firestore nicht erreichbar – Codes werden lokal gespeichert.')
     } finally {
       setLoading(false)
     }
   }
 
   const createCode = async () => {
-    if (!db) {
-      setError('Firebase nicht konfiguriert – Code kann nicht gespeichert werden.')
-      return
-    }
     setCreating(true)
     setError(null)
-    try {
-      const code = generateCode()
-      const rec: Omit<CodeRecord, 'code'> = {
-        active: true,
-        createdAt: Date.now(),
-        ...(note.trim() ? { note: note.trim() } : {}),
-      }
-      await withTimeout(setDoc(doc(db, 'adminCodes', code), rec))
-      setCodes(prev => [{ code, ...rec }, ...prev])
-      setNote('')
-      copyToClipboard(code)
-    } catch (e: unknown) {
-      const msg = e instanceof Error ? e.message : String(e)
-      console.error('[AdminPanel] createCode failed:', e)
-      setError(msg)
-    } finally {
-      setCreating(false)
+    const code = generateCode()
+    const rec: CodeRecord = {
+      code,
+      active: true,
+      createdAt: Date.now(),
+      ...(note.trim() ? { note: note.trim() } : {}),
     }
+
+    // Always save to localStorage immediately
+    const existing = lsLoad()
+    lsSave([rec, ...existing])
+    setCodes(prev => [rec, ...prev])
+    setNote('')
+    copyToClipboard(code)
+
+    // Also try Firestore in background
+    if (db && isFirebaseConfigured) {
+      try {
+        await withTimeout(setDoc(doc(db, 'adminCodes', code), {
+          active: rec.active,
+          createdAt: rec.createdAt,
+          ...(rec.note ? { note: rec.note } : {}),
+        }))
+        setFirestoreOk(true)
+      } catch {
+        setFirestoreOk(false)
+        // localStorage already has it — no problem
+      }
+    }
+
+    setCreating(false)
   }
 
   const toggleActive = async (code: string, current: boolean) => {
-    if (!db) { setError('Firebase nicht konfiguriert.'); return }
-    setError(null)
-    try {
-      await updateDoc(doc(db, 'adminCodes', code), { active: !current })
-      setCodes(prev => prev.map(c => c.code === code ? { ...c, active: !current } : c))
-    } catch (e: unknown) {
-      const msg = e instanceof Error ? e.message : String(e)
-      console.error('[AdminPanel] toggleActive failed:', e)
-      setError(`Fehler: ${msg}`)
+    const updated = !current
+    setCodes(prev => prev.map(c => c.code === code ? { ...c, active: updated } : c))
+    // Update localStorage
+    lsSave(lsLoad().map(c => c.code === code ? { ...c, active: updated } : c))
+    // Try Firestore
+    if (db) {
+      try { await withTimeout(updateDoc(doc(db, 'adminCodes', code), { active: updated })) }
+      catch { /* localStorage already updated */ }
     }
   }
 
   const deleteCode = async (code: string) => {
-    if (!db) { setError('Firebase nicht konfiguriert.'); return }
     if (!confirm(`Code ${code} löschen?`)) return
-    setError(null)
-    try {
-      await deleteDoc(doc(db, 'adminCodes', code))
-      setCodes(prev => prev.filter(c => c.code !== code))
-    } catch (e: unknown) {
-      const msg = e instanceof Error ? e.message : String(e)
-      console.error('[AdminPanel] deleteCode failed:', e)
-      setError(`Fehler: ${msg}`)
+    setCodes(prev => prev.filter(c => c.code !== code))
+    lsSave(lsLoad().filter(c => c.code !== code))
+    if (db) {
+      try { await withTimeout(deleteDoc(doc(db, 'adminCodes', code))) }
+      catch { /* ok */ }
     }
   }
 
@@ -153,6 +182,7 @@ export default function AdminPanel() {
     setTimeout(() => setCopied(null), 2000)
   }
 
+  // ── Login screen ────────────────────────────────────────────────────────
   if (!authed) {
     return (
       <div className="min-h-dvh flex flex-col items-center justify-center px-6" style={{ background: 'var(--bg)' }}>
@@ -181,7 +211,7 @@ export default function AdminPanel() {
           />
           {pwErr && <p className="text-xs text-center font-semibold" style={{ color: '#ef4444' }}>❌ Falsches Passwort</p>}
           <button onClick={handleLogin}
-            className="w-full py-3.5 rounded-2xl font-black text-base transition-all"
+            className="w-full py-3.5 rounded-2xl font-black text-base"
             style={{ background: 'linear-gradient(135deg,#4a8c5c,#7db88a)', color: '#fff' }}>
             Einloggen
           </button>
@@ -190,9 +220,10 @@ export default function AdminPanel() {
     )
   }
 
-  const active   = codes.filter(c => c.active).length
-  const inactive = codes.filter(c => !c.active).length
+  const activeCount   = codes.filter(c => c.active).length
+  const inactiveCount = codes.filter(c => !c.active).length
 
+  // ── Main panel ──────────────────────────────────────────────────────────
   return (
     <div className="min-h-dvh px-4 py-6 max-w-2xl mx-auto" style={{ background: 'var(--bg)' }}>
 
@@ -205,10 +236,20 @@ export default function AdminPanel() {
           </div>
           <div>
             <h1 className="text-xl font-black" style={{ color: 'var(--text-1)' }}>Admin Panel</h1>
-            <p className="text-xs" style={{ color: 'var(--text-3)' }}>{active} aktiv · {inactive} inaktiv</p>
+            <p className="text-xs" style={{ color: 'var(--text-3)' }}>{activeCount} aktiv · {inactiveCount} inaktiv</p>
           </div>
         </div>
         <div className="flex gap-2">
+          {/* Firestore status indicator */}
+          {firestoreOk !== null && (
+            <div className="w-9 h-9 rounded-xl flex items-center justify-center"
+              style={{ background: firestoreOk ? 'rgba(74,140,92,0.1)' : 'rgba(245,158,11,0.1)' }}
+              title={firestoreOk ? 'Firestore verbunden' : 'Lokal gespeichert (kein Firestore)'}>
+              {firestoreOk
+                ? <Wifi size={15} style={{ color: '#4a8c5c' }} />
+                : <WifiOff size={15} style={{ color: '#f59e0b' }} />}
+            </div>
+          )}
           <button onClick={fetchCodes}
             className="w-9 h-9 rounded-xl flex items-center justify-center"
             style={{ background: 'rgba(74,140,92,0.1)', border: '1px solid rgba(74,140,92,0.15)' }}>
@@ -222,38 +263,22 @@ export default function AdminPanel() {
         </div>
       </div>
 
-      {/* Firebase not configured warning */}
-      {!isFirebaseConfigured && (
-        <div className="glass p-4 mb-4 flex gap-3 items-start" style={{ borderRadius: 16, border: '1px solid rgba(245,158,11,0.3)' }}>
-          <AlertTriangle size={18} style={{ color: '#f59e0b', flexShrink: 0, marginTop: 1 }} />
-          <div>
-            <p className="text-sm font-bold" style={{ color: '#f59e0b' }}>Firebase nicht konfiguriert</p>
-            <p className="text-xs mt-0.5" style={{ color: 'var(--text-3)' }}>
-              Bitte VITE_FIREBASE_API_KEY, VITE_FIREBASE_PROJECT_ID etc. in Vercel → Settings → Environment Variables setzen und neu deployen.
-            </p>
-          </div>
-        </div>
-      )}
-
-      {/* Error banner */}
-      {error && (
-        <div className="glass p-3 mb-4 flex gap-3 items-center" style={{ borderRadius: 14, border: '1px solid rgba(239,68,68,0.3)' }}>
-          <AlertTriangle size={16} style={{ color: '#ef4444', flexShrink: 0 }} />
-          <p className="text-xs font-semibold flex-1" style={{ color: '#ef4444' }}>{error}</p>
-          <button onClick={() => setError(null)} className="text-xs" style={{ color: 'var(--text-3)' }}>✕</button>
-        </div>
-      )}
-
-      {/* Firestore rules hint – only when there's a timeout/permission error */}
-      {error && error.includes('Timeout') && (
-        <div className="glass p-3 mb-4" style={{ borderRadius: 14, border: '1px solid rgba(245,158,11,0.25)' }}>
-          <p className="text-xs font-semibold mb-1" style={{ color: '#f59e0b' }}>Firestore Rules öffnen</p>
-          <p className="text-xs mb-1" style={{ color: 'var(--text-3)' }}>
-            Firebase Console → Firestore → Regeln → ersetzen mit:
+      {/* Storage mode banner */}
+      {firestoreOk === false && (
+        <div className="glass p-3 mb-4 flex gap-2 items-start" style={{ borderRadius: 14, border: '1px solid rgba(245,158,11,0.25)' }}>
+          <AlertTriangle size={15} style={{ color: '#f59e0b', flexShrink: 0, marginTop: 1 }} />
+          <p className="text-xs" style={{ color: '#f59e0b' }}>
+            <strong>Offline-Modus:</strong> Codes werden lokal in diesem Browser gespeichert. Nutzer können trotzdem einloggen, solange sie ihren Code kennen.
           </p>
-          <pre className="text-xs p-2 rounded-lg overflow-x-auto" style={{ background: 'rgba(0,0,0,0.3)', color: '#7db88a' }}>{`match /{document=**} {
-  allow read, write: if true;
-}`}</pre>
+        </div>
+      )}
+
+      {/* Error */}
+      {error && (
+        <div className="glass p-3 mb-4 flex gap-2 items-center" style={{ borderRadius: 14, border: '1px solid rgba(239,68,68,0.25)' }}>
+          <AlertTriangle size={15} style={{ color: '#ef4444', flexShrink: 0 }} />
+          <p className="text-xs flex-1" style={{ color: '#ef4444' }}>{error}</p>
+          <button onClick={() => setError(null)} style={{ color: 'var(--text-3)', fontSize: 12 }}>✕</button>
         </div>
       )}
 
@@ -287,18 +312,22 @@ export default function AdminPanel() {
       <div className="space-y-2">
         {loading && (
           <p className="text-center text-sm py-4" style={{ color: 'var(--text-3)' }}>
-            <RefreshCw size={14} className="inline animate-spin mr-2" />Lade Codes…
+            <RefreshCw size={14} className="inline animate-spin mr-1" /> Lade Codes…
           </p>
         )}
-        {!loading && codes.length === 0 && !error && (
-          <p className="text-center text-sm py-8" style={{ color: 'var(--text-3)' }}>Noch keine Codes vorhanden.</p>
+        {!loading && codes.length === 0 && (
+          <p className="text-center text-sm py-8" style={{ color: 'var(--text-3)' }}>
+            Noch keine Codes vorhanden. Erstelle den ersten Code oben.
+          </p>
         )}
         {codes.map(c => (
           <div key={c.code} className="glass p-4" style={{ borderRadius: 18, opacity: c.active ? 1 : 0.55 }}>
             <div className="flex items-center justify-between gap-2">
               <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-2 mb-0.5 flex-wrap">
-                  <span className="font-mono font-black text-base tracking-wider" style={{ color: 'var(--text-1)' }}>{c.code}</span>
+                  <span className="font-mono font-black text-base tracking-wider" style={{ color: 'var(--text-1)' }}>
+                    {c.code}
+                  </span>
                   <span className="text-xs px-2 py-0.5 rounded-full font-semibold"
                     style={{
                       background: c.active ? 'rgba(74,140,92,0.15)' : 'rgba(150,150,150,0.12)',

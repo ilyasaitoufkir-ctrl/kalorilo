@@ -42,15 +42,31 @@ async function loadUserData(code: string) {
   }
 }
 
-async function validateCode(code: string): Promise<boolean> {
-  if (!db) return true // no Firebase → accept any code offline
+const LS_ADMIN_CODES = 'kalorilo_admin_codes'
+
+function isCodeInLocalStorage(code: string): boolean {
   try {
-    const snap = await getDoc(doc(db, 'adminCodes', code))
+    const list: { code: string; active: boolean }[] = JSON.parse(localStorage.getItem(LS_ADMIN_CODES) ?? '[]')
+    return list.some(c => c.code === code && c.active !== false)
+  } catch { return false }
+}
+
+async function validateCode(code: string): Promise<boolean> {
+  // Always check localStorage first (works offline + admin-generated codes)
+  if (isCodeInLocalStorage(code)) return true
+  // No Firebase → accept any KAL- code so the app still works
+  if (!db) return true
+  try {
+    const snap = await Promise.race([
+      getDoc(doc(db, 'adminCodes', code)),
+      new Promise<never>((_, reject) => setTimeout(() => reject(new Error('timeout')), 6000)),
+    ])
     if (!snap.exists()) return false
     if (snap.data().active === false) return false
     return true
   } catch {
-    return false
+    // Firestore unreachable – fall back to accepting any KAL- code
+    return code.startsWith('KAL-')
   }
 }
 

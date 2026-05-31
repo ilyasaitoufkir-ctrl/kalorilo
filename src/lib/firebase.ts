@@ -1,6 +1,6 @@
 import { initializeApp, getApps, getApp } from 'firebase/app'
 import { getAuth, GoogleAuthProvider } from 'firebase/auth'
-import { getFirestore } from 'firebase/firestore'
+import { initializeFirestore, memoryLocalCache } from 'firebase/firestore'
 
 const cfg = {
   apiKey:            import.meta.env.VITE_FIREBASE_API_KEY             ?? '',
@@ -17,8 +17,10 @@ const app = isFirebaseConfigured
   ? (getApps().length ? getApp() : initializeApp(cfg))
   : null
 
-export const auth      = app ? getAuth(app)      : null
-export const db        = app ? getFirestore(app) : null
+export const auth      = app ? getAuth(app) : null
+// memoryLocalCache disables IndexedDB persistence — Firestore operations fail
+// immediately on permission errors instead of queuing offline forever.
+export const db        = app ? initializeFirestore(app, { localCache: memoryLocalCache() }) : null
 export const gProvider = isFirebaseConfigured ? new GoogleAuthProvider() : null
 
 // Legacy no-ops kept for backward compatibility
