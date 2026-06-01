@@ -1,6 +1,6 @@
 import { useState, useMemo, useRef } from 'react'
-import { BarChart, Bar, LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from 'recharts'
 import { Scale, Camera, X, Loader } from 'lucide-react'
+import { CSSBarChart, CSSLineChart } from './MiniChart'
 import { useStore } from '../store/useStore'
 import { getLast7Days, getLast30Days, formatDate, getDayName, uid, imageFileToDataUrl, imageToBase64 } from '../utils/calculations'
 import { analyzeBodyPhoto } from '../utils/api'
@@ -103,9 +103,6 @@ export default function Statistics() {
 
   const inputStyle = { background:'rgba(255,255,255,0.05)', border:'1px solid rgba(74,140,92,0.1)', borderRadius:16, color:'var(--text-1)', padding:'13px 16px', width:'100%', fontSize:14, fontWeight:600 } as const
 
-  const tooltipStyle = { background:'#111111', border:'1px solid #222222', borderRadius:12, color:'#ffffff', fontSize:12 }
-  const axisStyle    = { fontSize:10, fill:'#555555', fontWeight:600 }
-
   const TABS = [
     { id:'week'   as const, label:'📊 Woche'  },
     { id:'weight' as const, label:'⚖️ Gewicht'},
@@ -157,19 +154,14 @@ export default function Statistics() {
         {activeTab==='week' && (
           <div className="space-y-3">
             <div className="glass p-4">
-              <p className="label mb-3">Kalorien & Sport (7 Tage)</p>
-              <ResponsiveContainer width="100%" height={160}>
-                <BarChart data={weekData} barSize={14} barGap={3}>
-                  <CartesianGrid strokeDasharray="2 4" stroke="rgba(74,140,92,0.06)" vertical={false}/>
-                  <XAxis dataKey="day" tick={axisStyle} axisLine={false} tickLine={false}/>
-                  <YAxis tick={axisStyle} axisLine={false} tickLine={false} width={30}/>
-                  <Tooltip contentStyle={tooltipStyle} cursor={{ fill:'rgba(255,255,255,0.03)' }}/>
-                  <Bar dataKey="calories" fill="#f59e0b" radius={[6,6,0,0]} name="kcal"/>
-                  <Bar dataKey="burned"   fill="#10b981" radius={[6,6,0,0]} name="Verbrannt"/>
-                </BarChart>
-              </ResponsiveContainer>
+              <p className="label mb-2">Kalorien & Verbrannt (7 Tage)</p>
+              <CSSBarChart
+                height={140}
+                unit=" kcal"
+                data={weekData.map(d => ({ label: d.day, value: d.calories, value2: d.burned, color: '#f59e0b', color2: '#10b981' }))}
+              />
               <div className="flex gap-4 mt-2">
-                {[{c:'#4a8c5c',l:'Gegessen'},{c:'#10b981',l:'Verbrannt'}].map((item)=>(
+                {[{c:'#f59e0b',l:'Gegessen'},{c:'#10b981',l:'Verbrannt'}].map(item=>(
                   <span key={item.l} className="flex items-center gap-1.5 text-xs" style={{ color:'var(--text-3)' }}>
                     <span className="w-2.5 h-2.5 rounded-sm inline-block flex-shrink-0" style={{ background:item.c }}/>
                     {item.l}
@@ -178,14 +170,12 @@ export default function Statistics() {
               </div>
             </div>
             <div className="glass p-4">
-              <p className="label mb-3">Eiweiß (7 Tage)</p>
-              <ResponsiveContainer width="100%" height={120}>
-                <BarChart data={weekData} barSize={18}>
-                  <XAxis dataKey="day" tick={axisStyle} axisLine={false} tickLine={false}/>
-                  <Tooltip contentStyle={tooltipStyle} cursor={{ fill:'rgba(255,255,255,0.03)' }}/>
-                  <Bar dataKey="protein" fill="#3b82f6" radius={[6,6,0,0]} name="Eiweiß (g)"/>
-                </BarChart>
-              </ResponsiveContainer>
+              <p className="label mb-2">Eiweiß (7 Tage)</p>
+              <CSSBarChart
+                height={110}
+                unit=" g"
+                data={weekData.map(d => ({ label: d.day, value: d.protein, color: '#3b82f6' }))}
+              />
             </div>
             <div className="glass p-4">
               <p className="label mb-3">Zielerreichung (30 Tage)</p>
@@ -229,16 +219,13 @@ export default function Statistics() {
             )}
             {weightData.length>1 && (
               <div className="glass p-4">
-                <p className="label mb-3">Verlauf</p>
-                <ResponsiveContainer width="100%" height={180}>
-                  <LineChart data={weightData}>
-                    <CartesianGrid strokeDasharray="2 4" stroke="rgba(74,140,92,0.06)" vertical={false}/>
-                    <XAxis dataKey="date" tick={axisStyle} axisLine={false} tickLine={false}/>
-                    <YAxis domain={['auto','auto']} tick={axisStyle} axisLine={false} tickLine={false} width={32}/>
-                    <Tooltip contentStyle={tooltipStyle}/>
-                    <Line type="monotone" dataKey="weight" stroke="#f59e0b" strokeWidth={2.5} dot={{ r:4, fill:'#4a8c5c', strokeWidth:0 }} name="kg"/>
-                  </LineChart>
-                </ResponsiveContainer>
+                <p className="label mb-2">Verlauf</p>
+                <CSSLineChart
+                  data={weightData.map(d => ({ label: d.date, value: d.weight }))}
+                  color="#f59e0b"
+                  unit=" kg"
+                  height={180}
+                />
               </div>
             )}
             {showInput ? (

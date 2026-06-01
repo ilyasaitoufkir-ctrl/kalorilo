@@ -1,5 +1,5 @@
 import { useMemo } from 'react'
-import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell, ReferenceLine } from 'recharts'
+import { PaceBarChart } from './MiniChart'
 import { Share2, Trophy, Zap } from 'lucide-react'
 import { fmtTime, fmtPace } from './RunActiveScreen'
 import RunMap from './RunMap'
@@ -231,29 +231,7 @@ export default function RunSummary({ session, onSave, onDiscard }: Props) {
             <p className="text-xs mb-3" style={{ color: 'var(--text-3)' }}>
               🥇 Gold = schnellster · 🔴 Rot = langsamster · Linie = Ø Pace
             </p>
-            <ResponsiveContainer width="100%" height={180}>
-              <BarChart data={chartData} margin={{ top: 8, right: 4, left: -20, bottom: 0 }} barCategoryGap="22%">
-                <XAxis dataKey="name" tick={{ fill: '#555', fontSize: 11 }} axisLine={false} tickLine={false}
-                  label={{ value: 'km', position: 'insideBottomRight', offset: 0, fill: '#444', fontSize: 10 }} />
-                <YAxis domain={['auto', 'auto']} tick={{ fill: '#555', fontSize: 10 }} axisLine={false} tickLine={false} />
-                <Tooltip
-                  cursor={{ fill: 'rgba(74,140,92,0.06)' }}
-                  contentStyle={{ background: '#ffffff', border: '1px solid rgba(125,184,138,0.2)', borderRadius: 12 }}
-                  labelStyle={{ color: '#888', fontSize: 11 }}
-                  formatter={(_val: unknown, _name: unknown, props: any) =>
-                    [(props?.payload?.paceStr ?? '') + ' min/km', 'Pace']}
-                />
-                <ReferenceLine y={avgPaceMin} stroke="rgba(255,255,255,0.2)" strokeDasharray="4 3" strokeWidth={1.5} />
-                <Bar dataKey="paceMin" radius={[6, 6, 0, 0]}>
-                  {chartData.map((entry, i) => (
-                    <Cell key={i}
-                      fill={entry.isBest ? '#4a8c5c' : entry.isWorst ? '#ef4444' : '#3b82f6'}
-                      opacity={0.9}
-                    />
-                  ))}
-                </Bar>
-              </BarChart>
-            </ResponsiveContainer>
+            <PaceBarChart data={chartData} avgPaceMin={avgPaceMin} />
           </div>
         )}
 

@@ -6,7 +6,8 @@ import { formatDate, uid } from '../utils/calculations'
 import { fetchByBarcode, searchUSDA, getAINutrients } from '../utils/api'
 
 import VoiceInput from './VoiceInput'
-import BarcodeScanner from './BarcodeScanner'
+import { lazy, Suspense } from 'react'
+const BarcodeScanner = lazy(() => import('./BarcodeScanner'))
 import PhotoFoodScanner from './PhotoFoodScanner'
 import type { FoodItem, MealType } from '../types'
 import toast from 'react-hot-toast'
@@ -133,12 +134,14 @@ function AddSheet({ mealType, onClose }: { mealType: MealType; onClose: () => vo
 
   return (
     <>
-    {/* ── Camera Barcode Scanner overlay ── */}
+    {/* ── Camera Barcode Scanner overlay (lazy – loads @zxing only on demand) ── */}
     {showCameraScanner && (
-      <BarcodeScanner
-        onDetected={handleCameraScan}
-        onClose={() => setShowCameraScanner(false)}
-      />
+      <Suspense fallback={null}>
+        <BarcodeScanner
+          onDetected={handleCameraScan}
+          onClose={() => setShowCameraScanner(false)}
+        />
+      </Suspense>
     )}
 
     {/* ── Precise Photo Scanner overlay ── */}
