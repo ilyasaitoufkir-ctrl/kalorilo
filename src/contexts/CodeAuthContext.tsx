@@ -21,7 +21,29 @@ export function useCodeAuth() {
 }
 
 const LS_KEY        = 'kalorilo_access_code'
+const LS_KEY_BACKUP = 'kalorilo_access_code_backup'
 const LS_ADMIN_CODES = 'kalorilo_admin_codes'
+
+function saveCode(code: string) {
+  localStorage.setItem(LS_KEY, code)
+  localStorage.setItem(LS_KEY_BACKUP, code)
+  try { sessionStorage.setItem(LS_KEY, code) } catch { /* private mode */ }
+}
+
+function readCode(): string | null {
+  return (
+    localStorage.getItem(LS_KEY) ??
+    localStorage.getItem(LS_KEY_BACKUP) ??
+    sessionStorage.getItem(LS_KEY) ??
+    null
+  )
+}
+
+function removeCode() {
+  localStorage.removeItem(LS_KEY)
+  localStorage.removeItem(LS_KEY_BACKUP)
+  try { sessionStorage.removeItem(LS_KEY) } catch { /* ignore */ }
+}
 
 // Normalize: uppercase, no spaces, no leading/trailing whitespace
 function normalize(raw: string): string {
@@ -112,13 +134,13 @@ export function CodeAuthProvider({ children }: { children: ReactNode }) {
   const [revoked, setRevoked] = useState(false)
 
   useEffect(() => {
-    const stored = localStorage.getItem(LS_KEY)
+    const stored = readCode()
     if (!stored) { setLoading(false); return }
 
     const normalized = normalize(stored)
 
     // Show app immediately — trust the locally stored code
-    localStorage.setItem(LS_KEY, normalized)
+    saveCode(normalized)
     setCode(normalized)
     setLoading(false)
 
@@ -127,12 +149,15 @@ export function CodeAuthProvider({ children }: { children: ReactNode }) {
       if (result === 'ok' || result === 'offline_fallback') {
         await loadUserData(normalized)
         touchCode(normalized)
-      } else {
-        // Code was deactivated since last login — kick out
-        localStorage.removeItem(LS_KEY)
+      } else if (result === 'inactive') {
+        // Admin explicitly deactivated this code — kick out & show revoked banner
+        removeCode()
         setCode(null)
-        if (result === 'inactive') setRevoked(true)
+        setRevoked(true)
       }
+      // 'not_found' is intentionally ignored here: it can occur due to Firebase
+      // permission errors or network issues on an otherwise valid code. Never
+      // delete user data or log out the user based on a background check failure.
     })
   }, [])
 
@@ -149,8 +174,8 @@ export function CodeAuthProvider({ children }: { children: ReactNode }) {
       return { success: false, error: errorMessage(result) }
     }
 
-    // Save normalized code to localStorage
-    localStorage.setItem(LS_KEY, c)
+    // Save normalized code to all storage locations
+    saveCode(c)
     setCode(c)
 
     // Load user data (non-blocking — app shows onboarding if no profile)
@@ -161,7 +186,7 @@ export function CodeAuthProvider({ children }: { children: ReactNode }) {
   }
 
   const logout = () => {
-    localStorage.removeItem(LS_KEY)
+    removeCode()
     setCode(null)
     setRevoked(false)
     useStore.getState().clearUserData()
