@@ -1,4 +1,4 @@
-import { useRef } from 'react'
+import { lazy, Suspense, useRef } from 'react'
 import { Toaster } from 'react-hot-toast'
 import { useStore } from './store/useStore'
 import { useDarkMode } from './hooks/useDarkMode'
@@ -7,20 +7,46 @@ import { useFirestoreSync } from './hooks/useFirestoreSync'
 import { useBroadcasts } from './hooks/useBroadcasts'
 import { CodeAuthProvider, useCodeAuth } from './contexts/CodeAuthContext'
 import Navigation from './components/Navigation'
-import Dashboard from './components/Dashboard'
-import FoodTracker from './components/FoodTracker'
-import SportTracker from './components/SportTracker'
-import TrainingPage from './components/TrainingPage'
-import AIAdvisor from './components/AIAdvisor'
-import Statistics from './components/Statistics'
-import Profile from './components/Profile'
-import Friends from './components/Friends'
-import Onboarding from './components/Onboarding'
 import CodeEntryScreen from './components/CodeEntryScreen'
-import AdminPanel from './components/AdminPanel'
-import WhoopCallback from './components/WhoopCallback'
 import ErrorBoundary from './components/ErrorBoundary'
 import type { TabId } from './types'
+
+// ── Lazy-loaded route components ──────────────────────────────────────────────
+// Each tab is its own chunk — only loaded when first visited.
+const Dashboard    = lazy(() => import('./components/Dashboard'))
+const FoodTracker  = lazy(() => import('./components/FoodTracker'))
+const SportTracker = lazy(() => import('./components/SportTracker'))
+const TrainingPage = lazy(() => import('./components/TrainingPage'))
+const AIAdvisor    = lazy(() => import('./components/AIAdvisor'))
+const Profile      = lazy(() => import('./components/Profile'))
+const Statistics   = lazy(() => import('./components/Statistics'))
+const Friends      = lazy(() => import('./components/Friends'))
+const Onboarding   = lazy(() => import('./components/Onboarding'))
+const AdminPanel   = lazy(() => import('./components/AdminPanel'))
+const WhoopCallback = lazy(() => import('./components/WhoopCallback'))
+
+// ── Shared loading spinner ────────────────────────────────────────────────────
+function Spinner() {
+  return (
+    <div className="h-dvh flex items-center justify-center" style={{ background: 'var(--bg)' }}>
+      <div className="text-center anim-fade">
+        <div style={{ fontSize: 56, marginBottom: 16 }}>🥗</div>
+        <div className="w-8 h-8 rounded-full border-2 mx-auto"
+          style={{ borderColor: 'rgba(74,140,92,0.3)', borderTopColor: '#4a8c5c', animation: 'spin 0.8s linear infinite' }} />
+      </div>
+    </div>
+  )
+}
+
+// ── Lightweight tab fallback (keeps nav visible while tab chunk loads) ────────
+function TabFallback() {
+  return (
+    <div className="flex items-center justify-center" style={{ height: 'calc(100dvh - 80px)', background: 'var(--bg)' }}>
+      <div className="w-6 h-6 rounded-full border-2"
+        style={{ borderColor: 'rgba(74,140,92,0.3)', borderTopColor: '#4a8c5c', animation: 'spin 0.8s linear infinite' }} />
+    </div>
+  )
+}
 
 const TAB_ORDER: TabId[] = ['home', 'food', 'sport', 'training', 'ai', 'profile']
 
@@ -58,21 +84,17 @@ function MainApp() {
       (document.activeElement as HTMLElement)?.blur()
   }
 
-  if (loading) {
-    return (
-      <div className="h-dvh flex items-center justify-center" style={{ background: 'var(--bg)' }}>
-        <div className="text-center anim-fade">
-          <div style={{ fontSize: 56, marginBottom: 16 }}>🥗</div>
-          <div className="w-8 h-8 rounded-full border-2 mx-auto"
-            style={{ borderColor: 'rgba(74,140,92,0.3)', borderTopColor: '#4a8c5c', animation: 'spin 0.8s linear infinite' }} />
-        </div>
-      </div>
-    )
-  }
+  if (loading) return <Spinner />
 
   if (!code) return <CodeEntryScreen />
 
-  if (!profile) return <Onboarding />
+  if (!profile) {
+    return (
+      <Suspense fallback={<Spinner />}>
+        <Onboarding />
+      </Suspense>
+    )
+  }
 
   const tab = activeTab as string
 
@@ -84,14 +106,16 @@ function MainApp() {
       onTouchEnd={handleTouchEnd}
       onClick={handleTap}
     >
-      {tab === 'home'     && <Dashboard />}
-      {tab === 'food'     && <FoodTracker />}
-      {tab === 'sport'    && <SportTracker />}
-      {tab === 'training' && <TrainingPage />}
-      {tab === 'ai'       && <AIAdvisor />}
-      {tab === 'profile'  && <Profile />}
-      {tab === 'stats'    && <Statistics />}
-      {tab === 'friends'  && <Friends />}
+      <Suspense fallback={<TabFallback />}>
+        {tab === 'home'     && <Dashboard />}
+        {tab === 'food'     && <FoodTracker />}
+        {tab === 'sport'    && <SportTracker />}
+        {tab === 'training' && <TrainingPage />}
+        {tab === 'ai'       && <AIAdvisor />}
+        {tab === 'profile'  && <Profile />}
+        {tab === 'stats'    && <Statistics />}
+        {tab === 'friends'  && <Friends />}
+      </Suspense>
       <Navigation />
     </div>
   )
@@ -103,15 +127,17 @@ export default function App() {
 
   return (
     <ErrorBoundary>
-      {isAdmin ? (
-        <AdminPanel />
-      ) : isWhoopCallback ? (
-        <WhoopCallback />
-      ) : (
-        <CodeAuthProvider>
-          <MainApp />
-        </CodeAuthProvider>
-      )}
+      <Suspense fallback={<Spinner />}>
+        {isAdmin ? (
+          <AdminPanel />
+        ) : isWhoopCallback ? (
+          <WhoopCallback />
+        ) : (
+          <CodeAuthProvider>
+            <MainApp />
+          </CodeAuthProvider>
+        )}
+      </Suspense>
       <Toaster
         position="top-center"
         toastOptions={{
