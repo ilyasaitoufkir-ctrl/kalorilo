@@ -122,8 +122,18 @@ export default function Dashboard() {
   }, [profile])
 
   const macroT   = useMemo(() => getMacroTargets(target), [target])
+
+  // Whoop calories burned today → add to calorie budget (earned extra calories)
+  const whoopBurnedToday = useMemo(() => {
+    if (!whoopExtended || !whoopExtended.caloriesBurned) return 0
+    // Only use if Whoop data is from today
+    if (whoopExtended.date && whoopExtended.date !== today) return 0
+    return Math.round(whoopExtended.caloriesBurned)
+  }, [whoopExtended])
+
+  const adjustedTarget = target + whoopBurnedToday
   const net      = calories - burned
-  const remain   = target - net
+  const remain   = adjustedTarget - net
   const waterPct = Math.min(1, water / waterGoal())
 
   const streak = useMemo(() => {
@@ -133,7 +143,7 @@ export default function Dashboard() {
       const ds = d.toISOString().split('T')[0]
       const c = foodLogs.filter((l) => l.date===ds).reduce((s,f)=>s+(f.macros?.calories??0),0)
       const b = activityLogs.filter((l) => l.date===ds).reduce((s,a)=>s+a.caloriesBurned,0)
-      if (c>0 && Math.abs((c-b)-target)<=200) count++
+      if (c>0 && Math.abs((c-b)-adjustedTarget)<=200) count++
       else if (i>0) break
       d.setDate(d.getDate()-1)
     }
@@ -188,7 +198,7 @@ export default function Dashboard() {
         {/* Calorie Ring */}
         <div className="flex items-center justify-center gap-6">
           <div className="relative flex items-center justify-center flex-shrink-0">
-            <CalorieRing consumed={net} target={target} size={180} />
+            <CalorieRing consumed={net} target={adjustedTarget} size={180} />
             <div className="absolute inset-0 flex flex-col items-center justify-center text-center">
               <span className="text-4xl font-black tracking-tight" style={{ color: 'var(--text-1)' }}>
                 {Math.round(net)}
@@ -203,7 +213,7 @@ export default function Dashboard() {
           {/* Stats column */}
           <div className="flex flex-col gap-3 flex-shrink-0">
             {[
-              { label: 'Ziel',      val: target,              unit: 'kcal', color: 'var(--text-2)' },
+              { label: 'Budget',    val: adjustedTarget,       unit: 'kcal', color: 'var(--text-2)' },
               { label: 'Gegessen',  val: Math.round(calories), unit: 'kcal', color: 'var(--text-1)' },
               { label: 'Verbrannt', val: Math.round(burned),   unit: 'kcal', color: '#10b981' },
             ].map((s) => (
@@ -216,6 +226,22 @@ export default function Dashboard() {
             ))}
           </div>
         </div>
+
+        {/* Whoop calorie bonus banner */}
+        {whoopBurnedToday > 0 && (
+          <div className="mt-3 px-4 py-2.5 rounded-2xl flex items-center gap-2"
+            style={{ background: 'rgba(251,146,60,0.1)', border: '1px solid rgba(251,146,60,0.2)' }}>
+            <span style={{ fontSize: 16 }}>🔥</span>
+            <div className="flex-1 min-w-0">
+              <p className="text-xs font-black" style={{ color: '#fb923c' }}>
+                +{whoopBurnedToday} kcal durch Whoop-Aktivität
+              </p>
+              <p className="text-[10px]" style={{ color: 'var(--text-3)' }}>
+                Basis {target} + Whoop {whoopBurnedToday} = Budget {adjustedTarget} kcal
+              </p>
+            </div>
+          </div>
+        )}
       </div>
 
       {/* ── Content ──────────────────────────────────────────────── */}
@@ -341,21 +367,13 @@ export default function Dashboard() {
                   ))}
                 </div>
 
-                {/* Extended data row */}
-                {whoopExtended && (
+                {/* Extended data row – sleep only (burned cals shown in ring banner) */}
+                {whoopExtended && whoopExtended.sleepDuration > 0 && (
                   <div className="flex gap-2 text-xs mt-1">
-                    {whoopExtended.sleepDuration > 0 && (
-                      <span className="px-2 py-1 rounded-xl font-semibold"
-                        style={{ background:'rgba(167,139,250,0.1)', color:'#a78bfa' }}>
-                        😴 {whoopExtended.sleepDuration}h Schlaf
-                      </span>
-                    )}
-                    {whoopExtended.caloriesBurned > 0 && (
-                      <span className="px-2 py-1 rounded-xl font-semibold"
-                        style={{ background:'rgba(251,146,60,0.1)', color:'#fb923c' }}>
-                        🔥 {whoopExtended.caloriesBurned} kcal Aktivität
-                      </span>
-                    )}
+                    <span className="px-2 py-1 rounded-xl font-semibold"
+                      style={{ background:'rgba(167,139,250,0.1)', color:'#a78bfa' }}>
+                      😴 {whoopExtended.sleepDuration}h Schlaf
+                    </span>
                   </div>
                 )}
 
