@@ -11,7 +11,6 @@ const BarcodeScanner = lazy(() => import('./BarcodeScanner'))
 import PhotoFoodScanner from './PhotoFoodScanner'
 import type { FoodItem, MealType } from '../types'
 import toast from 'react-hot-toast'
-import FoodFinder from './FoodFinder'
 import MenuScanner from './MenuScanner'
 
 const today = formatDate()
@@ -448,7 +447,6 @@ function AddSheet({ mealType, onClose }: { mealType: MealType; onClose: () => vo
 export default function FoodTracker() {
   const [addingMeal, setAddingMeal]       = useState<MealType|null>(null)
   const [expandedMeal, setExpandedMeal]   = useState<MealType>('breakfast')
-  const [showFinder, setShowFinder]       = useState(false)
   const [showMenuScanner, setShowMenuScanner] = useState(false)
   const allFoodLogs   = useStore((s) => s.foodLogs)
   const removeFoodLog = useStore((s) => s.removeFoodLog)
@@ -481,13 +479,6 @@ export default function FoodTracker() {
           ))}
         </div>
         <div className="flex gap-2">
-          <button
-            onClick={() => setShowFinder(true)}
-            className="flex-1 flex items-center justify-center gap-2 rounded-2xl font-bold text-sm"
-            style={{ height: 50, background: 'rgba(16,185,129,0.1)', border: '1px solid rgba(16,185,129,0.25)', color: '#10b981' }}
-          >
-            <span>📍</span> Food in der Nähe
-          </button>
           <button
             onClick={() => setShowMenuScanner(true)}
             className="flex-1 flex items-center justify-center gap-2 rounded-2xl font-bold text-sm"
@@ -549,7 +540,6 @@ export default function FoodTracker() {
       </div>
 
       {addingMeal && <AddSheet mealType={addingMeal} onClose={()=>setAddingMeal(null)} />}
-      {showFinder && <FoodFinder onClose={() => setShowFinder(false)} />}
       {showMenuScanner && (
         <MenuScanner
           onClose={() => setShowMenuScanner(false)}
