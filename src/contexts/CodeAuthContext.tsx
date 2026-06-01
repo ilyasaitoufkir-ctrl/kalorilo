@@ -117,18 +117,22 @@ export function CodeAuthProvider({ children }: { children: ReactNode }) {
 
     const normalized = normalize(stored)
 
+    // Show app immediately — trust the locally stored code
+    localStorage.setItem(LS_KEY, normalized)
+    setCode(normalized)
+    setLoading(false)
+
+    // Background: validate with Firebase + load user data (non-blocking)
     validateCode(normalized).then(async (result) => {
       if (result === 'ok' || result === 'offline_fallback') {
-        localStorage.setItem(LS_KEY, normalized)
-        setCode(normalized)
         await loadUserData(normalized)
         touchCode(normalized)
       } else {
+        // Code was deactivated since last login — kick out
         localStorage.removeItem(LS_KEY)
-        // Show "revoked" message only when code existed but was deactivated
+        setCode(null)
         if (result === 'inactive') setRevoked(true)
       }
-      setLoading(false)
     })
   }, [])
 
