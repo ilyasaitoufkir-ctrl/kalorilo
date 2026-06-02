@@ -481,7 +481,7 @@ export default function Dashboard() {
                     <p className="text-sm font-semibold truncate" style={{ color: 'var(--text-1)' }}>{log.foodItem.name}</p>
                     <p className="text-xs" style={{ color: 'var(--text-3)' }}>{log.amount}g</p>
                   </div>
-                  <p className="text-sm font-black flex-shrink-0 ml-2" style={{ color: 'var(--gold)' }}>{log.macros.calories} kcal</p>
+                  <p className="text-sm font-black flex-shrink-0 ml-2" style={{ color: 'var(--gold)' }}>{log.macros?.calories ?? 0} kcal</p>
                 </div>
               ))}
             </div>

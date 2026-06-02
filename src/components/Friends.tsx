@@ -50,23 +50,23 @@ function MemberCard({ member, challenge, rank, isMe, calTarget }: { member: any;
       <div className="flex items-center gap-3 mb-3">
         <div className="text-2xl">{rankEmoji}</div>
         <div className="w-10 h-10 rounded-2xl flex items-center justify-center text-xl"
-          style={{ background: 'var(--surface2)' }}>
+          style={{ background: 'rgba(125,184,138,0.07)' }}>
           {member.avatar}
         </div>
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-1.5">
-            <p className="text-sm font-black truncate" style={{ color: 'var(--text1)' }}>{member.name}</p>
+            <p className="text-sm font-black truncate" style={{ color: 'var(--text-1)' }}>{member.name}</p>
             {isMe && <span className="text-[10px] bg-blue-500 text-white px-1.5 py-0.5 rounded-full font-bold">Du</span>}
           </div>
           <p className="text-xs font-semibold" style={{ color: challenge.color }}>{val}</p>
         </div>
         <div className="text-right">
-          <p className="text-lg font-black" style={{ color: pct >= 100 ? '#10b981' : 'var(--text1)' }}>
+          <p className="text-lg font-black" style={{ color: pct >= 100 ? '#10b981' : 'var(--text-1)' }}>
             {pct >= 100 ? '✅' : `${pct}%`}
           </p>
         </div>
       </div>
-      <div className="h-2.5 rounded-full overflow-hidden" style={{ background: 'var(--surface2)' }}>
+      <div className="h-2.5 rounded-full overflow-hidden" style={{ background: 'rgba(125,184,138,0.07)' }}>
         <div
           className="h-full rounded-full transition-all duration-700"
           style={{ width: `${pct}%`, background: pct >= 100 ? '#10b981' : challenge.color }}
@@ -104,19 +104,19 @@ function CreateSheet({ userId, userName, userAvatar, onCreated, onClose }: {
         style={{ background: 'var(--bg)' }} onClick={(e) => e.stopPropagation()}>
         <div className="flex justify-center pt-3 pb-1 flex-shrink-0"><div className="sheet-handle" /></div>
         <div className="flex items-center justify-between px-5 py-4">
-          <h2 className="text-lg font-black" style={{ color: 'var(--text1)' }}>Gruppe erstellen</h2>
-          <button onClick={onClose} className="w-9 h-9 card flex items-center justify-center"><X size={18} style={{ color: 'var(--text1)' }} /></button>
+          <h2 className="text-lg font-black" style={{ color: 'var(--text-1)' }}>Gruppe erstellen</h2>
+          <button onClick={onClose} className="w-9 h-9 card flex items-center justify-center"><X size={18} style={{ color: 'var(--text-1)' }} /></button>
         </div>
 
         <div className="px-5 space-y-4" style={{ paddingBottom: 'calc(max(env(safe-area-inset-bottom), 20px) + 24px)' }}>
           {step === 'name' && (
             <>
               <div>
-                <label className="text-xs font-bold uppercase tracking-wider mb-2 block" style={{ color: 'var(--text3)' }}>Gruppenname</label>
+                <label className="text-xs font-bold uppercase tracking-wider mb-2 block" style={{ color: 'var(--text-3)' }}>Gruppenname</label>
                 <input
                   autoFocus value={name} onChange={(e) => setName(e.target.value)}
-                  className="w-full rounded-2xl px-4 py-4 text-base font-bold outline-none card"
-                  style={{ color: 'var(--text1)' }}
+                  className="w-full rounded-2xl px-4 py-4 text-base font-bold outline-none glass"
+                  style={{ color: 'var(--text-1)' }}
                   placeholder="z.B. Team Sommer 2025"
                   onKeyDown={(e) => e.key === 'Enter' && name.trim() && setStep('challenge')}
                 />
@@ -131,7 +131,7 @@ function CreateSheet({ userId, userName, userAvatar, onCreated, onClose }: {
           {step === 'challenge' && (
             <>
               <button onClick={() => setStep('name')} className="text-blue-500 text-sm font-semibold">← Zurück</button>
-              <p className="text-sm font-bold" style={{ color: 'var(--text1)' }}>Welche Challenge?</p>
+              <p className="text-sm font-bold" style={{ color: 'var(--text-1)' }}>Welche Challenge?</p>
               <div className="space-y-2">
                 {CHALLENGES.map((ch) => (
                   <button key={ch.id} onClick={() => setChallenge(ch.id)}
@@ -140,8 +140,8 @@ function CreateSheet({ userId, userName, userAvatar, onCreated, onClose }: {
                     <div className="w-12 h-12 rounded-2xl flex items-center justify-center text-2xl flex-shrink-0"
                       style={{ background: ch.color + '20' }}>{ch.emoji}</div>
                     <div className="flex-1 min-w-0">
-                      <p className="font-black text-sm" style={{ color: 'var(--text1)' }}>{ch.name}</p>
-                      <p className="text-xs" style={{ color: 'var(--text3)' }}>{ch.desc}</p>
+                      <p className="font-black text-sm" style={{ color: 'var(--text-1)' }}>{ch.name}</p>
+                      <p className="text-xs" style={{ color: 'var(--text-3)' }}>{ch.desc}</p>
                     </div>
                     {challenge === ch.id && <Check size={18} style={{ color: ch.color }} />}
                   </button>
@@ -199,8 +199,8 @@ function JoinSheet({ userId, userName, userAvatar, onJoined, onClose }: {
         style={{ background: 'var(--bg)' }} onClick={(e) => e.stopPropagation()}>
         <div className="flex justify-center pt-3 pb-1"><div className="sheet-handle" /></div>
         <div className="flex items-center justify-between px-5 py-4">
-          <h2 className="text-lg font-black" style={{ color: 'var(--text1)' }}>Mit Code beitreten</h2>
-          <button onClick={onClose} className="w-9 h-9 card flex items-center justify-center"><X size={18} style={{ color: 'var(--text1)' }} /></button>
+          <h2 className="text-lg font-black" style={{ color: 'var(--text-1)' }}>Mit Code beitreten</h2>
+          <button onClick={onClose} className="w-9 h-9 card flex items-center justify-center"><X size={18} style={{ color: 'var(--text-1)' }} /></button>
         </div>
         <div className="px-5 space-y-3" style={{ paddingBottom: 'calc(max(env(safe-area-inset-bottom), 20px) + 24px)' }}>
           <div className="flex gap-2">
@@ -208,8 +208,8 @@ function JoinSheet({ userId, userName, userAvatar, onJoined, onClose }: {
               autoFocus value={code}
               onChange={(e) => { setCode(e.target.value.toUpperCase()); setInfo(null) }}
               onKeyDown={(e) => e.key === 'Enter' && checkCode()}
-              className="flex-1 rounded-2xl px-4 py-3.5 text-lg font-black text-center tracking-widest outline-none card"
-              style={{ color: 'var(--text1)' }}
+              className="flex-1 rounded-2xl px-4 py-3.5 text-lg font-black text-center tracking-widest outline-none glass"
+              style={{ color: 'var(--text-1)' }}
               placeholder="ABC123"
               maxLength={8}
             />
@@ -220,12 +220,12 @@ function JoinSheet({ userId, userName, userAvatar, onJoined, onClose }: {
           </div>
 
           {info && challenge && (
-            <div className="card p-4">
+            <div className="glassp-4">
               <div className="flex items-center gap-3 mb-3">
                 <span className="text-3xl">{challenge.emoji}</span>
                 <div>
-                  <p className="font-black" style={{ color: 'var(--text1)' }}>{info.name}</p>
-                  <p className="text-sm" style={{ color: 'var(--text3)' }}>Challenge: {challenge.name}</p>
+                  <p className="font-black" style={{ color: 'var(--text-1)' }}>{info.name}</p>
+                  <p className="text-sm" style={{ color: 'var(--text-3)' }}>Challenge: {challenge.name}</p>
                 </div>
               </div>
               <button onClick={join} disabled={joining}
@@ -267,7 +267,7 @@ function GroupDetail({ groupId, userId, calTarget, onBack }: {
     <div className="flex-1 flex items-center justify-center">
       <div className="text-center">
         <Loader size={28} className="animate-spin text-blue-500 mx-auto mb-2" />
-        <p className="text-sm" style={{ color: 'var(--text3)' }}>Lade Gruppe…</p>
+        <p className="text-sm" style={{ color: 'var(--text-3)' }}>Lade Gruppe…</p>
       </div>
     </div>
   )
@@ -276,7 +276,7 @@ function GroupDetail({ groupId, userId, calTarget, onBack }: {
     <div className="flex-1 flex items-center justify-center px-6 text-center">
       <div>
         <p className="text-4xl mb-3">⚠️</p>
-        <p className="text-sm font-bold" style={{ color: 'var(--text1)' }}>{error}</p>
+        <p className="text-sm font-bold" style={{ color: 'var(--text-1)' }}>{error}</p>
         <button onClick={onBack} className="mt-4 px-6 py-2 bg-blue-500 rounded-2xl text-white text-sm font-bold">Zurück</button>
       </div>
     </div>
@@ -298,13 +298,13 @@ function GroupDetail({ groupId, userId, calTarget, onBack }: {
           <div className="flex items-center gap-3 mb-1">
             <span className="text-3xl">{challenge.emoji}</span>
             <div>
-              <p className="font-black" style={{ color: 'var(--text1)' }}>{group.name}</p>
+              <p className="font-black" style={{ color: 'var(--text-1)' }}>{group.name}</p>
               <p className="text-sm font-semibold" style={{ color: challenge.color }}>{challenge.name} · {challenge.desc}</p>
             </div>
           </div>
-          <div className="flex items-center justify-between mt-3 text-xs" style={{ color: 'var(--text3)' }}>
+          <div className="flex items-center justify-between mt-3 text-xs" style={{ color: 'var(--text-3)' }}>
             <span>{members.length} {members.length === 1 ? 'Mitglied' : 'Mitglieder'}</span>
-            <span>Code: <strong style={{ color: 'var(--text1)' }}>{groupId}</strong></span>
+            <span>Code: <strong style={{ color: 'var(--text-1)' }}>{groupId}</strong></span>
           </div>
         </div>
 
@@ -321,14 +321,14 @@ function GroupDetail({ groupId, userId, calTarget, onBack }: {
         </div>
 
         {/* Members ranking */}
-        <p className="text-xs font-bold uppercase tracking-wider mb-3" style={{ color: 'var(--text3)' }}>
+        <p className="text-xs font-bold uppercase tracking-wider mb-3" style={{ color: 'var(--text-3)' }}>
           🏆 Rangliste heute
         </p>
         <div className="space-y-2">
           {members.length === 0 ? (
-            <div className="card p-6 text-center">
+            <div className="glassp-6 text-center">
               <p className="text-3xl mb-2">👥</p>
-              <p className="text-sm" style={{ color: 'var(--text3)' }}>Noch keine Mitglieder.<br />Teile den Link!</p>
+              <p className="text-sm" style={{ color: 'var(--text-3)' }}>Noch keine Mitglieder.<br />Teile den Link!</p>
             </div>
           ) : (
             members.map((member, i) => (
@@ -345,8 +345,8 @@ function GroupDetail({ groupId, userId, calTarget, onBack }: {
         </div>
 
         {/* Invite hint */}
-        <div className="mt-4 rounded-2xl p-3" style={{ background: 'var(--surface2)' }}>
-          <p className="text-xs" style={{ color: 'var(--text3)' }}>
+        <div className="mt-4 rounded-2xl p-3" style={{ background: 'rgba(125,184,138,0.07)' }}>
+          <p className="text-xs" style={{ color: 'var(--text-3)' }}>
             💡 Dein Fortschritt wird automatisch aus deinen heutigen Einträgen synchronisiert.
           </p>
         </div>
@@ -421,7 +421,7 @@ export default function Friends() {
   if (selectedGroup) {
     return (
       <div className="flex flex-col h-dvh pb-nav" style={{ background: 'var(--bg)' }}>
-        <div className="grad-blue px-5 pt-safe pb-4 flex-shrink-0">
+        <div className="px-5 pt-safe pb-4 flex-shrink-0" style={{ background: 'var(--grad-blue)' }}>
           <h1 className="text-white text-2xl font-black">👥 Gruppen</h1>
         </div>
         <GroupDetail
@@ -437,7 +437,7 @@ export default function Friends() {
   return (
     <div className="h-dvh overflow-y-auto overflow-x-hidden pb-nav anim-fade" style={{ background: 'var(--bg)' }}>
       {/* Header */}
-      <div className="grad-blue px-5 pt-safe pb-5 relative overflow-hidden">
+      <div className="px-5 pt-safe pb-5 relative overflow-hidden" style={{ background: 'var(--grad-blue)' }}>
         <div className="absolute -top-16 -right-16 w-56 h-56 rounded-full bg-white/5" />
         <h1 className="text-white text-2xl font-black mb-1">👥 Gruppen & Challenges</h1>
         <p className="text-blue-200 text-sm">Trainiere mit Freunden – gemeinsam mehr erreichen</p>
@@ -445,11 +445,11 @@ export default function Friends() {
 
       <div className="px-4 pt-4">
         {/* Tab bar */}
-        <div className="flex gap-1.5 p-1 rounded-2xl mb-4" style={{ background: 'var(--surface2)' }}>
+        <div className="flex gap-1.5 p-1 rounded-2xl mb-4" style={{ background: 'rgba(125,184,138,0.07)' }}>
           {(['groups', 'setup'] as const).map((t) => (
             <button key={t} onClick={() => setActiveTab(t)}
               className={`flex-1 py-2.5 rounded-xl text-xs font-bold transition-all ${activeTab === t ? 'bg-blue-500 text-white' : ''}`}
-              style={activeTab !== t ? { color: 'var(--text3)' } : {}}>
+              style={activeTab !== t ? { color: 'var(--text-3)' } : {}}>
               {{ groups: '🏆 Meine Gruppen', setup: '⚙️ Firebase Setup' }[t]}
             </button>
           ))}
@@ -459,12 +459,12 @@ export default function Friends() {
         {activeTab === 'groups' && (
           <div className="space-y-3">
             {!firebaseReady && (
-              <div className="card p-4">
+              <div className="glassp-4">
                 <div className="flex items-center gap-3 mb-3">
                   <span className="text-3xl">⚙️</span>
                   <div>
-                    <p className="font-black text-sm" style={{ color: 'var(--text1)' }}>Firebase einrichten</p>
-                    <p className="text-xs" style={{ color: 'var(--text3)' }}>Für Gruppen-Features benötigt</p>
+                    <p className="font-black text-sm" style={{ color: 'var(--text-1)' }}>Firebase einrichten</p>
+                    <p className="text-xs" style={{ color: 'var(--text-3)' }}>Für Gruppen-Features benötigt</p>
                   </div>
                 </div>
                 <button onClick={() => setActiveTab('setup')}
@@ -477,27 +477,27 @@ export default function Friends() {
             {/* Create / Join buttons */}
             <div className="grid grid-cols-2 gap-3">
               <button onClick={() => firebaseReady ? setShowCreate(true) : setActiveTab('setup')}
-                className="card card-press p-4 flex flex-col items-center gap-2">
+                className="glassglass-press p-4 flex flex-col items-center gap-2">
                 <div className="w-12 h-12 bg-blue-500 rounded-2xl flex items-center justify-center">
                   <Plus size={22} className="text-white" />
                 </div>
-                <p className="text-sm font-black" style={{ color: 'var(--text1)' }}>Gruppe erstellen</p>
-                <p className="text-xs text-center" style={{ color: 'var(--text3)' }}>Neue Challenge starten</p>
+                <p className="text-sm font-black" style={{ color: 'var(--text-1)' }}>Gruppe erstellen</p>
+                <p className="text-xs text-center" style={{ color: 'var(--text-3)' }}>Neue Challenge starten</p>
               </button>
               <button onClick={() => firebaseReady ? setShowJoin(true) : setActiveTab('setup')}
-                className="card card-press p-4 flex flex-col items-center gap-2">
+                className="glassglass-press p-4 flex flex-col items-center gap-2">
                 <div className="w-12 h-12 bg-green-500 rounded-2xl flex items-center justify-center">
                   <UserPlus size={22} className="text-white" />
                 </div>
-                <p className="text-sm font-black" style={{ color: 'var(--text1)' }}>Beitreten</p>
-                <p className="text-xs text-center" style={{ color: 'var(--text3)' }}>Mit Code einsteigen</p>
+                <p className="text-sm font-black" style={{ color: 'var(--text-1)' }}>Beitreten</p>
+                <p className="text-xs text-center" style={{ color: 'var(--text-3)' }}>Mit Code einsteigen</p>
               </button>
             </div>
 
             {/* My groups */}
             {groupIds.length > 0 ? (
               <div>
-                <p className="text-xs font-bold uppercase tracking-wider mb-2" style={{ color: 'var(--text3)' }}>Meine Gruppen</p>
+                <p className="text-xs font-bold uppercase tracking-wider mb-2" style={{ color: 'var(--text-3)' }}>Meine Gruppen</p>
                 <div className="space-y-2">
                   {groupIds.map((gid) => (
                     <GroupRow key={gid} groupId={gid} onSelect={() => setSelectedGroup(gid)} />
@@ -505,10 +505,10 @@ export default function Friends() {
                 </div>
               </div>
             ) : (
-              <div className="card p-8 text-center">
+              <div className="glassp-8 text-center">
                 <p className="text-4xl mb-3">🏆</p>
-                <p className="font-black text-sm mb-1" style={{ color: 'var(--text1)' }}>Noch keine Gruppen</p>
-                <p className="text-xs" style={{ color: 'var(--text3)' }}>
+                <p className="font-black text-sm mb-1" style={{ color: 'var(--text-1)' }}>Noch keine Gruppen</p>
+                <p className="text-xs" style={{ color: 'var(--text-3)' }}>
                   Erstelle eine Gruppe und lade deine Freunde ein!
                 </p>
               </div>
@@ -516,15 +516,15 @@ export default function Friends() {
 
             {/* Challenge preview */}
             <div>
-              <p className="text-xs font-bold uppercase tracking-wider mb-2" style={{ color: 'var(--text3)' }}>Verfügbare Challenges</p>
+              <p className="text-xs font-bold uppercase tracking-wider mb-2" style={{ color: 'var(--text-3)' }}>Verfügbare Challenges</p>
               <div className="space-y-2">
                 {CHALLENGES.map((ch) => (
-                  <div key={ch.id} className="card p-3 flex items-center gap-3">
+                  <div key={ch.id} className="glassp-3 flex items-center gap-3">
                     <div className="w-10 h-10 rounded-2xl flex items-center justify-center text-xl flex-shrink-0"
                       style={{ background: ch.color + '20' }}>{ch.emoji}</div>
                     <div className="flex-1">
-                      <p className="text-sm font-black" style={{ color: 'var(--text1)' }}>{ch.name}</p>
-                      <p className="text-xs" style={{ color: 'var(--text3)' }}>{ch.desc}</p>
+                      <p className="text-sm font-black" style={{ color: 'var(--text-1)' }}>{ch.name}</p>
+                      <p className="text-xs" style={{ color: 'var(--text-3)' }}>{ch.desc}</p>
                     </div>
                   </div>
                 ))}
@@ -564,7 +564,7 @@ function GroupRow({ groupId, onSelect }: { groupId: string; onSelect: () => void
   const { group, members } = useGroup(groupId, '')
   const challenge = CHALLENGES.find((c) => c.id === group?.challengeId)
   if (!group || !challenge) return (
-    <div className="card p-4 flex items-center gap-3">
+    <div className="glassp-4 flex items-center gap-3">
       <div className="w-10 h-10 rounded-2xl skeleton" />
       <div className="flex-1">
         <div className="h-4 w-24 skeleton mb-2" />
@@ -573,16 +573,16 @@ function GroupRow({ groupId, onSelect }: { groupId: string; onSelect: () => void
     </div>
   )
   return (
-    <button onClick={onSelect} className="w-full card card-press p-4 flex items-center gap-3 text-left">
+    <button onClick={onSelect} className="w-full card glass-press p-4 flex items-center gap-3 text-left">
       <div className="w-12 h-12 rounded-2xl flex items-center justify-center text-2xl flex-shrink-0"
         style={{ background: challenge.color + '20' }}>{challenge.emoji}</div>
       <div className="flex-1 min-w-0">
-        <p className="font-black text-sm truncate" style={{ color: 'var(--text1)' }}>{group.name}</p>
-        <p className="text-xs" style={{ color: 'var(--text3)' }}>
+        <p className="font-black text-sm truncate" style={{ color: 'var(--text-1)' }}>{group.name}</p>
+        <p className="text-xs" style={{ color: 'var(--text-3)' }}>
           {challenge.name} · {members.length} {members.length === 1 ? 'Mitglied' : 'Mitglieder'}
         </p>
       </div>
-      <ChevronRight size={16} style={{ color: 'var(--text3)' }} />
+      <ChevronRight size={16} style={{ color: 'var(--text-3)' }} />
     </button>
   )
 }
@@ -616,8 +616,8 @@ function FirebaseSetup({ onConfigured }: { onConfigured: () => void }) {
   return (
     <div className="space-y-4">
       {/* Instructions */}
-      <div className="card p-4">
-        <p className="text-sm font-black mb-3" style={{ color: 'var(--text1)' }}>🔥 Firebase Einrichtung (kostenlos)</p>
+      <div className="glassp-4">
+        <p className="text-sm font-black mb-3" style={{ color: 'var(--text-1)' }}>🔥 Firebase Einrichtung (kostenlos)</p>
         <ol className="space-y-2 text-sm" style={{ color: 'var(--text2)' }}>
           <li className="flex gap-2"><span className="font-black text-blue-500">1.</span><span>Gehe zu <strong>console.firebase.google.com</strong></span></li>
           <li className="flex gap-2"><span className="font-black text-blue-500">2.</span><span>Neues Projekt „kalorilo" erstellen</span></li>
@@ -628,8 +628,8 @@ function FirebaseSetup({ onConfigured }: { onConfigured: () => void }) {
       </div>
 
       {/* Config form */}
-      <div className="card p-4 space-y-3">
-        <p className="text-xs font-bold uppercase tracking-wider" style={{ color: 'var(--text3)' }}>Firebase Konfiguration</p>
+      <div className="glassp-4 space-y-3">
+        <p className="text-xs font-bold uppercase tracking-wider" style={{ color: 'var(--text-3)' }}>Firebase Konfiguration</p>
         {[
           { key: 'apiKey', label: 'API Key *', placeholder: 'AIza...' },
           { key: 'projectId', label: 'Project ID *', placeholder: 'kalorilo-12345' },
@@ -639,13 +639,13 @@ function FirebaseSetup({ onConfigured }: { onConfigured: () => void }) {
           { key: 'appId', label: 'App ID', placeholder: '1:123:web:abc...' },
         ].map((f) => (
           <div key={f.key}>
-            <label className="text-xs font-bold mb-1 block" style={{ color: 'var(--text3)' }}>{f.label}</label>
+            <label className="text-xs font-bold mb-1 block" style={{ color: 'var(--text-3)' }}>{f.label}</label>
             <input
               type={f.key === 'apiKey' ? 'password' : 'text'}
               value={form[f.key as keyof typeof form]}
               onChange={(e) => setForm({ ...form, [f.key]: e.target.value })}
-              className="w-full rounded-2xl px-4 py-3 text-sm font-mono outline-none card"
-              style={{ color: 'var(--text1)' }}
+              className="w-full rounded-2xl px-4 py-3 text-sm font-mono outline-none glass"
+              style={{ color: 'var(--text-1)' }}
               placeholder={f.placeholder}
             />
           </div>
