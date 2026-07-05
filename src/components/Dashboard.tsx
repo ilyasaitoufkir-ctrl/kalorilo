@@ -15,46 +15,19 @@ function greeting() {
   return 'Guten Abend'
 }
 
-// ── Calorie Ring (hero) ───────────────────────────────────────────────────
-function CalorieRing({ consumed, target, size = 180 }: { consumed: number; target: number; size?: number }) {
-  const pct  = target > 0 ? Math.min(1, consumed / target) : 0
-  const stroke = 18
-  const r    = (size - stroke) / 2
-  const circ = 2 * Math.PI * r
-  const dash = circ * pct
-  const id   = 'ringGrad'
-  return (
-    <svg width={size} height={size} style={{ filter: 'drop-shadow(0 0 24px rgba(74,140,92,0.3))' }}>
-      <defs>
-        <linearGradient id={id} x1="0%" y1="0%" x2="100%" y2="0%">
-          <stop offset="0%"   stopColor="#a8c5a0" />
-          <stop offset="50%"  stopColor="#7db88a" />
-          <stop offset="100%" stopColor="#4a8c5c" />
-        </linearGradient>
-      </defs>
-      <circle cx={size/2} cy={size/2} r={r} fill="none"
-        stroke="rgba(74,140,92,0.12)" strokeWidth={stroke} />
-      <circle cx={size/2} cy={size/2} r={r} fill="none"
-        stroke={`url(#${id})`} strokeWidth={stroke}
-        strokeDasharray={`${dash} ${circ}`} strokeLinecap="round"
-        style={{ transition: 'stroke-dasharray 0.8s cubic-bezier(0.16,1,0.3,1)' }}
-      />
-    </svg>
-  )
-}
-
 // ── Macro chip ────────────────────────────────────────────────────────────
 function MacroCard({ label, value, max, color, unit = 'g' }: {
   label: string; value: number; max: number; color: string; unit?: string
 }) {
   const pct = max > 0 ? Math.min(100, (value / max) * 100) : 0
   return (
-    <div className="glass flex-1 p-3 flex flex-col gap-2" style={{ minWidth: 0 }}>
+    <div className="flex-1 flex flex-col gap-2 p-3"
+      style={{ background: '#243028', border: '1px solid rgba(125,184,138,0.12)', borderRadius: 20, minWidth: 0 }}>
       <div className="flex items-center justify-between">
         <span className="label">{label}</span>
         <span className="text-xs font-bold" style={{ color }}>{Math.round(value)}{unit}</span>
       </div>
-      <div className="h-1.5 rounded-full overflow-hidden" style={{ background: 'rgba(74,140,92,0.08)' }}>
+      <div className="h-1.5 rounded-full overflow-hidden" style={{ background: 'rgba(255,255,255,0.06)' }}>
         <div className="h-full rounded-full transition-all duration-700"
           style={{ width: `${pct}%`, background: color }} />
       </div>
@@ -293,7 +266,7 @@ function WhoopWidget({
   const sleepHistory    = whoopHistory.map((d) => d.sleepDuration)
 
   return (
-    <div className="glass p-4" style={{ background: '#080808', border: '1px solid #1a1a1a' }}>
+    <div className="glass p-4" style={{ background: '#1e2c22', border: '1px solid rgba(125,184,138,0.12)' }}>
       {/* Header */}
       <div className="flex items-center gap-2 mb-4">
         <span style={{ fontSize: 16 }}>⌚</span>
@@ -341,7 +314,7 @@ function WhoopWidget({
       {/* Sleep */}
       {sleep > 0 && (
         <div className="rounded-2xl p-3 mb-3"
-          style={{ background: 'rgba(167,139,250,0.07)', border: '1px solid rgba(167,139,250,0.12)' }}>
+          style={{ background: 'rgba(167,139,250,0.08)', border: '1px solid rgba(167,139,250,0.15)' }}>
           <div className="flex items-center justify-between mb-2">
             <p className="text-xs font-bold" style={{ color: '#a78bfa' }}>😴 Schlaf letzte Nacht</p>
             {whoopData.sleepQuality > 0 && (
@@ -1114,6 +1087,7 @@ export default function Dashboard() {
 
   return (
     <div ref={scrollRef} className="pb-nav overflow-y-auto overflow-x-hidden h-dvh anim-fade"
+      style={{ background: '#1a2e1f' }}
       onTouchStart={onTouchStart} onTouchMove={onTouchMove} onTouchEnd={onTouchEnd}>
 
       {/* Pull indicator */}
@@ -1123,229 +1097,106 @@ export default function Dashboard() {
         </div>
       )}
 
-      {/* ── Hero Header ──────────────────────────────────────────── */}
-      <div className="relative overflow-hidden pt-safe px-5 pb-6"
-        style={{ background: 'var(--grad-hero)' }}>
-
-        {/* Glow orb */}
-        <div className="absolute pointer-events-none" style={{
-          top: -60, right: -60, width: 280, height: 280,
-          background: 'radial-gradient(circle, rgba(74,140,92,0.1) 0%, transparent 65%)',
+      {/* ── Header ───────────────────────────────────────────────── */}
+      <div className="pt-safe px-5 pb-5" style={{ background: '#1a2e1f' }}>
+        {/* Glow */}
+        <div className="pointer-events-none absolute" style={{
+          top: 0, right: 0, width: 220, height: 220,
+          background: 'radial-gradient(circle, rgba(200,230,201,0.07) 0%, transparent 70%)',
         }} />
 
-        {/* Top row */}
-        <div className="flex items-start justify-between mb-4 relative">
+        <div className="flex items-end justify-between relative">
           <div>
-            <p className="text-sm font-medium mb-1" style={{ color: 'var(--text-3)' }}>{dateStr}</p>
-            <h1 className="text-2xl font-black tracking-tight" style={{ color: 'var(--text-1)' }}>
-              {greeting()}, {profile?.name?.split(' ')[0] ?? 'Kalorilo'} 👋
+            <p style={{ color: '#6a9470', fontSize: 13, fontWeight: 600, letterSpacing: '0.03em' }}>
+              {greeting()}!
+            </p>
+            <h1 style={{ color: '#fff', fontSize: 30, fontWeight: 900, lineHeight: 1.1, marginTop: 2 }}>
+              {profile?.name?.split(' ')[0] ?? 'Kalorilo'} 👋
             </h1>
+            <p style={{ color: '#6a9470', fontSize: 11, marginTop: 4 }}>{dateStr}</p>
           </div>
-          <button onClick={() => setActiveTab('profile')}
-            className="glass-sm glass-press w-10 h-10 flex items-center justify-center mt-1 flex-shrink-0">
-            <Settings size={17} style={{ color: 'var(--text-2)' }} />
-          </button>
+          <div className="flex flex-col items-end gap-2">
+            <button onClick={() => setActiveTab('profile')}
+              className="glass-press"
+              style={{ width: 38, height: 38, borderRadius: 14, background: 'rgba(200,230,201,0.08)', border: '1px solid rgba(200,230,201,0.14)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <Settings size={16} style={{ color: '#7db88a' }} />
+            </button>
+            <div className="text-right">
+              <p style={{ color: '#6a9470', fontSize: 10, fontWeight: 700, letterSpacing: '0.06em' }}>SCORE</p>
+              <p style={{ color: scoreColor(dailyScore), fontSize: 48, fontWeight: 900, lineHeight: 1, filter: `drop-shadow(0 0 12px ${scoreColor(dailyScore)}55)` }}>{dailyScore}</p>
+            </div>
+          </div>
         </div>
 
         {/* Quote */}
-        <div className="glass-sm px-4 py-3 mb-6" style={{ background: 'rgba(74,140,92,0.06)', borderColor: 'rgba(74,140,92,0.12)' }}>
-          <p className="text-sm italic" style={{ color: 'var(--text-2)' }}>{getTodayQuote()}</p>
+        <div style={{ marginTop: 14, background: 'rgba(200,230,201,0.07)', borderRadius: 16, padding: '9px 14px', border: '1px solid rgba(200,230,201,0.1)' }}>
+          <p style={{ color: '#7a9e7f', fontSize: 12, fontStyle: 'italic', lineHeight: 1.4 }}>{getTodayQuote()}</p>
         </div>
-
-        {/* Calorie Ring */}
-        <div className="flex items-center justify-center gap-6">
-          <div className="relative flex items-center justify-center flex-shrink-0">
-            <CalorieRing consumed={net} target={adjustedTarget} size={180} />
-            <div className="absolute inset-0 flex flex-col items-center justify-center text-center">
-              <span className="text-4xl font-black tracking-tight" style={{ color: 'var(--text-1)' }}>
-                {Math.round(net)}
-              </span>
-              <span className="text-xs font-semibold" style={{ color: 'var(--text-3)' }}>kcal</span>
-              <span className="text-xs mt-1 font-bold" style={{ color: remain >= 0 ? '#10b981' : '#ef4444' }}>
-                {remain >= 0 ? `${Math.round(remain)} übrig` : `${Math.abs(Math.round(remain))} drüber`}
-              </span>
-            </div>
-          </div>
-
-          {/* Stats column */}
-          <div className="flex flex-col gap-3 flex-shrink-0">
-            {[
-              { label: 'Budget',    val: adjustedTarget,       unit: 'kcal', color: 'var(--text-2)' },
-              { label: 'Gegessen',  val: Math.round(calories), unit: 'kcal', color: 'var(--text-1)' },
-              { label: 'Verbrannt', val: Math.round(burned),   unit: 'kcal', color: '#10b981' },
-            ].map((s) => (
-              <div key={s.label}>
-                <p className="text-[10px] font-semibold" style={{ color: 'var(--text-3)' }}>{s.label}</p>
-                <p className="text-lg font-black leading-tight" style={{ color: s.color }}>
-                  {s.val} <span className="text-xs font-medium opacity-60">{s.unit}</span>
-                </p>
-              </div>
-            ))}
-          </div>
-        </div>
-
-        {/* Whoop calorie bonus */}
-        {whoopBurnedToday > 0 && (
-          <div className="mt-3 px-4 py-2.5 rounded-2xl flex items-center gap-2"
-            style={{ background: 'rgba(251,146,60,0.1)', border: '1px solid rgba(251,146,60,0.2)' }}>
-            <span style={{ fontSize: 16 }}>🔥</span>
-            <div className="flex-1 min-w-0">
-              <p className="text-xs font-black" style={{ color: '#fb923c' }}>
-                +{whoopBurnedToday} kcal durch Whoop-Aktivität
-              </p>
-              <p className="text-[10px]" style={{ color: 'var(--text-3)' }}>
-                Basis {target} + Whoop {whoopBurnedToday} = Budget {adjustedTarget} kcal
-              </p>
-            </div>
-          </div>
-        )}
       </div>
 
-      {/* ── Content ──────────────────────────────────────────────── */}
-      <div className="px-4 space-y-3" style={{ paddingBottom: 4 }}>
+      {/* ── Widget Grid ──────────────────────────────────────────── */}
+      <div style={{ padding: '0 14px', display: 'flex', flexDirection: 'column', gap: 12, paddingBottom: 4 }}>
 
-        {/* ── Tages-Score Ring ── */}
-        <div className="glass p-5"
-          style={{ background: 'rgba(8,8,8,0.9)', border: `1px solid ${scoreColor(dailyScore)}22` }}>
-
-          {/* Header */}
-          <div className="flex items-center justify-between mb-4">
-            <p className="text-sm font-black tracking-wide" style={{ color: 'var(--text-1)' }}>🎯 Tages-Score</p>
-            {scoreStreak >= 3 && (
-              <span className="text-xs px-2.5 py-1 rounded-full font-bold"
-                style={{ background: 'rgba(251,191,36,0.1)', color: '#fbbf24' }}>
-                🔥 {scoreStreak} Tage über 70!
-              </span>
-            )}
-          </div>
-
-          {/* Ring + mini rings */}
-          <div className="flex flex-col items-center gap-4">
-            <DailyScoreRing score={dailyScore} size={180} />
-
-            {/* Label + comparison */}
-            <div className="text-center px-4">
-              <p className="text-base font-black" style={{ color: scoreColor(dailyScore) }}>
-                {scoreLabel(dailyScore)}
-              </p>
+        {/* ── Score Ring widget (dark card) ── */}
+        <div style={{ background: '#243028', borderRadius: 28, border: `1px solid ${scoreColor(dailyScore)}22`, padding: '18px 20px' }}>
+          <div className="flex items-center gap-4">
+            <DailyScoreRing score={dailyScore} size={110} />
+            <div className="flex-1" style={{ minWidth: 0 }}>
+              {scoreStreak >= 3 && (
+                <span style={{ display: 'inline-block', marginBottom: 6, background: 'rgba(251,191,36,0.12)', color: '#fbbf24', fontSize: 10, fontWeight: 800, padding: '3px 10px', borderRadius: 20 }}>
+                  🔥 {scoreStreak} Tage ≥70
+                </span>
+              )}
+              <p style={{ color: scoreColor(dailyScore), fontWeight: 900, fontSize: 16, lineHeight: 1.2 }}>{scoreLabel(dailyScore)}</p>
               {scoreDelta !== null && (
-                <p className="text-xs mt-1" style={{ color: scoreDelta >= 0 ? '#10b981' : '#f87171' }}>
-                  {scoreDelta >= 0 ? `+${scoreDelta}` : scoreDelta} Punkte vs. gestern
-                  {scoreDelta >= 5 ? ' 🔥' : scoreDelta <= -5 ? ' ⬇️' : ''}
+                <p style={{ color: scoreDelta >= 0 ? '#10b981' : '#f87171', fontSize: 11, marginTop: 4 }}>
+                  {scoreDelta >= 0 ? `+${scoreDelta}` : `${scoreDelta}`} vs. gestern{scoreDelta >= 5 ? ' 🔥' : scoreDelta <= -5 ? ' ⬇️' : ''}
                 </p>
               )}
               {scoreComment && scoreCommentDate === today && (
-                <p className="text-xs mt-2 italic leading-relaxed" style={{ color: 'rgba(255,255,255,0.45)' }}>
+                <p style={{ color: 'rgba(255,255,255,0.38)', fontSize: 10, marginTop: 8, fontStyle: 'italic', lineHeight: 1.45 }}>
                   {scoreComment}
                 </p>
               )}
             </div>
-
-            {/* 4 Mini Rings */}
-            <div className="flex justify-around w-full px-2">
-              <MiniScoreRing value={nutritionScore} label="Ernährung" icon="🍽️" color="#10b981" />
-              <MiniScoreRing value={sportScore}     label="Sport"     icon="💪" color="#f59e0b" />
-              <MiniScoreRing value={sleepScore}     label="Schlaf"    icon="😴" color="#a78bfa" />
-              <MiniScoreRing value={recScore}       label="Recovery"  icon="⌚" color="#60a5fa" />
-            </div>
+          </div>
+          <div className="flex justify-around mt-4 pt-4" style={{ borderTop: '1px solid rgba(255,255,255,0.06)' }}>
+            <MiniScoreRing value={nutritionScore} label="Ernährung" icon="🍽️" color="#10b981" />
+            <MiniScoreRing value={sportScore}     label="Sport"     icon="💪" color="#f59e0b" />
+            <MiniScoreRing value={sleepScore}     label="Schlaf"    icon="😴" color="#a78bfa" />
+            <MiniScoreRing value={recScore}       label="Recovery"  icon="⌚" color="#60a5fa" />
           </div>
         </div>
 
-        {/* ── Energie Plan ── */}
-        <EnergyPlanCard whoopData={whoopData} />
+        {/* ── Protein (mint) + Calories (yellow) ── */}
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
 
-        {/* Makros */}
-        <div>
-          <p className="label mb-2 px-1">Makros heute</p>
-          <div className="flex gap-2">
-            <MacroCard label="Eiweiß"        value={protein} max={macroT.protein} color="#3b82f6" />
-            <MacroCard label="Kohlenhydrate" value={carbs}   max={macroT.carbs}   color="#f59e0b" />
-            <MacroCard label="Fett"          value={fat}     max={macroT.fat}     color="#ef4444" />
+          {/* Protein – MINT card */}
+          <div style={{ background: '#c8e6c9', borderRadius: 28, padding: 16, position: 'relative', overflow: 'hidden' }}>
+            <div style={{ position: 'absolute', top: -20, right: -20, width: 80, height: 80, background: 'rgba(74,140,92,0.12)', borderRadius: '50%' }} />
+            <p style={{ color: '#2d6a3f', fontSize: 10, fontWeight: 800, letterSpacing: '0.08em', opacity: 0.7 }}>🥩 PROTEIN</p>
+            <p style={{ color: '#1a2e1f', fontSize: 40, fontWeight: 900, lineHeight: 1, marginTop: 6 }}>{Math.round(protein)}</p>
+            <p style={{ color: '#4a8c5c', fontSize: 12, fontWeight: 700 }}>/ {macroT.protein}g</p>
+            <div style={{ height: 5, background: 'rgba(74,140,92,0.2)', borderRadius: 3, marginTop: 10, overflow: 'hidden' }}>
+              <div style={{ height: '100%', width: `${Math.min(100, macroT.protein > 0 ? (protein/macroT.protein)*100 : 0)}%`, background: 'linear-gradient(90deg,#4a8c5c,#7db88a)', borderRadius: 3, transition: 'width 0.8s ease' }} />
+            </div>
           </div>
-        </div>
 
-        {/* ── Protein Tracker ── */}
-        <ProteinTrackerCard />
-
-        {/* ── Adaptive TDEE ── */}
-        <AdaptiveTDEECard />
-
-        {/* Quick actions */}
-        <div className="grid grid-cols-2 gap-3">
-          <button onClick={() => setActiveTab('food')}
-            className="glass glass-press p-4 flex items-center gap-3 text-left">
-            <div className="w-11 h-11 rounded-2xl flex items-center justify-center flex-shrink-0"
-              style={{ background: 'var(--gold-dim)', border: '1px solid rgba(74,140,92,0.18)' }}>
-              <Plus size={20} style={{ color: 'var(--gold)' }} />
-            </div>
-            <div style={{ minWidth: 0 }}>
-              <p className="text-sm font-black" style={{ color: 'var(--text-1)' }}>Essen</p>
-              <p className="text-xs" style={{ color: 'var(--text-3)' }}>Eintragen</p>
-            </div>
-          </button>
-          <button onClick={() => setActiveTab('sport')}
-            className="glass glass-press p-4 flex items-center gap-3 text-left">
-            <div className="w-11 h-11 rounded-2xl flex items-center justify-center flex-shrink-0"
-              style={{ background: 'var(--green-dim)', border: '1px solid rgba(16,185,129,0.2)' }}>
-              <Zap size={20} style={{ color: 'var(--green)' }} />
-            </div>
-            <div style={{ minWidth: 0 }}>
-              <p className="text-sm font-black" style={{ color: 'var(--text-1)' }}>Sport</p>
-              <p className="text-xs" style={{ color: 'var(--text-3)' }}>Aktivität</p>
-            </div>
-          </button>
-        </div>
-
-        {/* Water */}
-        <div className="glass p-4">
-          <div className="flex items-center justify-between mb-3">
-            <div className="flex items-center gap-2">
-              <Droplets size={17} style={{ color: '#38bdf8' }} />
-              <p className="text-sm font-bold" style={{ color: 'var(--text-1)' }}>Wasser</p>
-            </div>
-            <p className="text-sm font-bold" style={{ color: '#38bdf8' }}>
-              {water} <span className="font-normal" style={{ color: 'var(--text-3)' }}>/ {waterGoal()} ml</span>
+          {/* Calories – YELLOW card */}
+          <div style={{ background: '#f0f0c0', borderRadius: 28, padding: 16, position: 'relative', overflow: 'hidden' }}>
+            <div style={{ position: 'absolute', top: -20, right: -20, width: 80, height: 80, background: 'rgba(200,180,0,0.1)', borderRadius: '50%' }} />
+            <p style={{ color: '#5a5a10', fontSize: 10, fontWeight: 800, letterSpacing: '0.08em', opacity: 0.7 }}>🔥 KALORIEN</p>
+            <p style={{ color: '#1a1a00', fontSize: 40, fontWeight: 900, lineHeight: 1, marginTop: 6 }}>{Math.round(calories)}</p>
+            <p style={{ color: remain >= 0 ? '#3d7a3d' : '#c0392b', fontSize: 12, fontWeight: 700 }}>
+              {remain >= 0 ? `${Math.round(remain)} übrig` : `${Math.abs(Math.round(remain))} drüber`}
             </p>
-          </div>
-          <div className="h-2 rounded-full mb-3 overflow-hidden" style={{ background: 'rgba(74,140,92,0.08)' }}>
-            <div className="h-full rounded-full transition-all duration-700"
-              style={{ width: `${waterPct * 100}%`, background: 'linear-gradient(90deg, #38bdf8, #0ea5e9)' }} />
-          </div>
-          <div className="flex gap-2">
-            {[150, 250, 500].map((ml) => (
-              <button key={ml} onClick={() => addWater(today, ml)}
-                className="flex-1 py-2.5 rounded-2xl text-xs font-bold glass-press transition-all"
-                style={{ background: 'rgba(56,189,248,0.08)', border: '1px solid rgba(56,189,248,0.15)', color: '#38bdf8' }}>
-                +{ml}ml
-              </button>
-            ))}
+            <div style={{ height: 5, background: 'rgba(180,180,0,0.2)', borderRadius: 3, marginTop: 10, overflow: 'hidden' }}>
+              <div style={{ height: '100%', width: `${Math.min(100, adjustedTarget > 0 ? (calories/adjustedTarget)*100 : 0)}%`, background: remain >= 0 ? 'linear-gradient(90deg,#8a8a20,#b0b030)' : 'linear-gradient(90deg,#c0392b,#e74c3c)', borderRadius: 3, transition: 'width 0.8s ease' }} />
+            </div>
           </div>
         </div>
 
-        {/* Steps */}
-        <div className="glass p-4 flex items-center gap-3">
-          <div className="w-11 h-11 rounded-2xl flex items-center justify-center flex-shrink-0"
-            style={{ background: 'rgba(16,185,129,0.1)', border: '1px solid rgba(16,185,129,0.15)' }}>
-            <Footprints size={18} style={{ color: 'var(--green)' }} />
-          </div>
-          <div className="flex-1" style={{ minWidth: 0 }}>
-            <p className="text-xs" style={{ color: 'var(--text-3)' }}>Schritte heute</p>
-            <input
-              type="number" inputMode="numeric"
-              value={stepsToday || ''}
-              onChange={(e) => setStepsToday(parseInt(e.target.value)||0)}
-              className="text-lg font-black bg-transparent border-none outline-none w-full"
-              style={{ color: 'var(--text-1)' }}
-              placeholder="0"
-            />
-          </div>
-          <div className="text-right flex-shrink-0">
-            <p className="text-sm font-black" style={{ color: 'var(--green)' }}>+{Math.round(stepsToday*0.04)}</p>
-            <p className="text-xs" style={{ color: 'var(--text-3)' }}>kcal</p>
-          </div>
-        </div>
-
-        {/* Whoop Widget */}
+        {/* ── Whoop Recovery (dark card) ── */}
         <WhoopWidget
           whoopData={whoopData}
           whoopHistory={whoopHistory}
@@ -1353,104 +1204,210 @@ export default function Dashboard() {
           onConnect={() => setActiveTab('profile')}
         />
 
-        {/* ── Muskel-Regeneration ── */}
-        <MuscleTrackerCard activityLogs={activityLogs} />
+        {/* ── Training (white) + Sleep (dark) ── */}
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
 
-        {/* ── Score History 7 Tage ── */}
-        <div className="glass p-4">
-          <div className="flex items-center justify-between mb-4">
-            <p className="text-sm font-black" style={{ color: 'var(--text-1)' }}>📊 Score Verlauf</p>
-            <span className="text-xs" style={{ color: 'var(--text-3)' }}>7 Tage</span>
+          {/* Training – LIGHT card */}
+          <button onClick={() => setActiveTab('sport')} style={{ background: '#fff', borderRadius: 28, padding: 16, textAlign: 'left', width: '100%', position: 'relative', overflow: 'hidden' }}
+            className="glass-press">
+            <div style={{ position: 'absolute', bottom: -16, right: -16, width: 70, height: 70, background: 'rgba(74,140,92,0.08)', borderRadius: '50%' }} />
+            <p style={{ color: '#4a8c5c', fontSize: 10, fontWeight: 800, letterSpacing: '0.08em', opacity: 0.8 }}>💪 TRAINING</p>
+            <p style={{ color: '#1a2e1f', fontSize: 40, fontWeight: 900, lineHeight: 1, marginTop: 6 }}>{todayActs.length}</p>
+            <p style={{ color: '#7db88a', fontSize: 12, fontWeight: 700 }}>Einheiten</p>
+            {burned > 0 && (
+              <p style={{ color: '#4a8c5c', fontSize: 10, marginTop: 8, fontWeight: 700 }}>🔥 {Math.round(burned)} kcal</p>
+            )}
+          </button>
+
+          {/* Sleep – DARK card */}
+          <div style={{ background: '#243028', borderRadius: 28, padding: 16, border: '1px solid rgba(167,139,250,0.18)', position: 'relative', overflow: 'hidden' }}>
+            <div style={{ position: 'absolute', bottom: -16, right: -16, width: 70, height: 70, background: 'rgba(167,139,250,0.08)', borderRadius: '50%' }} />
+            <p style={{ color: '#a78bfa', fontSize: 10, fontWeight: 800, letterSpacing: '0.08em', opacity: 0.8 }}>😴 SCHLAF</p>
+            <p style={{ color: '#fff', fontSize: 40, fontWeight: 900, lineHeight: 1, marginTop: 6 }}>
+              {whoopData?.sleepDuration ? `${whoopData.sleepDuration}h` : '—'}
+            </p>
+            <p style={{ color: '#7a6aaa', fontSize: 12, fontWeight: 700 }}>
+              {whoopData?.sleepQuality ? `${whoopData.sleepQuality}% Qual.` : 'kein Whoop'}
+            </p>
+          </div>
+        </div>
+
+        {/* ── Wasser (dark card) ── */}
+        <div style={{ background: '#243028', borderRadius: 28, padding: 18, border: '1px solid rgba(56,189,248,0.14)' }}>
+          <div className="flex items-center justify-between" style={{ marginBottom: 12 }}>
+            <div className="flex items-center gap-2">
+              <Droplets size={17} style={{ color: '#38bdf8' }} />
+              <p style={{ color: '#fff', fontSize: 14, fontWeight: 800 }}>Wasser</p>
+            </div>
+            <p style={{ color: '#38bdf8', fontSize: 14, fontWeight: 900 }}>
+              {water}<span style={{ color: '#6a9470', fontWeight: 500, fontSize: 12 }}> / {waterGoal()} ml</span>
+            </p>
+          </div>
+          <div style={{ height: 6, background: 'rgba(56,189,248,0.1)', borderRadius: 3, marginBottom: 12, overflow: 'hidden' }}>
+            <div style={{ height: '100%', width: `${waterPct * 100}%`, background: 'linear-gradient(90deg,#38bdf8,#0ea5e9)', borderRadius: 3, transition: 'width 0.8s ease', boxShadow: '0 0 8px rgba(56,189,248,0.4)' }} />
+          </div>
+          <div className="flex gap-2">
+            {[150, 250, 500].map((ml) => (
+              <button key={ml} onClick={() => addWater(today, ml)}
+                className="flex-1 glass-press"
+                style={{ padding: '10px 0', borderRadius: 16, background: 'rgba(56,189,248,0.08)', border: '1px solid rgba(56,189,248,0.15)', color: '#38bdf8', fontSize: 12, fontWeight: 800 }}>
+                +{ml}ml
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* ── Schritte (dark card) ── */}
+        <div style={{ background: '#243028', borderRadius: 28, padding: 18, border: '1px solid rgba(125,184,138,0.12)', display: 'flex', alignItems: 'center', gap: 14 }}>
+          <div style={{ width: 46, height: 46, borderRadius: 18, background: 'rgba(125,184,138,0.12)', border: '1px solid rgba(125,184,138,0.2)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+            <Footprints size={20} style={{ color: '#7db88a' }} />
+          </div>
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <p style={{ color: '#6a9470', fontSize: 11, fontWeight: 600 }}>Schritte heute</p>
+            <input type="number" inputMode="numeric"
+              value={stepsToday || ''}
+              onChange={(e) => setStepsToday(parseInt(e.target.value)||0)}
+              style={{ fontSize: 22, fontWeight: 900, background: 'transparent', border: 'none', outline: 'none', color: '#fff', width: '100%', padding: 0 }}
+              placeholder="0" />
+          </div>
+          <div style={{ textAlign: 'right', flexShrink: 0 }}>
+            <p style={{ color: '#7db88a', fontSize: 16, fontWeight: 900 }}>+{Math.round(stepsToday*0.04)}</p>
+            <p style={{ color: '#6a9470', fontSize: 10 }}>kcal</p>
+          </div>
+        </div>
+
+        {/* ── Makros ── */}
+        <div>
+          <p style={{ color: '#6a9470', fontSize: 11, fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', marginBottom: 8, paddingLeft: 4 }}>Makros heute</p>
+          <div className="flex gap-2">
+            <MacroCard label="Eiweiß"        value={protein} max={macroT.protein} color="#3b82f6" />
+            <MacroCard label="KH"            value={carbs}   max={macroT.carbs}   color="#f59e0b" />
+            <MacroCard label="Fett"          value={fat}     max={macroT.fat}     color="#ef4444" />
+          </div>
+        </div>
+
+        {/* ── Energie Plan ── */}
+        <EnergyPlanCard whoopData={whoopData} />
+
+        {/* ── Protein Tracker ── */}
+        <ProteinTrackerCard />
+
+        {/* ── Adaptive TDEE ── */}
+        <AdaptiveTDEECard />
+
+        {/* ── Quick actions ── */}
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+          <button onClick={() => setActiveTab('food')} className="glass-press"
+            style={{ background: '#c8e6c9', borderRadius: 28, padding: '16px 14px', display: 'flex', alignItems: 'center', gap: 12, textAlign: 'left' }}>
+            <div style={{ width: 40, height: 40, background: 'rgba(74,140,92,0.18)', borderRadius: 15, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+              <Plus size={20} style={{ color: '#2d6a3f' }} />
+            </div>
+            <div style={{ minWidth: 0 }}>
+              <p style={{ color: '#1a2e1f', fontWeight: 900, fontSize: 14 }}>Essen</p>
+              <p style={{ color: '#4a8c5c', fontSize: 11 }}>Eintragen</p>
+            </div>
+          </button>
+          <button onClick={() => setActiveTab('sport')} className="glass-press"
+            style={{ background: '#243028', borderRadius: 28, padding: '16px 14px', display: 'flex', alignItems: 'center', gap: 12, border: '1px solid rgba(125,184,138,0.2)', textAlign: 'left', width: '100%' }}>
+            <div style={{ width: 40, height: 40, background: 'rgba(125,184,138,0.12)', borderRadius: 15, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+              <Zap size={20} style={{ color: '#7db88a' }} />
+            </div>
+            <div style={{ minWidth: 0 }}>
+              <p style={{ color: '#fff', fontWeight: 900, fontSize: 14 }}>Sport</p>
+              <p style={{ color: '#6a9470', fontSize: 11 }}>Aktivität</p>
+            </div>
+          </button>
+        </div>
+
+        {/* ── Score Verlauf ── */}
+        <div style={{ background: '#243028', borderRadius: 28, padding: '18px 20px', border: '1px solid rgba(125,184,138,0.1)' }}>
+          <div className="flex items-center justify-between" style={{ marginBottom: 16 }}>
+            <p style={{ color: '#fff', fontSize: 14, fontWeight: 900 }}>📊 Score Verlauf</p>
+            <span style={{ color: '#6a9470', fontSize: 11 }}>7 Tage</span>
           </div>
           <ScoreBarChart scores={scoreHistoryArr} />
-
-          {/* Best day */}
           {scoreHistoryArr.some((s) => s.score > 0) && (() => {
             const best = scoreHistoryArr.reduce((a, b) => b.score > a.score ? b : a)
-            const bestDay = new Date(best.date).toLocaleDateString('de-DE', { weekday: 'long' })
-            const isToday = best.date === today
             return best.score >= 70 ? (
-              <p className="text-xs mt-3 text-center" style={{ color: 'rgba(255,255,255,0.4)' }}>
+              <p style={{ color: 'rgba(255,255,255,0.35)', fontSize: 10, marginTop: 12, textAlign: 'center' }}>
                 🏆 Bester Tag: <span style={{ color: scoreColor(best.score), fontWeight: 700 }}>
-                  {isToday ? 'heute' : bestDay} ({best.score} Punkte)
+                  {best.date === today ? 'heute' : new Date(best.date).toLocaleDateString('de-DE', { weekday: 'short' })} ({best.score}P)
                 </span>
               </p>
             ) : null
           })()}
         </div>
 
-        {/* ── Streak + Achievement ── */}
-        <div className="grid grid-cols-3 gap-3">
-          <div className="glass p-3 text-center">
-            <p className="text-xl mb-1">🔥</p>
-            <p className="text-xl font-black" style={{ color: '#4a8c5c' }}>{streak}</p>
-            <p className="text-[10px] mt-0.5" style={{ color: 'var(--text-3)' }}>Kalorien-Streak</p>
-          </div>
-          <div className="glass p-3 text-center">
-            <p className="text-xl mb-1">⭐</p>
-            <p className="text-xl font-black" style={{ color: '#f59e0b' }}>{scoreStreak}</p>
-            <p className="text-[10px] mt-0.5" style={{ color: 'var(--text-3)' }}>Score ≥70 Streak</p>
-          </div>
-          <div className="glass p-3 text-center">
-            <p className="text-xl mb-1">📊</p>
-            <p className="text-xl font-black" style={{ color: '#60a5fa' }}>{bmi ?? '–'}</p>
-            <p className="text-[10px] mt-0.5" style={{ color: 'var(--text-3)' }}>BMI</p>
-          </div>
-        </div>
-
-        {/* Cheat Day */}
-        <div className="glass p-4 flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <span className="text-2xl">🍕</span>
-            <div>
-              <p className="text-sm font-black" style={{ color: 'var(--text-1)' }}>Cheat Day</p>
-              <p className="text-xs" style={{ color: 'var(--text-3)' }}>{isCheatDay ? 'Heute aktiv' : 'Nicht aktiv'}</p>
+        {/* ── Streak + BMI ── */}
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 10 }}>
+          {[
+            { icon: '🔥', val: streak,      label: 'Kcal-Streak', color: '#fb923c' },
+            { icon: '⭐', val: scoreStreak, label: '≥70 Streak',  color: '#fbbf24' },
+            { icon: '📊', val: bmi ?? '–',  label: 'BMI',         color: '#60a5fa' },
+          ].map(({ icon, val, label, color }) => (
+            <div key={label} style={{ background: '#243028', borderRadius: 22, padding: '12px 8px', textAlign: 'center', border: '1px solid rgba(125,184,138,0.1)' }}>
+              <p style={{ fontSize: 20, marginBottom: 4 }}>{icon}</p>
+              <p style={{ color, fontSize: 22, fontWeight: 900 }}>{val}</p>
+              <p style={{ color: '#6a9470', fontSize: 9, marginTop: 2, fontWeight: 600 }}>{label}</p>
             </div>
-          </div>
-          <button
-            onClick={() => isCheatDay ? removeCheatDay(today) : addCheatDay({ date: today })}
-            className="px-4 py-2.5 rounded-2xl text-sm font-bold glass-press transition-all"
-            style={isCheatDay
-              ? { background:'rgba(239,68,68,0.1)', border:'1px solid rgba(239,68,68,0.2)', color:'#ef4444' }
-              : { background:'var(--gold-dim)', border:'1px solid rgba(74,140,92,0.18)', color:'var(--gold)' }
-            }>
-            {isCheatDay ? 'Deaktivieren' : 'Aktivieren'}
-          </button>
+          ))}
         </div>
 
-        {/* KI shortcut */}
-        <button onClick={() => setActiveTab('ai')}
-          className="glass glass-press w-full p-4 flex items-center gap-3 text-left">
-          <div className="w-11 h-11 rounded-2xl flex items-center justify-center text-xl flex-shrink-0"
-            style={{ background:'rgba(139,92,246,0.1)', border:'1px solid rgba(139,92,246,0.2)' }}>🤖</div>
-          <div className="flex-1" style={{ minWidth: 0 }}>
-            <p className="text-sm font-black" style={{ color: 'var(--text-1)' }}>KI-Ernährungsberater</p>
-            <p className="text-xs" style={{ color: 'var(--text-3)' }}>Frag mich alles rund ums Essen</p>
+        {/* ── Muskel-Regeneration ── */}
+        <MuscleTrackerCard activityLogs={activityLogs} />
+
+        {/* ── AI shortcut ── */}
+        <button onClick={() => setActiveTab('ai')} className="glass-press"
+          style={{ background: '#243028', borderRadius: 28, padding: '16px 18px', border: '1px solid rgba(167,139,250,0.2)', width: '100%', display: 'flex', alignItems: 'center', gap: 14, textAlign: 'left' }}>
+          <div style={{ width: 46, height: 46, background: 'rgba(139,92,246,0.15)', borderRadius: 18, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, fontSize: 22 }}>🤖</div>
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <p style={{ color: '#fff', fontSize: 14, fontWeight: 900 }}>KI-Ernährungsberater</p>
+            <p style={{ color: '#6a9470', fontSize: 11, marginTop: 2 }}>Frag mich alles rund ums Essen</p>
           </div>
-          <ChevronRight size={16} style={{ color: 'var(--text-3)', flexShrink: 0 }} />
+          <ChevronRight size={16} style={{ color: '#6a9470', flexShrink: 0 }} />
         </button>
 
-        {/* Recent food */}
+        {/* ── Heute gegessen ── */}
         {todayFoods.length > 0 && (
-          <div className="glass p-4">
-            <div className="flex items-center justify-between mb-3">
-              <p className="label">Heute gegessen</p>
-              <button onClick={() => setActiveTab('food')}
-                className="text-xs font-bold" style={{ color: 'var(--gold)' }}>Alle</button>
+          <div style={{ background: '#243028', borderRadius: 28, padding: '16px 18px', border: '1px solid rgba(125,184,138,0.1)' }}>
+            <div className="flex items-center justify-between" style={{ marginBottom: 12 }}>
+              <p style={{ color: '#6a9470', fontSize: 11, fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase' }}>Heute gegessen</p>
+              <button onClick={() => setActiveTab('food')} style={{ color: '#7db88a', fontSize: 12, fontWeight: 800 }}>Alle</button>
             </div>
-            <div className="space-y-2.5">
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
               {todayFoods.slice(-3).map((log) => (
                 <div key={log.id} className="flex items-center justify-between">
                   <div style={{ minWidth: 0 }}>
-                    <p className="text-sm font-semibold truncate" style={{ color: 'var(--text-1)' }}>{log.foodItem.name}</p>
-                    <p className="text-xs" style={{ color: 'var(--text-3)' }}>{log.amount}g</p>
+                    <p style={{ color: '#fff', fontSize: 13, fontWeight: 600 }} className="truncate">{log.foodItem.name}</p>
+                    <p style={{ color: '#6a9470', fontSize: 11 }}>{log.amount}g</p>
                   </div>
-                  <p className="text-sm font-black flex-shrink-0 ml-2" style={{ color: 'var(--gold)' }}>{log.macros?.calories ?? 0} kcal</p>
+                  <p style={{ color: '#c8e6c9', fontSize: 13, fontWeight: 900, flexShrink: 0, marginLeft: 8 }}>{log.macros?.calories ?? 0} kcal</p>
                 </div>
               ))}
             </div>
           </div>
         )}
+
+        {/* ── Cheat Day ── */}
+        <div style={{ background: '#243028', borderRadius: 28, padding: '14px 18px', border: '1px solid rgba(125,184,138,0.1)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+          <div className="flex items-center gap-3">
+            <span style={{ fontSize: 24 }}>🍕</span>
+            <div>
+              <p style={{ color: '#fff', fontSize: 14, fontWeight: 900 }}>Cheat Day</p>
+              <p style={{ color: '#6a9470', fontSize: 11 }}>{isCheatDay ? 'Heute aktiv' : 'Nicht aktiv'}</p>
+            </div>
+          </div>
+          <button onClick={() => isCheatDay ? removeCheatDay(today) : addCheatDay({ date: today })}
+            className="glass-press"
+            style={{
+              padding: '9px 16px', borderRadius: 18, fontSize: 12, fontWeight: 800,
+              background: isCheatDay ? 'rgba(248,113,113,0.12)' : 'rgba(200,230,201,0.12)',
+              border: isCheatDay ? '1px solid rgba(248,113,113,0.25)' : '1px solid rgba(200,230,201,0.2)',
+              color: isCheatDay ? '#f87171' : '#c8e6c9',
+            }}>
+            {isCheatDay ? 'Deaktivieren' : 'Aktivieren'}
+          </button>
+        </div>
       </div>
     </div>
   )

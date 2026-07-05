@@ -3,11 +3,11 @@ import { useStore } from '../store/useStore'
 import type { TabId } from '../types'
 
 const TABS: { id: TabId; icon: React.ElementType; label: string }[] = [
-  { id: 'home',     icon: Home,     label: 'Start'    },
-  { id: 'food',     icon: Utensils, label: 'Essen'    },
-  { id: 'sport',    icon: Dumbbell, label: 'Sport'    },
-  { id: 'ai',       icon: Bot,      label: 'Kalo'     },
-  { id: 'profile',  icon: User,     label: 'Profil'   },
+  { id: 'home',    icon: Home,     label: 'Start'  },
+  { id: 'food',    icon: Utensils, label: 'Essen'  },
+  { id: 'sport',   icon: Dumbbell, label: 'Sport'  },
+  { id: 'ai',      icon: Bot,      label: 'Kalo'   },
+  { id: 'profile', icon: User,     label: 'Profil' },
 ]
 
 export default function Navigation() {
@@ -16,44 +16,39 @@ export default function Navigation() {
 
   return (
     <nav className="tab-bar">
-      <div className="flex items-center justify-around pt-2 px-2">
+      <div className="flex items-center justify-around pt-2 px-3">
         {TABS.map(({ id, icon: Icon, label }) => {
           const active = activeTab === id
           return (
             <button
               key={id}
               onClick={() => { setActiveTab(id); navigator.vibrate?.(8) }}
-              className="flex flex-col items-center gap-0.5 py-1.5 px-2 rounded-xl transition-all duration-200 relative"
-              style={{ minWidth: 44 }}
+              className="flex flex-col items-center gap-0.5 transition-all duration-200 relative"
+              style={{
+                padding: active ? '8px 14px' : '8px 10px',
+                borderRadius: 20,
+                background: active ? 'rgba(200,230,201,0.18)' : 'transparent',
+                border: active ? '1px solid rgba(200,230,201,0.25)' : '1px solid transparent',
+                minWidth: 52,
+              }}
             >
-              {/* Active gold glow background */}
-              {active && (
-                <div
-                  className="absolute inset-0 rounded-2xl"
-                  style={{
-                    background: 'rgba(74,140,92,0.1)',
-                    border: '1px solid rgba(74,140,92,0.2)',
-                    boxShadow: '0 0 16px rgba(74,140,92,0.15)',
-                  }}
-                />
-              )}
-              <div className="relative">
-                <Icon
-                  size={22}
-                  strokeWidth={active ? 2.5 : 1.7}
-                  style={{ color: active ? '#4a8c5c' : '#8aaa93', transition: 'color 0.2s ease' }}
-                />
-                {/* Gold dot indicator */}
-                {active && (
-                  <div
-                    className="absolute -bottom-1 left-1/2 w-1 h-1 rounded-full"
-                    style={{ background: '#4a8c5c', transform: 'translateX(-50%)', boxShadow: '0 0 6px #f59e0b' }}
-                  />
-                )}
-              </div>
+              <Icon
+                size={21}
+                strokeWidth={active ? 2.5 : 1.8}
+                style={{
+                  color: active ? '#c8e6c9' : '#5a7a63',
+                  transition: 'color 0.2s ease',
+                  filter: active ? 'drop-shadow(0 0 6px rgba(200,230,201,0.5))' : 'none',
+                }}
+              />
               <span
-                className="text-[10px] font-semibold relative"
-                style={{ color: active ? '#4a8c5c' : '#8aaa93', transition: 'color 0.2s ease' }}
+                style={{
+                  fontSize: 10,
+                  fontWeight: active ? 800 : 500,
+                  color: active ? '#c8e6c9' : '#5a7a63',
+                  transition: 'color 0.2s ease',
+                  letterSpacing: active ? '0.02em' : 0,
+                }}
               >
                 {label}
               </span>
