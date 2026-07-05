@@ -238,6 +238,46 @@ export interface UserPersonality {
   dailyQuestionDate: string
 }
 
+// ── Extended coaching profile (from 8-step onboarding) ────────────────────
+export interface CoachingProfile {
+  mainGoals: string[]
+  dietType: string
+  mealsPerDay: number
+  eatsBreakfast: boolean
+  mealTimes: string
+  favoriteFoods: string
+  dislikedFoods: string
+  allergies: string
+  alcoholConsumption: string
+  caffeineLevel: string
+  trainingDaysPerWeek: number
+  sportTypes: string[]
+  trainingDurationMin: number
+  trainingTime: string
+  trainingIntensity: string
+  sleepTime: string
+  wakeTime: string
+  sleepQualityRating: string
+  naps: boolean
+  sleepDisruptors: string
+  healthLimitations: string
+  currentSupplements: string
+  stressLevel: string
+  dailySittingHours: string
+  workType: string
+  whoopUsageDuration: string
+  avgRecovery: string
+  avgHrv: string
+  whoopGoals: string
+  healthMotivation: string
+  pastFailures: string
+  motivationStyle: string
+  disciplineLevel: string
+  biggestChallenge: string
+  aiPersonalizationSummary?: string
+  completedAt: number
+}
+
 export const DEFAULT_PERSONALITY: UserPersonality = {
   favoriteFoods: [],
   weaknesses: [],

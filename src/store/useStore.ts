@@ -4,7 +4,7 @@ import type {
   UserProfile, FoodLog, ActivityLog, WeightEntry, WaterLog,
   CustomRecipe, AIMessage, WhoopData, WhoopDayHistory, ApiKeys, Reminder,
   CheatDay, BeforeAfterPhoto, WeeklyPlan, TabId, DailyStats, RunSession,
-  UserPersonality,
+  UserPersonality, CoachingProfile,
 } from '../types'
 import { DEFAULT_PERSONALITY } from '../types'
 
@@ -114,6 +114,10 @@ interface AppState {
   addSupplement: (name: string) => void
   removeSupplement: (id: string) => void
   toggleSupplement: (id: string) => void
+
+  // Extended coaching profile (from onboarding)
+  coachingProfile: CoachingProfile | null
+  setCoachingProfile: (p: CoachingProfile) => void
 
   // Kalo AI personality
   userPersonality: UserPersonality
@@ -261,6 +265,9 @@ export const useStore = create<AppState>()(
         return { supplementChecked: checked }
       }),
 
+      coachingProfile: null,
+      setCoachingProfile: (p) => set({ coachingProfile: p }),
+
       // Kalo personality
       userPersonality: DEFAULT_PERSONALITY,
       updatePersonality: (updates) => set((s) => ({
@@ -397,6 +404,7 @@ export const useStore = create<AppState>()(
         runSessions: state.runSessions,
         supplements: state.supplements,
         supplementChecked: state.supplementChecked,
+        coachingProfile: state.coachingProfile,
       }),
     }
   )

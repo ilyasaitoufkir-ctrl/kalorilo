@@ -1,4 +1,4 @@
-import type { FoodItem, Macros, MealType, BodyAnalysis, UserPersonality, PlateIngredient, DetailedPlateAnalysis } from '../types'
+import type { FoodItem, Macros, MealType, BodyAnalysis, UserPersonality, PlateIngredient, DetailedPlateAnalysis, UserProfile, CoachingProfile } from '../types'
 
 // ── Voice Input Parsing ────────────────────────────────────────────────────
 export interface VoiceParseResult {
@@ -790,4 +790,57 @@ Antworte NUR mit JSON: {"calories":100,"protein":5.0,"fat":2.0,"carbs":15.0}`,
     const json = raw.match(/\{[\s\S]*\}/)?.[0] ?? '{}'
     return JSON.parse(json)
   } catch { return null }
+}
+
+// ── Onboarding: KI-Personalisierungszusammenfassung ───────────────────────
+export async function generatePersonalizationSummary(
+  profile: UserProfile,
+  cp: CoachingProfile,
+  apiKey: string,
+): Promise<string> {
+  const goalMap: Record<string, string> = {
+    muscle:'Muskelaufbau', fat_loss:'Fettabbau', performance:'Performance',
+    sleep:'Schlafoptimierung', health:'Allgemeine Gesundheit', endurance:'Ausdauer',
+  }
+  const goals = cp.mainGoals.map((g) => goalMap[g] ?? g).join(', ')
+  const bmr = profile.gender === 'male'
+    ? Math.round(10 * profile.weight + 6.25 * profile.height - 5 * profile.age + 5)
+    : Math.round(10 * profile.weight + 6.25 * profile.height - 5 * profile.age - 161)
+  const actMult: Record<string, number> = { sedentary:1.2, light:1.375, moderate:1.55, active:1.725, very_active:1.9 }
+  const tdee = Math.round(bmr * (actMult[profile.activityLevel] ?? 1.55))
+
+  const res = await anthropicPost(apiKey, {
+    model: ANTHROPIC_MODEL,
+    max_tokens: 800,
+    messages: [{
+      role: 'user',
+      content: `Erstelle eine präzise Coaching-Zusammenfassung für ${profile.name} auf Deutsch.
+
+PROFIL:
+- Alter: ${profile.age}J, ${profile.gender==='male'?'männlich':'weiblich'}, ${profile.weight}kg, ${profile.height}cm
+- TDEE: ~${tdee} kcal, Ziel: ${profile.goal==='lose'?'Abnehmen':profile.goal==='gain'?'Zunehmen':'Gewicht halten'}
+- Hauptziele: ${goals}
+- Ernährung: ${cp.dietType}, ${cp.mealsPerDay} Mahlzeiten, Frühstück: ${cp.eatsBreakfast?'Ja':'Nein'}
+- Lieblingsspeisen: ${cp.favoriteFoods||'keine Angabe'}, mag nicht: ${cp.dislikedFoods||'keine'}
+- Allergien: ${cp.allergies||'keine'}, Alkohol: ${cp.alcoholConsumption}, Koffein: ${cp.caffeineLevel}
+- Training: ${cp.trainingDaysPerWeek}×/Woche, ${cp.sportTypes.join('+')||'keiner'}, ${cp.trainingDurationMin}min, ${cp.trainingTime}, ${cp.trainingIntensity}
+- Schlaf: ${cp.sleepTime}–${cp.wakeTime}, Qualität: ${cp.sleepQualityRating}, Störungen: ${cp.sleepDisruptors||'keine'}
+- Stress: ${cp.stressLevel}, Arbeit: ${cp.workType}, Sitzen: ${cp.dailySittingHours}
+- Supplements: ${cp.currentSupplements||'keine'}, Einschränkungen: ${cp.healthLimitations||'keine'}
+- Disziplin: ${cp.disciplineLevel}, Herausforderung: ${cp.biggestChallenge||'keine Angabe'}
+- Motivation: ${cp.healthMotivation||'keine Angabe'}
+- Was nicht funktioniert hat: ${cp.pastFailures||'keine Angabe'}
+${cp.avgRecovery ? `- Whoop Recovery Ø: ${cp.avgRecovery}, HRV Ø: ${cp.avgHrv}` : ''}
+
+Erstelle in 4-5 Sätzen eine PERSONALISIERTE Zusammenfassung die enthält:
+1. Kalorienziel & Makros (konkrete Zahlen)
+2. Optimale Mahlzeitenstrategie
+3. Trainingsempfehlung
+4. Wichtigste Verbesserungsbereiche
+5. Persönlicher Coaching-Stil
+
+Schreib wie ein echter Coach der diese Person kennt. Keine generischen Tipps.`,
+    }],
+  })
+  return (await res.json()).content?.[0]?.text ?? ''
 }

@@ -40,17 +40,18 @@ export default function AIAdvisor() {
   const fileRef   = useRef<HTMLInputElement>(null)
   const bottomRef = useRef<HTMLDivElement>(null)
 
-  const kaloMessages    = useStore((s) => s.kaloMessages)
-  const addKaloMessage  = useStore((s) => s.addKaloMessage)
-  const clearKaloMsgs   = useStore((s) => s.clearKaloMessages)
-  const userPersonality = useStore((s) => s.userPersonality)
+  const kaloMessages      = useStore((s) => s.kaloMessages)
+  const addKaloMessage    = useStore((s) => s.addKaloMessage)
+  const clearKaloMsgs     = useStore((s) => s.clearKaloMessages)
+  const userPersonality   = useStore((s) => s.userPersonality)
   const updatePersonality = useStore((s) => s.updatePersonality)
-  const apiKeys         = useStore((s) => s.apiKeys)
-  const profile         = useStore((s) => s.profile)
-  const allFoodLogs     = useStore((s) => s.foodLogs)
-  const allActivities   = useStore((s) => s.activityLogs)
-  const weightHistory   = useStore((s) => s.weightHistory)
-  const whoopData       = useStore((s) => s.whoopData)
+  const apiKeys           = useStore((s) => s.apiKeys)
+  const profile           = useStore((s) => s.profile)
+  const allFoodLogs       = useStore((s) => s.foodLogs)
+  const allActivities     = useStore((s) => s.activityLogs)
+  const weightHistory     = useStore((s) => s.weightHistory)
+  const whoopData         = useStore((s) => s.whoopData)
+  const coachingProfile   = useStore((s) => s.coachingProfile)
 
   const apiKey = apiKeys.anthropic || apiKeys.openai
 
@@ -66,7 +67,27 @@ export default function AIAdvisor() {
     return Math.round(bmr*(m[profile.activityLevel]??1.55))
   }, [profile])
 
-  const context = `${profile?.name}, Ziel: ${profile?.goal==='lose'?'Abnehmen':profile?.goal==='gain'?'Zunehmen':'Halten'}, Kalorienziel: ${target}, Heute: ${Math.round(todayCals)} kcal, Noch: ${Math.round(target-todayCals)} kcal`
+  const cpContext = coachingProfile ? [
+    `Ernährungstyp: ${coachingProfile.dietType}`,
+    coachingProfile.favoriteFoods ? `Lieblingsessen: ${coachingProfile.favoriteFoods}` : '',
+    coachingProfile.dislikedFoods ? `Mag nicht: ${coachingProfile.dislikedFoods}` : '',
+    coachingProfile.allergies     ? `Allergien: ${coachingProfile.allergies}` : '',
+    `Training: ${coachingProfile.trainingDaysPerWeek}×/Woche (${coachingProfile.sportTypes.join(', ')}), ${coachingProfile.trainingTime}, ${coachingProfile.trainingIntensity}`,
+    `Schlaf: ${coachingProfile.sleepTime}–${coachingProfile.wakeTime}, Qualität: ${coachingProfile.sleepQualityRating}`,
+    coachingProfile.sleepDisruptors ? `Schlafstörer: ${coachingProfile.sleepDisruptors}` : '',
+    `Stress: ${coachingProfile.stressLevel}, Arbeit: ${coachingProfile.workType}`,
+    coachingProfile.currentSupplements ? `Supplements: ${coachingProfile.currentSupplements}` : '',
+    coachingProfile.healthLimitations  ? `Einschränkungen: ${coachingProfile.healthLimitations}` : '',
+    `Disziplin: ${coachingProfile.disciplineLevel}`,
+    coachingProfile.biggestChallenge ? `Größte Herausforderung: ${coachingProfile.biggestChallenge}` : '',
+    coachingProfile.mainGoals.length  ? `Hauptziele: ${coachingProfile.mainGoals.join(', ')}` : '',
+  ].filter(Boolean).join(' | ') : ''
+
+  const context = [
+    `${profile?.name}, Ziel: ${profile?.goal==='lose'?'Abnehmen':profile?.goal==='gain'?'Zunehmen':'Halten'}`,
+    `Kalorienziel: ${target}, Heute: ${Math.round(todayCals)} kcal, Noch: ${Math.round(target-todayCals)} kcal`,
+    cpContext,
+  ].filter(Boolean).join(' · ')
   const medTargets = useMemo(() => profile ? computeTargets(profile, target) : null, [profile, target])
   const medSystem  = useMemo(() => buildMedicalSystemPrompt(profile??null, medTargets, target), [profile, medTargets, target])
 
@@ -204,6 +225,20 @@ export default function AIAdvisor() {
     if (weightHistory.length) lines.push(`\nGewicht: ${weightHistory.slice(-5).map((w)=>`${getDayName(w.date)} ${w.weight}kg`).join(' → ')}`)
     if (whoopData) lines.push(`\nWhoop: Recovery ${whoopData.recovery}%, Schlaf ${whoopData.sleepQuality}%, HRV ${whoopData.hrv}ms`)
     lines.push(`\nKalorienziel: ${target} kcal/Tag`)
+    if (coachingProfile) {
+      lines.push('\n=== Persönliches Coaching-Profil ===')
+      lines.push(`Ernährung: ${coachingProfile.dietType}, ${coachingProfile.mealsPerDay} Mahlzeiten/Tag`)
+      if (coachingProfile.favoriteFoods)   lines.push(`Lieblingsessen: ${coachingProfile.favoriteFoods}`)
+      if (coachingProfile.allergies)       lines.push(`Allergien: ${coachingProfile.allergies}`)
+      lines.push(`Training: ${coachingProfile.trainingDaysPerWeek}×/Woche (${coachingProfile.sportTypes.join(', ')}), ${coachingProfile.trainingIntensity}`)
+      lines.push(`Schlaf: ${coachingProfile.sleepTime}–${coachingProfile.wakeTime}, Qualität: ${coachingProfile.sleepQualityRating}`)
+      lines.push(`Stress: ${coachingProfile.stressLevel}, Arbeit: ${coachingProfile.workType}`)
+      if (coachingProfile.currentSupplements) lines.push(`Supplements: ${coachingProfile.currentSupplements}`)
+      if (coachingProfile.healthLimitations)  lines.push(`Einschränkungen: ${coachingProfile.healthLimitations}`)
+      lines.push(`Disziplin: ${coachingProfile.disciplineLevel}`)
+      if (coachingProfile.biggestChallenge)   lines.push(`Herausforderung: ${coachingProfile.biggestChallenge}`)
+      if (coachingProfile.aiPersonalizationSummary) lines.push(`\nKI-Analyse: ${coachingProfile.aiPersonalizationSummary}`)
+    }
     return lines.join('\n')
   }
 
@@ -452,6 +487,41 @@ export default function AIAdvisor() {
       {/* ── Coach ── */}
       {tab==='coach' && (
         <div className="flex-1 overflow-y-auto overflow-x-hidden px-4 pt-4 space-y-3 scroll-pb">
+
+          {/* Coaching profile summary */}
+          {coachingProfile?.aiPersonalizationSummary && (
+            <div className="glass p-4" style={{ background:'rgba(74,140,92,0.06)', borderColor:'rgba(74,140,92,0.2)' }}>
+              <div className="flex items-center gap-2 mb-2">
+                <Sparkles size={14} style={{ color:'#4a8c5c' }}/>
+                <p className="text-xs font-black tracking-wide" style={{ color:'#4a8c5c' }}>DEIN PERSÖNLICHES PROFIL</p>
+              </div>
+              <p className="text-sm leading-relaxed" style={{ color:'var(--text-1)' }}>{coachingProfile.aiPersonalizationSummary}</p>
+              <div className="flex flex-wrap gap-1.5 mt-3">
+                {coachingProfile.mainGoals.map((g) => (
+                  <span key={g} className="text-[10px] px-2 py-0.5 rounded-full font-bold"
+                    style={{ background:'rgba(74,140,92,0.12)', color:'#7db88a', border:'1px solid rgba(74,140,92,0.2)' }}>
+                    {g==='muscle'?'💪 Muskeln':g==='fat_loss'?'🔥 Fett verlieren':g==='performance'?'⚡ Performance':g==='sleep'?'😴 Schlaf':g==='health'?'🧬 Gesünder':g==='endurance'?'🏃 Ausdauer':g}
+                  </span>
+                ))}
+                {coachingProfile.sportTypes.map((s) => (
+                  <span key={s} className="text-[10px] px-2 py-0.5 rounded-full font-bold"
+                    style={{ background:'rgba(59,130,246,0.1)', color:'#60a5fa', border:'1px solid rgba(59,130,246,0.15)' }}>
+                    {s==='strength'?'🏋️':s==='running'?'🏃':s==='cycling'?'🚴':s==='swimming'?'🏊':s==='yoga'?'🧘':s==='martial'?'🥊':'🎯'} {s}
+                  </span>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Recovery-based coaching card */}
+          {coachingProfile && !coachingProfile.aiPersonalizationSummary && (
+            <div className="glass p-4" style={{ background:'rgba(74,140,92,0.04)' }}>
+              <p className="text-xs font-black mb-1" style={{ color:'#4a8c5c' }}>COACHING PROFIL</p>
+              <p className="text-sm" style={{ color:'var(--text-2)' }}>
+                {coachingProfile.trainingDaysPerWeek}× Training/Woche · {coachingProfile.dietType} · Schlaf {coachingProfile.sleepTime}–{coachingProfile.wakeTime}
+              </p>
+            </div>
+          )}
 
           {(briefingLoading || morningBriefing) && (
             <div className="glass p-4" style={{ background:'rgba(251,191,36,0.06)', borderColor:'rgba(251,191,36,0.25)' }}>
