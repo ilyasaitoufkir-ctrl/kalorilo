@@ -5,9 +5,7 @@ import { useDarkMode } from './hooks/useDarkMode'
 import { useWhoopSync } from './hooks/useWhoopSync'
 import { useFirestoreSync } from './hooks/useFirestoreSync'
 import { useBroadcasts } from './hooks/useBroadcasts'
-import { CodeAuthProvider, useCodeAuth } from './contexts/CodeAuthContext'
 import Navigation from './components/Navigation'
-import CodeEntryScreen from './components/CodeEntryScreen'
 import ErrorBoundary from './components/ErrorBoundary'
 import type { TabId } from './types'
 
@@ -21,7 +19,6 @@ const Profile      = lazy(() => import('./components/Profile'))
 const Statistics   = lazy(() => import('./components/Statistics'))
 const Friends      = lazy(() => import('./components/Friends'))
 const Onboarding   = lazy(() => import('./components/Onboarding'))
-const AdminPanel   = lazy(() => import('./components/AdminPanel'))
 const WhoopCallback = lazy(() => import('./components/WhoopCallback'))
 
 // ── Shared loading spinner ────────────────────────────────────────────────────
@@ -53,12 +50,11 @@ function MainApp() {
   const profile      = useStore((s) => s.profile)
   const activeTab    = useStore((s) => s.activeTab)
   const setActiveTab = useStore((s) => s.setActiveTab)
-  const { code, loading } = useCodeAuth()
 
   useDarkMode()
   useWhoopSync()
-  useFirestoreSync(code)
-  useBroadcasts(code)
+  useFirestoreSync(null)
+  useBroadcasts(null)
 
   const touchStartX = useRef(0)
   const touchStartY = useRef(0)
@@ -82,10 +78,6 @@ function MainApp() {
     if (!t.closest('input, textarea, [contenteditable]'))
       (document.activeElement as HTMLElement)?.blur()
   }
-
-  if (loading) return <Spinner />
-
-  if (!code) return <CodeEntryScreen />
 
   if (!profile) {
     return (
@@ -121,19 +113,14 @@ function MainApp() {
 
 export default function App() {
   const isWhoopCallback = window.location.pathname.includes('whoop-callback')
-  const isAdmin = window.location.pathname === '/admin'
 
   return (
     <ErrorBoundary>
       <Suspense fallback={<Spinner />}>
-        {isAdmin ? (
-          <AdminPanel />
-        ) : isWhoopCallback ? (
+        {isWhoopCallback ? (
           <WhoopCallback />
         ) : (
-          <CodeAuthProvider>
-            <MainApp />
-          </CodeAuthProvider>
+          <MainApp />
         )}
       </Suspense>
       <Toaster
