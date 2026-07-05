@@ -3,6 +3,7 @@ import { Settings, Droplets, Zap, Plus, ChevronRight, Footprints, RefreshCw, Che
 import { useStore } from '../store/useStore'
 import { formatDate, getMacroTargets, getTodayQuote, waterGoal, getBMI } from '../utils/calculations'
 import { generateEnergyPlan, getMuscleRecovery } from '../utils/insights'
+import { generateScoreComment } from '../utils/api'
 import type { WhoopData, WhoopDayHistory, ActivityLog } from '../types'
 
 const today = formatDate()
@@ -64,16 +65,18 @@ function MacroCard({ label, value, max, color, unit = 'g' }: {
 
 // ── Daily Score helpers ───────────────────────────────────────────────────
 function scoreColor(s: number) {
-  if (s >= 81) return '#10b981'
-  if (s >= 61) return '#f59e0b'
-  if (s >= 41) return '#f97316'
+  if (s >= 85) return '#10b981'
+  if (s >= 70) return '#22c55e'
+  if (s >= 55) return '#f59e0b'
+  if (s >= 40) return '#f97316'
   return '#ef4444'
 }
 function scoreLabel(s: number) {
-  if (s >= 81) return 'Sehr gut! 🟢'
-  if (s >= 61) return 'Gut! 🟡'
-  if (s >= 41) return 'Verbesserungspotenzial 🟠'
-  return 'Ruhetag empfohlen 🔴'
+  if (s >= 85) return '🔥 Ausgezeichnet!'
+  if (s >= 70) return '💪 Sehr gut!'
+  if (s >= 55) return '👍 Gut!'
+  if (s >= 40) return '⚡ Verbesserungspotenzial'
+  return '😴 Schlechter Tag'
 }
 
 // ── Large animated score ring ─────────────────────────────────────────────
@@ -568,8 +571,12 @@ export default function Dashboard() {
   const addCheatDay    = useStore((s) => s.addCheatDay)
   const removeCheatDay = useStore((s) => s.removeCheatDay)
   const setActiveTab   = useStore((s) => s.setActiveTab)
-  const setDailyScore  = useStore((s) => s.setDailyScore)
-  const scoreHistory   = useStore((s) => s.scoreHistory)
+  const setDailyScore      = useStore((s) => s.setDailyScore)
+  const scoreHistory       = useStore((s) => s.scoreHistory)
+  const apiKeys            = useStore((s) => s.apiKeys)
+  const scoreComment       = useStore((s) => s.scoreComment)
+  const scoreCommentDate   = useStore((s) => s.scoreCommentDate)
+  const setScoreComment    = useStore((s) => s.setScoreComment)
 
   // Pull-to-refresh
   const [pullY, setPullY]        = useState(0)
@@ -647,38 +654,48 @@ export default function Dashboard() {
 
   // ── Daily Score ──────────────────────────────────────────────────────────
   const nutritionScore = useMemo(() => {
-    const calHit  = target > 0           ? Math.min(1, calories / target)             : 0
-    const protHit = macroT.protein > 0   ? Math.min(1, protein  / macroT.protein)     : 0
-    const watHit  = waterGoal() > 0      ? Math.min(1, water    / waterGoal())        : 0
-    return Math.round((calHit * 0.5 + protHit * 0.3 + watHit * 0.2) * 100)
-  }, [calories, target, protein, macroT, water])
+    // Protein: stepped scoring (60 pts max)
+    const protGoal  = (Number(profile?.weight) || 75) * 2
+    const pRatio    = protGoal > 0 ? protein / protGoal : 0
+    const proteinSc = pRatio >= 1.0 ? 60 : pRatio >= 0.9 ? 50 : pRatio >= 0.8 ? 40 : pRatio >= 0.7 ? 25 : Math.round(pRatio * 20)
+    // Calorie deficit scoring (40 pts max)
+    const deficit   = target - calories  // positive = under budget
+    const calSc     = deficit >= 0 && deficit <= 500 ? 40
+                    : deficit > 500                  ? 25
+                    : deficit >= -100                ? 30
+                    : Math.max(0, Math.round(30 + (deficit + 100) / 10))
+    return Math.min(100, proteinSc + calSc)
+  }, [calories, target, protein, profile])
 
   const sportScore = useMemo(() => {
-    const strain   = whoopData?.strain ?? 0
-    const strainSc = Math.min(100, (strain / 21) * 100)
-    const stepsSc  = Math.min(100, (stepsToday / 10000) * 100)
-    const worked   = todayActs.length > 0 ? 30 : 0
-    return Math.min(100, Math.round(strainSc * 0.4 + stepsSc * 0.3 + worked))
-  }, [whoopData, stepsToday, todayActs])
+    const strain    = whoopData?.strain ?? 0
+    const strainSc  = Math.min(50, (strain / 21) * 50)
+    const workoutSc = todayActs.length > 0 ? 30 : stepsToday >= 10000 ? 15 : 0
+    const burnedSc  = Math.min(20, (burned / 400) * 20)
+    return Math.min(100, Math.round(strainSc + workoutSc + burnedSc))
+  }, [whoopData, stepsToday, todayActs, burned])
 
-  const sleepScore = useMemo(() => {
-    const dur = whoopData?.sleepDuration ?? 0
-    const q   = whoopData?.sleepQuality  ?? 0
-    if (dur === 0 && q === 0) return 50
-    const durSc = Math.min(100, (dur / 8) * 100)
-    const qSc   = q > 0 ? q : 50
-    return Math.round(durSc * 0.6 + qSc * 0.4)
-  }, [whoopData])
+  const sleepScore = whoopData?.sleepQuality ?? 50
+  const recScore   = whoopData?.recovery     ?? 50
 
-  const recScore   = whoopData?.recovery ?? 50
   const dailyScore = useMemo(() => Math.round(
-    nutritionScore * 0.30 + sportScore * 0.25 + sleepScore * 0.25 + recScore * 0.20
+    nutritionScore * 0.35 + sportScore * 0.25 + sleepScore * 0.20 + recScore * 0.20
   ), [nutritionScore, sportScore, sleepScore, recScore])
 
-  // Save today's score + build 7-day history array
+  // Save today's score + generate AI comment once per day
+  const commentGenRef = useRef(false)
   useEffect(() => {
     if (dailyScore > 0) setDailyScore(today, dailyScore)
-  }, [dailyScore, setDailyScore])
+    const apiKey = apiKeys.anthropic || apiKeys.openai
+    if (dailyScore > 0 && apiKey && profile && scoreCommentDate !== today && !commentGenRef.current) {
+      commentGenRef.current = true
+      generateScoreComment(dailyScore, nutritionScore, sportScore, sleepScore, recScore, profile.name.split(' ')[0], apiKey)
+        .then((c) => { if (c) setScoreComment(c, today) })
+        .catch(() => {})
+        .finally(() => { commentGenRef.current = false })
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [dailyScore])
 
   const scoreHistoryArr = useMemo(() => {
     const arr: { date: string; score: number }[] = []
@@ -828,7 +845,7 @@ export default function Dashboard() {
             <DailyScoreRing score={dailyScore} size={180} />
 
             {/* Label + comparison */}
-            <div className="text-center">
+            <div className="text-center px-4">
               <p className="text-base font-black" style={{ color: scoreColor(dailyScore) }}>
                 {scoreLabel(dailyScore)}
               </p>
@@ -836,6 +853,11 @@ export default function Dashboard() {
                 <p className="text-xs mt-1" style={{ color: scoreDelta >= 0 ? '#10b981' : '#f87171' }}>
                   {scoreDelta >= 0 ? `+${scoreDelta}` : scoreDelta} Punkte vs. gestern
                   {scoreDelta >= 5 ? ' 🔥' : scoreDelta <= -5 ? ' ⬇️' : ''}
+                </p>
+              )}
+              {scoreComment && scoreCommentDate === today && (
+                <p className="text-xs mt-2 italic leading-relaxed" style={{ color: 'rgba(255,255,255,0.45)' }}>
+                  {scoreComment}
                 </p>
               )}
             </div>

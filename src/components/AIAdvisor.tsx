@@ -1,10 +1,10 @@
 import { useState, useRef, useEffect, useMemo } from 'react'
-import { Send, Loader, RefreshCw, Sparkles, Refrigerator, TrendingUp, ChevronRight, Zap, Sun, Heart, Brain, ChevronDown, ChevronUp } from 'lucide-react'
+import { Send, Loader, RefreshCw, Sparkles, Refrigerator, TrendingUp, ChevronRight, Zap, Sun, Heart, Brain, ChevronDown, ChevronUp, Mic, Volume2, VolumeX } from 'lucide-react'
 import { useStore } from '../store/useStore'
 import {
   askKalo, generateDailyKaloQuestion, extractPersonalityInsights, generateWeeklyKaloReport,
   generateCoachInsights, generateMorningBriefing, analyzeFridge, getRecipesFromIngredients, getShoppingList,
-  analyzeCorrelations, generateBodyFingerprint,
+  analyzeCorrelations, generateBodyFingerprint, generateTrainingPlan, generateNutritionPlan,
   type CoachReport, type MorningBriefing, type BodyFingerprint,
 } from '../utils/api'
 import { computeTargets, buildMedicalSystemPrompt } from '../utils/medicalKnowledge'
@@ -23,6 +23,15 @@ export default function AIAdvisor() {
   const [weeklyReport, setWeeklyReport]       = useState('')
   const [dailyQuestion, setDailyQuestion]     = useState('')
   const [questionLoading, setQuestionLoading] = useState(false)
+
+  // Voice coach
+  const [voiceActive, setVoiceActive]         = useState(false)
+  const [voiceEnabled, setVoiceEnabled]       = useState(false)
+  const recogRef = useRef<any>(null)
+
+  // Adaptive plans
+  const [trainingLoading, setTrainingLoading] = useState(false)
+  const [nutritionLoading, setNutritionLoading] = useState(false)
 
   // Insights tab
   const [corrText, setCorrText]               = useState('')
@@ -61,6 +70,10 @@ export default function AIAdvisor() {
   const whoopData         = useStore((s) => s.whoopData)
   const whoopHistory      = useStore((s) => s.whoopHistory)
   const coachingProfile   = useStore((s) => s.coachingProfile)
+  const trainingPlan      = useStore((s) => s.trainingPlan)
+  const setTrainingPlan   = useStore((s) => s.setTrainingPlan)
+  const nutritionPlan     = useStore((s) => s.nutritionPlan)
+  const setNutritionPlan  = useStore((s) => s.setNutritionPlan)
 
   const apiKey = apiKeys.anthropic || apiKeys.openai
 
@@ -136,6 +149,7 @@ export default function AIAdvisor() {
     try {
       const reply = await askKalo(msg, profile, userPersonality, kaloMessages, context, apiKey)
       addKaloMessage({ role:'assistant', content:reply, timestamp:Date.now() })
+      speak(reply)
       // Background personality extraction every 6 messages
       const newLen = kaloMessages.length + 2
       if (newLen >= 6 && newLen % 6 === 0) {
@@ -184,6 +198,58 @@ export default function AIAdvisor() {
       setWeeklyReport(text)
     } catch (e) { toast.error(e instanceof Error ? e.message : 'Fehler', { duration:5000 }) }
     setReportLoading(false)
+  }
+
+  // ── Voice coach ─────────────────────────────────────────────────────────
+  const startVoice = () => {
+    const SRA = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition
+    if (!SRA) { toast.error('Spracherkennung nicht unterstützt in diesem Browser'); return }
+    const rec = new SRA()
+    rec.lang = 'de-DE'
+    rec.interimResults = false
+    rec.maxAlternatives = 1
+    rec.onresult = (e: any) => {
+      const text = e.results[0][0].transcript
+      setInput(text)
+      setVoiceActive(false)
+    }
+    rec.onerror = () => setVoiceActive(false)
+    rec.onend   = () => setVoiceActive(false)
+    recogRef.current = rec
+    rec.start()
+    setVoiceActive(true)
+  }
+
+  const stopVoice = () => { recogRef.current?.stop(); setVoiceActive(false) }
+
+  const speak = (text: string) => {
+    if (!voiceEnabled || !('speechSynthesis' in window)) return
+    window.speechSynthesis.cancel()
+    const utt = new SpeechSynthesisUtterance(text.replace(/[*#_]/g, ''))
+    utt.lang = 'de-DE'
+    utt.rate = 1.05
+    window.speechSynthesis.speak(utt)
+  }
+
+  // ── Adaptive plan generators ─────────────────────────────────────────────
+  const genTrainingPlan = async () => {
+    if (!apiKey || !profile) { toast.error('API Key oder Profil fehlt'); return }
+    setTrainingLoading(true)
+    try {
+      const plan = await generateTrainingPlan(profile, coachingProfile, whoopData, apiKey)
+      setTrainingPlan(plan)
+    } catch (e) { toast.error(e instanceof Error ? e.message : 'Fehler', { duration: 5000 }) }
+    setTrainingLoading(false)
+  }
+
+  const genNutritionPlan = async () => {
+    if (!apiKey || !profile) { toast.error('API Key oder Profil fehlt'); return }
+    setNutritionLoading(true)
+    try {
+      const plan = await generateNutritionPlan(profile, coachingProfile, target, apiKey)
+      setNutritionPlan(plan)
+    } catch (e) { toast.error(e instanceof Error ? e.message : 'Fehler', { duration: 5000 }) }
+    setNutritionLoading(false)
   }
 
   const buildCoachData = () => {
@@ -475,15 +541,34 @@ export default function AIAdvisor() {
           {/* Input bar */}
           <div className="flex-shrink-0 px-4 py-3" style={{ background:'var(--bg)', borderTop:'1px solid rgba(74,140,92,0.08)' }}>
             {kaloMessages.length > 0 && (
-              <button onClick={clearKaloMsgs} className="flex items-center gap-1 text-xs mb-2 glass-press" style={{ color:'var(--text-3)' }}>
-                <RefreshCw size={11}/>Chat leeren
-              </button>
+              <div className="flex items-center gap-3 mb-2">
+                <button onClick={clearKaloMsgs} className="flex items-center gap-1 text-xs glass-press" style={{ color:'var(--text-3)' }}>
+                  <RefreshCw size={11}/>Chat leeren
+                </button>
+                {'speechSynthesis' in window && (
+                  <button onClick={() => { setVoiceEnabled((v) => !v); window.speechSynthesis.cancel() }}
+                    className="flex items-center gap-1 text-xs glass-press" title="Kalo spricht"
+                    style={{ color: voiceEnabled ? '#10b981' : 'var(--text-3)' }}>
+                    {voiceEnabled ? <Volume2 size={11}/> : <VolumeX size={11}/>}
+                    {voiceEnabled ? 'Stimme an' : 'Stimme aus'}
+                  </button>
+                )}
+              </div>
             )}
             <div className="flex items-center gap-2">
               <input value={input} onChange={(e) => setInput(e.target.value)}
                 onKeyDown={(e) => e.key==='Enter'&&!e.shiftKey&&send()}
                 placeholder={`Erzähl mir, ${firstName || 'wie geht\'s'}…`}
                 style={{ ...glassInput, flex:1 }}/>
+              {(('SpeechRecognition' in window) || ('webkitSpeechRecognition' in (window as any))) && (
+                <button onClick={() => voiceActive ? stopVoice() : startVoice()}
+                  className="w-12 h-12 rounded-2xl flex items-center justify-center flex-shrink-0 transition-all"
+                  style={voiceActive
+                    ? { background:'#ef4444', border:'none' }
+                    : { background:'rgba(255,255,255,0.05)', border:'1px solid rgba(74,140,92,0.1)' }}>
+                  <Mic size={16} style={{ color: voiceActive ? '#fff' : 'var(--text-2)' }}/>
+                </button>
+              )}
               <button onClick={() => send()} disabled={!input.trim()||loading||!apiKey}
                 className="btn-gold w-12 h-12 rounded-2xl flex items-center justify-center flex-shrink-0 disabled:opacity-40">
                 <Send size={16}/>
@@ -695,6 +780,54 @@ export default function AIAdvisor() {
               <p className="text-xs" style={{ color:'var(--text-3)' }}>Tippe auf „Jetzt analysieren" um deine Daten auszuwerten</p>
             </div>
           )}
+
+          {/* ── Trainingsplan ── */}
+          <div className="glass p-5" style={{ background:'rgba(59,130,246,0.05)', borderColor:'rgba(59,130,246,0.18)' }}>
+            <div className="flex items-center gap-3 mb-3">
+              <div className="w-14 h-14 rounded-3xl flex items-center justify-center text-3xl flex-shrink-0"
+                style={{ background:'rgba(59,130,246,0.1)', border:'1px solid rgba(59,130,246,0.18)' }}>💪</div>
+              <div>
+                <p className="font-black" style={{ color:'var(--text-1)' }}>Dein Trainingsplan</p>
+                <p className="text-xs" style={{ color:'var(--text-3)' }}>7 Tage · personalisiert · Recovery-basiert</p>
+              </div>
+            </div>
+            <button onClick={genTrainingPlan} disabled={trainingLoading||!apiKey||!profile}
+              className="btn-gold w-full py-4 text-sm flex items-center justify-center gap-2 disabled:opacity-40" style={{ minHeight:50 }}>
+              {trainingLoading
+                ? <><Loader size={16} className="animate-spin"/>Generiere Plan…</>
+                : <><Zap size={16}/>{trainingPlan?'Neu generieren':'Trainingsplan erstellen'}</>}
+            </button>
+            {!apiKey && <p className="text-xs mt-2 text-center" style={{ color:'#ef4444' }}>⚠️ API Key fehlt → Profil → API Keys</p>}
+            {trainingPlan && (
+              <div className="mt-3 rounded-2xl p-3" style={{ background:'rgba(255,255,255,0.03)', border:'1px solid rgba(59,130,246,0.1)' }}>
+                <p className="text-sm leading-relaxed whitespace-pre-wrap" style={{ color:'var(--text-1)' }}>{trainingPlan}</p>
+              </div>
+            )}
+          </div>
+
+          {/* ── Ernährungsplan ── */}
+          <div className="glass p-5" style={{ background:'rgba(245,158,11,0.05)', borderColor:'rgba(245,158,11,0.18)' }}>
+            <div className="flex items-center gap-3 mb-3">
+              <div className="w-14 h-14 rounded-3xl flex items-center justify-center text-3xl flex-shrink-0"
+                style={{ background:'rgba(245,158,11,0.1)', border:'1px solid rgba(245,158,11,0.18)' }}>🍽️</div>
+              <div>
+                <p className="font-black" style={{ color:'var(--text-1)' }}>Dein Ernährungsplan</p>
+                <p className="text-xs" style={{ color:'var(--text-3)' }}>7 Tage · Kalorien & Protein-optimiert</p>
+              </div>
+            </div>
+            <button onClick={genNutritionPlan} disabled={nutritionLoading||!apiKey||!profile}
+              className="btn-gold w-full py-4 text-sm flex items-center justify-center gap-2 disabled:opacity-40" style={{ minHeight:50 }}>
+              {nutritionLoading
+                ? <><Loader size={16} className="animate-spin"/>Generiere Plan…</>
+                : <><Sparkles size={16}/>{nutritionPlan?'Neu generieren':'Ernährungsplan erstellen'}</>}
+            </button>
+            {nutritionPlan && (
+              <div className="mt-3 rounded-2xl p-3" style={{ background:'rgba(255,255,255,0.03)', border:'1px solid rgba(245,158,11,0.1)' }}>
+                <p className="text-sm leading-relaxed whitespace-pre-wrap" style={{ color:'var(--text-1)' }}>{nutritionPlan}</p>
+              </div>
+            )}
+          </div>
+
         </div>
       )}
 

@@ -123,6 +123,17 @@ interface AppState {
   coachingProfile: CoachingProfile | null
   setCoachingProfile: (p: CoachingProfile) => void
 
+  // Adaptive coaching plans (AI-generated, cached)
+  trainingPlan: string | null
+  setTrainingPlan: (plan: string) => void
+  nutritionPlan: string | null
+  setNutritionPlan: (plan: string) => void
+
+  // Daily AI score comment (cached per day)
+  scoreComment: string
+  scoreCommentDate: string
+  setScoreComment: (comment: string, date: string) => void
+
   // Kalo AI personality
   userPersonality: UserPersonality
   updatePersonality: (updates: Partial<UserPersonality>) => void
@@ -277,6 +288,15 @@ export const useStore = create<AppState>()(
       coachingProfile: null,
       setCoachingProfile: (p) => set({ coachingProfile: p }),
 
+      trainingPlan: null,
+      setTrainingPlan: (plan) => set({ trainingPlan: plan }),
+      nutritionPlan: null,
+      setNutritionPlan: (plan) => set({ nutritionPlan: plan }),
+
+      scoreComment: '',
+      scoreCommentDate: '',
+      setScoreComment: (comment, date) => set({ scoreComment: comment, scoreCommentDate: date }),
+
       // Kalo personality
       userPersonality: DEFAULT_PERSONALITY,
       updatePersonality: (updates) => set((s) => ({
@@ -304,6 +324,7 @@ export const useStore = create<AppState>()(
         apiKeys: defaultApiKeys, activeTab: 'home',
         whoopTokens: null, groupIds: [],
         userPersonality: DEFAULT_PERSONALITY, portionHistory: {},
+        trainingPlan: null, nutritionPlan: null, scoreComment: '', scoreCommentDate: '',
       }),
 
       getFoodLogsForDate: (date) => get().foodLogs.filter((l) => l.date === date),
@@ -415,6 +436,10 @@ export const useStore = create<AppState>()(
         supplementChecked: state.supplementChecked,
         coachingProfile: state.coachingProfile,
         scoreHistory: state.scoreHistory,
+        trainingPlan: state.trainingPlan,
+        nutritionPlan: state.nutritionPlan,
+        scoreComment: state.scoreComment,
+        scoreCommentDate: state.scoreCommentDate,
       }),
     }
   )

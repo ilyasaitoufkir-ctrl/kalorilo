@@ -1,4 +1,4 @@
-import type { FoodItem, Macros, MealType, BodyAnalysis, UserPersonality, PlateIngredient, DetailedPlateAnalysis, UserProfile, CoachingProfile } from '../types'
+import type { FoodItem, Macros, MealType, BodyAnalysis, UserPersonality, PlateIngredient, DetailedPlateAnalysis, UserProfile, CoachingProfile, WhoopData } from '../types'
 
 // ── Voice Input Parsing ────────────────────────────────────────────────────
 export interface VoiceParseResult {
@@ -855,6 +855,119 @@ Maximal 4 observations. Bei Datenmangel: ehrlich mit "(geschätzt)" kennzeichnen
   const json = raw.match(/\{[\s\S]*\}/)?.[0] ?? '{}'
   const fb: BodyFingerprint = { optimalSleep: '–', bestTrainingDay: '–', optimalCalories: 0, topRecoveryFoods: [], worstRecoveryFoods: [], proteinNeeds: '–', observations: [] }
   try { return { ...fb, ...JSON.parse(json) } } catch { return fb }
+}
+
+// ── Adaptive Coaching – Training & Nutrition Plan ─────────────────────────
+
+export async function generateTrainingPlan(
+  profile: UserProfile,
+  coachingProfile: CoachingProfile | null,
+  whoopData: WhoopData | null,
+  apiKey: string,
+): Promise<string> {
+  const goal = profile.goal === 'lose' ? 'Fettabbau' : profile.goal === 'gain' ? 'Muskelaufbau' : 'Fitness & Gesundheit'
+  const cp   = coachingProfile
+  const res  = await anthropicPost(apiKey, {
+    model: ANTHROPIC_MODEL,
+    max_tokens: 2000,
+    messages: [{
+      role: 'user',
+      content: `Du bist ein Personal Trainer. Erstelle einen personalisierten 7-Tage-Trainingsplan.
+
+PROFIL:
+- Name: ${profile.name}, Alter: ${profile.age}J, Gewicht: ${profile.weight}kg
+- Ziel: ${goal}
+${cp ? `- Trainingstage: ${cp.trainingDaysPerWeek}×/Woche` : ''}
+${cp ? `- Sportarten: ${cp.sportTypes.join(', ')}` : ''}
+${cp ? `- Trainingszeit: ${cp.trainingTime}` : ''}
+${cp ? `- Intensität: ${cp.trainingIntensity}` : ''}
+${cp ? `- Dauer: ${cp.trainingDurationMin} Min/Session` : ''}
+${cp?.healthLimitations ? `- Einschränkungen: ${cp.healthLimitations}` : ''}
+${whoopData ? `- Aktuelle Recovery: ${whoopData.recovery}%` : ''}
+${whoopData ? `- Heutiger Strain: ${whoopData.strain ?? 0}` : ''}
+
+Erstelle den Plan mit:
+1. Tagesstruktur (Kraft/Ausdauer/Ruhe/Aktive Erholung)
+2. Konkrete Übungen mit Sätzen, Wdh. und Gewichtshinweisen
+3. Warm-up & Cool-down (je 5 Min)
+4. Recovery-Tipps zwischen den Einheiten
+5. Steigerungsempfehlung für Woche 2
+
+Antworte auf Deutsch, strukturiert und motivierend.`,
+    }],
+  })
+  return (await res.json()).content?.[0]?.text ?? 'Kein Plan generiert'
+}
+
+export async function generateNutritionPlan(
+  profile: UserProfile,
+  coachingProfile: CoachingProfile | null,
+  calorieTarget: number,
+  apiKey: string,
+): Promise<string> {
+  const protGoal = Math.round(Number(profile.weight) * 2)
+  const goal     = profile.goal === 'lose' ? 'Fettabbau' : profile.goal === 'gain' ? 'Muskelaufbau' : 'Fitness'
+  const cp       = coachingProfile
+  const res      = await anthropicPost(apiKey, {
+    model: ANTHROPIC_MODEL,
+    max_tokens: 2000,
+    messages: [{
+      role: 'user',
+      content: `Du bist ein Ernährungsberater. Erstelle einen personalisierten 7-Tage-Ernährungsplan.
+
+PROFIL:
+- Name: ${profile.name}, Gewicht: ${profile.weight}kg, Ziel: ${goal}
+- Kalorienziel: ${calorieTarget} kcal/Tag
+- Proteinziel: ${protGoal}g/Tag (${profile.weight}kg × 2)
+${cp ? `- Ernährungstyp: ${cp.dietType}` : ''}
+${cp ? `- Mahlzeiten/Tag: ${cp.mealsPerDay}` : ''}
+${cp ? `- Frühstück: ${cp.eatsBreakfast ? 'Ja' : 'Nein'}` : ''}
+${cp?.favoriteFoods ? `- Lieblingsessen: ${cp.favoriteFoods}` : ''}
+${cp?.dislikedFoods ? `- Mag nicht: ${cp.dislikedFoods}` : ''}
+${cp?.allergies ? `- Allergien: ${cp.allergies}` : ''}
+
+Erstelle den Plan mit:
+1. Mahlzeiten Mo–So (Frühstück, Mittag, Abend + Snacks)
+2. Kalorien & Protein pro Mahlzeit
+3. Kurze Zubereitungshinweise
+4. Kompakte Wocheneinkaufsliste am Ende
+5. Meal-Prep Tipp für Sonntag
+
+Antworte auf Deutsch, konkret und praktisch.`,
+    }],
+  })
+  return (await res.json()).content?.[0]?.text ?? 'Kein Plan generiert'
+}
+
+export async function generateScoreComment(
+  score: number,
+  nutritionScore: number,
+  sportScore: number,
+  sleepScore: number,
+  recoveryScore: number,
+  profileName: string,
+  apiKey: string,
+): Promise<string> {
+  const weakest = [
+    { name: 'Ernährung', v: nutritionScore },
+    { name: 'Sport',     v: sportScore     },
+    { name: 'Schlaf',    v: sleepScore     },
+    { name: 'Recovery',  v: recoveryScore  },
+  ].sort((a, b) => a.v - b.v)[0]
+  const res = await anthropicPost(apiKey, {
+    model: ANTHROPIC_MODEL,
+    max_tokens: 150,
+    messages: [{
+      role: 'user',
+      content: `Du bist Kalo, persönlicher Coach von ${profileName}.
+
+Tages-Score: ${score}/100 (Ernährung: ${nutritionScore}, Sport: ${sportScore}, Schlaf: ${sleepScore}, Recovery: ${recoveryScore})
+Schwächster Bereich: ${weakest.name} (${weakest.v} Punkte)
+
+Schreib einen kurzen persönlichen Kommentar (2 Sätze). Motivierend, ehrlich, mit konkretem Hinweis auf den schwächsten Bereich. Kein Markdown, kein Name am Anfang.`,
+    }],
+  })
+  return (await res.json()).content?.[0]?.text?.trim() ?? ''
 }
 
 // ── Onboarding: KI-Personalisierungszusammenfassung ───────────────────────
