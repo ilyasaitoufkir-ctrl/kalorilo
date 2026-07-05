@@ -341,7 +341,7 @@ export default function Dashboard() {
   const waterLogs      = useStore((s) => s.waterLogs)
   const whoopData      = useStore((s) => s.whoopData)
   const whoopExtended  = useStore((s) => s.whoopExtended)
-  const whoopTokens    = useStore((s) => s.whoopTokens)
+
   const whoopHistory   = useStore((s) => s.whoopHistory)
   const whoopLastSync  = useStore((s) => s.whoopLastSyncAt)
   const cheatDays      = useStore((s) => s.cheatDays)
