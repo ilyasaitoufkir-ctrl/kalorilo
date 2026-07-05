@@ -14,24 +14,27 @@ interface Props {
 
 function ConfidenceBar({ value }: { value: number }) {
   const pct = Math.round(value * 100)
-  const color = value >= 0.8 ? '#22c55e' : value >= 0.5 ? '#f59e0b' : '#ef4444'
-  const label = value >= 0.8 ? 'Sicher' : value >= 0.5 ? 'Unsicher' : 'Sehr unsicher'
+  const color = value >= 0.85 ? '#22c55e' : value >= 0.60 ? '#f59e0b' : '#ef4444'
+  const label = value >= 0.85 ? '🟢 Sicher' : value >= 0.60 ? '🟡 Unsicher' : '🔴 Sehr unsicher'
   return (
     <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
       <div style={{ flex: 1, height: 5, background: 'rgba(255,255,255,0.1)', borderRadius: 3, overflow: 'hidden' }}>
         <div style={{ width: `${pct}%`, height: '100%', background: color, borderRadius: 3, transition: 'width 0.4s' }} />
       </div>
-      <span style={{ fontSize: 10, fontWeight: 700, color, minWidth: 70 }}>{pct}% {label}</span>
+      <span style={{ fontSize: 10, fontWeight: 700, color, minWidth: 80 }}>{pct}% {label}</span>
     </div>
   )
 }
+
+type RefObject = 'hand' | 'fork' | 'none'
 
 export default function PhotoFoodScanner({ onConfirm, onClose }: Props) {
   const apiKeys = useStore((s) => s.apiKeys)
   const portionHistory = useStore((s) => s.portionHistory)
   const updatePortionHistory = useStore((s) => s.updatePortionHistory)
 
-  const [step, setStep] = useState<'capture' | 'analyzing' | 'review'>('capture')
+  const [step, setStep] = useState<'reference' | 'capture' | 'analyzing' | 'review'>('reference')
+  const [refObject, setRefObject] = useState<RefObject>('hand')
   const [preview, setPreview] = useState<string | null>(null)
   const [analysis, setAnalysis] = useState<DetailedPlateAnalysis | null>(null)
   const [ingredients, setIngredients] = useState<PlateIngredient[]>([])
@@ -60,7 +63,7 @@ export default function PhotoFoodScanner({ onConfirm, onClose }: Props) {
       const b64 = await imageToBase64(file)
       setPreview(b64)
       setStep('analyzing')
-      const result = await analyzePlateDetailed(b64, portionHistory, apiKey)
+      const result = await analyzePlateDetailed(b64, portionHistory, apiKey, refObject)
       setAnalysis(result)
       setIngredients(result.ingredients)
       setStep('review')
@@ -121,6 +124,88 @@ export default function PhotoFoodScanner({ onConfirm, onClose }: Props) {
     onConfirm(items, analysis?.dish ?? 'Gericht vom Foto')
     toast.success('Mahlzeit gespeichert! 📸')
   }
+
+  // ── REFERENCE OBJECT SELECTION ────────────────────────────────────────
+  if (step === 'reference') return (
+    <div style={{ position: 'fixed', inset: 0, zIndex: 200, background: 'rgba(0,0,0,0.92)', backdropFilter: 'blur(8px)', display: 'flex', flexDirection: 'column' }}>
+      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 24, padding: 32 }}>
+        <div style={{
+          width: 84, height: 84, borderRadius: 24,
+          background: 'linear-gradient(135deg, #4a8c5c, #2d5c3a)',
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          boxShadow: '0 8px 32px rgba(74,140,92,0.4)',
+        }}>
+          <Camera size={38} color="#fff" />
+        </div>
+
+        <div style={{ textAlign: 'center' }}>
+          <h2 style={{ color: '#fff', fontSize: 20, fontWeight: 800, margin: '0 0 8px' }}>Referenzobjekt wählen</h2>
+          <p style={{ color: 'rgba(255,255,255,0.5)', fontSize: 13, margin: 0, lineHeight: 1.5 }}>
+            So schätzt Kalo die Portionsgröße<br />deutlich genauer ein
+          </p>
+        </div>
+
+        <div style={{ display: 'flex', gap: 12, width: '100%', maxWidth: 320 }}>
+          {([
+            { id: 'hand' as RefObject, emoji: '🖐️', label: 'Hand', desc: 'ca. 18cm Breite' },
+            { id: 'fork' as RefObject, emoji: '🍴', label: 'Gabel', desc: 'ca. 19cm lang' },
+            { id: 'none' as RefObject, emoji: '❌', label: 'Keines', desc: 'ohne Referenz' },
+          ] as const).map(({ id, emoji, label, desc }) => {
+            const active = refObject === id
+            return (
+              <button
+                key={id}
+                onClick={() => setRefObject(id)}
+                style={{
+                  flex: 1, padding: '14px 8px', borderRadius: 18,
+                  border: active ? '2px solid #4a8c5c' : '1.5px solid rgba(255,255,255,0.12)',
+                  background: active ? 'rgba(74,140,92,0.18)' : 'rgba(255,255,255,0.04)',
+                  cursor: 'pointer', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4,
+                  transition: 'all 0.2s',
+                }}
+              >
+                <span style={{ fontSize: 26 }}>{emoji}</span>
+                <span style={{ color: active ? '#c8e6c9' : '#fff', fontWeight: 700, fontSize: 13 }}>{label}</span>
+                <span style={{ color: 'rgba(255,255,255,0.4)', fontSize: 10 }}>{desc}</span>
+              </button>
+            )
+          })}
+        </div>
+
+        {refObject !== 'none' && (
+          <div style={{
+            background: 'rgba(74,140,92,0.1)', border: '1px solid rgba(74,140,92,0.25)',
+            borderRadius: 14, padding: '12px 16px', maxWidth: 320, width: '100%',
+          }}>
+            <p style={{ color: 'rgba(255,255,255,0.7)', fontSize: 12, margin: 0, lineHeight: 1.6 }}>
+              💡 Lege deine <strong style={{ color: '#7db88a' }}>{refObject === 'hand' ? 'Hand 🖐️' : 'Gabel 🍴'}</strong> neben den Teller, bevor du das Foto machst. Kalo nutzt sie als Maßstab.
+            </p>
+          </div>
+        )}
+
+        <button
+          onClick={() => setStep('capture')}
+          style={{
+            padding: '16px 32px', borderRadius: 18, border: 'none',
+            background: 'linear-gradient(135deg, #4a8c5c, #2d5c3a)',
+            color: '#fff', fontWeight: 800, fontSize: 16, cursor: 'pointer',
+            boxShadow: '0 4px 20px rgba(74,140,92,0.4)',
+            display: 'flex', alignItems: 'center', gap: 10, width: '100%', maxWidth: 320, justifyContent: 'center',
+          }}
+        >
+          Weiter → Foto aufnehmen
+        </button>
+      </div>
+
+      <button onClick={onClose} style={{
+        margin: '0 24px max(24px, env(safe-area-inset-bottom)) 24px',
+        padding: '14px', borderRadius: 16, border: '1px solid rgba(255,255,255,0.12)',
+        background: 'rgba(255,255,255,0.04)', color: 'rgba(255,255,255,0.5)', fontWeight: 600, cursor: 'pointer',
+      }}>
+        Abbrechen
+      </button>
+    </div>
+  )
 
   // ── CAPTURE ────────────────────────────────────────────────────────────
   if (step === 'capture') return (
@@ -183,14 +268,22 @@ export default function PhotoFoodScanner({ onConfirm, onClose }: Props) {
           </button>
         </div>
 
-        <div style={{
-          background: 'rgba(74,140,92,0.12)', border: '1px solid rgba(74,140,92,0.3)',
-          borderRadius: 14, padding: '12px 16px', maxWidth: 320, width: '100%',
+        {refObject !== 'none' && (
+          <div style={{
+            background: 'rgba(74,140,92,0.12)', border: '1px solid rgba(74,140,92,0.3)',
+            borderRadius: 14, padding: '12px 16px', maxWidth: 320, width: '100%',
+          }}>
+            <p style={{ color: 'rgba(255,255,255,0.8)', fontSize: 13, margin: 0, lineHeight: 1.5, fontWeight: 600 }}>
+              {refObject === 'hand' ? '🖐️ Hand' : '🍴 Gabel'} neben den Teller legen – dann Foto machen!
+            </p>
+          </div>
+        )}
+
+        <button onClick={() => setStep('reference')} style={{
+          background: 'transparent', border: 'none', color: 'rgba(255,255,255,0.35)', cursor: 'pointer', fontSize: 12,
         }}>
-          <p style={{ color: 'rgba(255,255,255,0.7)', fontSize: 12, margin: 0, lineHeight: 1.5 }}>
-            💡 <strong style={{ color: '#7db88a' }}>Tipp:</strong> Besteck oder Teller im Bild helfen Kalo die Portionsgröße genauer einzuschätzen
-          </p>
-        </div>
+          Referenz ändern
+        </button>
       </div>
 
       <button onClick={onClose} style={{
@@ -258,7 +351,7 @@ export default function PhotoFoodScanner({ onConfirm, onClose }: Props) {
         </button>
       </div>
 
-      {/* Overall confidence */}
+      {/* Overall confidence + accuracy */}
       {analysis && (
         <div style={{
           margin: '12px 16px 0',
@@ -268,10 +361,15 @@ export default function PhotoFoodScanner({ onConfirm, onClose }: Props) {
         }}>
           <AlertCircle size={16} color="#7db88a" />
           <div style={{ flex: 1 }}>
-            <span style={{ color: 'rgba(255,255,255,0.7)', fontSize: 12 }}>Gesamt-Konfidenz: </span>
+            <span style={{ color: 'rgba(255,255,255,0.7)', fontSize: 12 }}>Genauigkeit: </span>
             <span style={{ color: '#7db88a', fontWeight: 700, fontSize: 12 }}>
-              {Math.round(analysis.confidence_overall * 100)}%
+              ±{Math.round((1 - analysis.confidence_overall) * 20 + 5)}%
             </span>
+            {refObject !== 'none' && (
+              <span style={{ color: '#4a8c5c', fontWeight: 600, fontSize: 11 }}>
+                {' '}· Referenz: {refObject === 'hand' ? '🖐️ Hand' : '🍴 Gabel'}
+              </span>
+            )}
             {analysis.notes ? <span style={{ color: 'rgba(255,255,255,0.4)', fontSize: 11 }}> · {analysis.notes}</span> : null}
           </div>
         </div>

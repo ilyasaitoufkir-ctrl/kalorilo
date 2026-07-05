@@ -155,10 +155,16 @@ export interface CheatDay {
 
 export interface BodyAnalysis {
   bodyFatRange: string
-  muscleTonus: string
-  fitnessLevel: string
-  observations: string[]
-  recommendations: string[]
+  muscleScore: number          // 1–10
+  bodyType: string             // Ektomorph / Mesomorph / Endomorph
+  strengths: string[]
+  improvements: string[]
+  recommendation: string
+  // legacy compat
+  muscleTonus?: string
+  fitnessLevel?: string
+  observations?: string[]
+  recommendations?: string[]
 }
 
 export interface BeforeAfterPhoto {

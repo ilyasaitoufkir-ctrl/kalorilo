@@ -1,8 +1,10 @@
-import { useMemo, useState, useRef, useCallback, useEffect } from 'react'
+import { useMemo, useState, useRef, useCallback, useEffect, lazy, Suspense } from 'react'
 import { Settings, Droplets, Zap, Plus, ChevronRight, Footprints, RefreshCw, ChevronDown, ChevronUp, Loader, Brain } from 'lucide-react'
 import { useStore } from '../store/useStore'
 import { formatDate, getMacroTargets, getTodayQuote, waterGoal, getBMI } from '../utils/calculations'
 import { generateEnergyPlan, getMuscleRecovery } from '../utils/insights'
+
+const BodyScanScreen = lazy(() => import('./BodyScanScreen'))
 import { generateScoreComment, getProteinHelp } from '../utils/api'
 import type { WhoopData, WhoopDayHistory, ActivityLog } from '../types'
 
@@ -930,6 +932,9 @@ export default function Dashboard() {
   const scoreCommentDate   = useStore((s) => s.scoreCommentDate)
   const setScoreComment    = useStore((s) => s.setScoreComment)
 
+  // Body scan
+  const [showBodyScan, setShowBodyScan] = useState(false)
+
   // Pull-to-refresh
   const [pullY, setPullY]        = useState(0)
   const [refreshing, setRefresh] = useState(false)
@@ -1356,6 +1361,19 @@ export default function Dashboard() {
         {/* ── Muskel-Regeneration ── */}
         <MuscleTrackerCard activityLogs={activityLogs} />
 
+        {/* ── Körper Scan ── */}
+        <button onClick={() => setShowBodyScan(true)} className="glass-press"
+          style={{ background: '#243028', borderRadius: 28, padding: '16px 18px', border: '1px solid rgba(200,230,201,0.2)', width: '100%', display: 'flex', alignItems: 'center', gap: 14, textAlign: 'left' }}>
+          <div style={{ width: 46, height: 46, background: 'linear-gradient(135deg, rgba(74,140,92,0.3), rgba(45,92,58,0.3))', borderRadius: 18, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, fontSize: 24 }}>
+            🏋️
+          </div>
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <p style={{ color: '#fff', fontSize: 14, fontWeight: 900 }}>Körper Scan</p>
+            <p style={{ color: '#6a9470', fontSize: 11, marginTop: 2 }}>KI schätzt Körperfett & Body Type</p>
+          </div>
+          <ChevronRight size={16} style={{ color: '#6a9470', flexShrink: 0 }} />
+        </button>
+
         {/* ── AI shortcut ── */}
         <button onClick={() => setActiveTab('ai')} className="glass-press"
           style={{ background: '#243028', borderRadius: 28, padding: '16px 18px', border: '1px solid rgba(167,139,250,0.2)', width: '100%', display: 'flex', alignItems: 'center', gap: 14, textAlign: 'left' }}>
@@ -1409,6 +1427,13 @@ export default function Dashboard() {
           </button>
         </div>
       </div>
+
+      {/* ── Body Scan overlay ── */}
+      {showBodyScan && (
+        <Suspense fallback={null}>
+          <BodyScanScreen onClose={() => setShowBodyScan(false)} />
+        </Suspense>
+      )}
     </div>
   )
 }

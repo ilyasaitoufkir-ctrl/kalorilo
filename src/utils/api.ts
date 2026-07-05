@@ -520,30 +520,54 @@ Regeln: 3–4 Items, immer mit echten gestrigen Zahlen, immer mit Quellenangabe,
 }
 
 // ── Body Photo Analysis – Körperzusammensetzung schätzen ──────────────────
-export async function analyzeBodyPhoto(base64Image: string, apiKey: string): Promise<BodyAnalysis> {
+export async function analyzeBodyPhoto(
+  base64Image: string,
+  apiKey: string,
+  profile?: { weight?: number; height?: number; trainingFrequency?: number; goal?: string },
+): Promise<BodyAnalysis> {
+  const ctx = profile
+    ? `\nNutzer-Daten:\n- Gewicht: ${profile.weight ?? '?'}kg\n- Größe: ${profile.height ?? '?'}cm\n- Training: ${profile.trainingFrequency ?? '?'}x/Woche\n- Ziel: ${profile.goal ?? '?'}`
+    : ''
+
   const res = await anthropicPost(apiKey, {
     model: ANTHROPIC_MODEL,
-    max_tokens: 800,
+    max_tokens: 900,
     messages: [{
       role: 'user',
       content: [
         { type: 'image', source: { type: 'base64', media_type: 'image/jpeg', data: base64Image } },
-        { type: 'text', text: `Analysiere dieses Körperfoto visuell und sachlich.
+        {
+          type: 'text',
+          text: `Analysiere dieses Körperfoto präzise basierend auf sichtbaren Merkmalen.${ctx}
+
 Antworte NUR mit validem JSON ohne Markdown:
 {
-  "bodyFatRange": "15–20%",
-  "muscleTonus": "gering|mittel|gut|sehr gut",
-  "fitnessLevel": "Anfänger|Fortgeschritten|Fit|Sehr fit",
-  "observations": ["Sachliche Beobachtung 1", "Beobachtung 2"],
-  "recommendations": ["Konkrete Empfehlung 1", "Empfehlung 2"]
+  "bodyFatRange": "15-18%",
+  "muscleScore": 7,
+  "bodyType": "Mesomorph",
+  "strengths": ["Gute Schulterentwicklung", "Sichtbare Bauchmuskulatur"],
+  "improvements": ["Beinmuskulatur ausbauen", "Mehr Ausdauertraining"],
+  "recommendation": "Konkrete, motivierende Empfehlung in 1-2 Sätzen"
 }
-WICHTIG: Grobe visuelle Schätzung, kein medizinischer Rat. Respektvoll und motivierend bleiben.` },
+
+WICHTIG: Immer als visuelle Schätzung kommunizieren. Kein medizinischer Rat. Respektvoll und motivierend bleiben.`,
+        },
       ],
     }],
   })
   const raw = (await res.json()).content?.[0]?.text ?? '{}'
   const json = raw.match(/\{[\s\S]*\}/)?.[0] ?? '{}'
-  return JSON.parse(json)
+  try {
+    const p = JSON.parse(json)
+    return {
+      bodyFatRange: p.bodyFatRange ?? '–',
+      muscleScore: Number(p.muscleScore) || 5,
+      bodyType: p.bodyType ?? 'Mesomorph',
+      strengths: Array.isArray(p.strengths) ? p.strengths : [],
+      improvements: Array.isArray(p.improvements) ? p.improvements : [],
+      recommendation: p.recommendation ?? '',
+    }
+  } catch { throw new Error('KI konnte das Foto nicht analysieren') }
 }
 
 // ── USDA FoodData Central – Zweite Produktdatenbank ───────────────────────
@@ -715,9 +739,16 @@ export async function analyzePlateDetailed(
   base64Image: string,
   portionHistory: Record<string, number>,
   apiKey: string,
+  referenceObject: 'hand' | 'fork' | 'none' = 'none',
 ): Promise<DetailedPlateAnalysis> {
   const historyHint = Object.entries(portionHistory).slice(0, 8)
     .map(([food, g]) => `${food}: typisch ${g}g`).join(', ')
+
+  const refHint = referenceObject === 'hand'
+    ? '\nWICHTIG – Referenzobjekt: Eine Hand ist im Bild sichtbar (ca. 18cm breit). Nutze sie als Größenreferenz: bestimme damit Tellergröße und dann Portionsmengen. Beispiel: Hand=18cm → Teller=2×Hand=26cm → Hähnchen nimmt 30% des Tellers → ca. 150g.'
+    : referenceObject === 'fork'
+    ? '\nWICHTIG – Referenzobjekt: Eine Gabel ist im Bild sichtbar (ca. 19cm lang). Nutze sie als Größenreferenz für Tellergröße und Portionsmengen.'
+    : ''
 
   const res = await anthropicPost(apiKey, {
     model: ANTHROPIC_MODEL,
@@ -728,17 +759,17 @@ export async function analyzePlateDetailed(
         { type: 'image', source: { type: 'base64', media_type: 'image/jpeg', data: base64Image } },
         {
           type: 'text',
-          text: `Analysiere dieses Essensfoto sehr präzise.
+          text: `Analysiere dieses Essensfoto sehr präzise.${refHint}
 ${historyHint ? `\nBekannte Portionsgrößen dieser Person: ${historyHint}` : ''}
 
 1. Liste ALLE sichtbaren Zutaten einzeln auf
-2. Schätze Gewicht jeder Zutat in Gramm (nutze Referenzobjekte: Teller≈26cm, Gabel≈19cm)
+2. Schätze Gewicht jeder Zutat in Gramm – nutze das Referenzobjekt für exakte Berechnung
 3. Berechne Kalorien, Protein, Fett, Kohlenhydrate pro Zutat
-4. Gib Konfidenz-Score an (0.0–1.0 wie sicher du bist)
+4. Gib Konfidenz-Score an (0.0–1.0 wie sicher du bist) – mit Referenzobjekt kannst du höhere Werte vergeben
 5. Markiere unsichere Schätzungen in notes
 
 Antworte NUR als JSON (kein Markdown):
-{"dish":"Name","ingredients":[{"name":"Hähnchenbrust","weight_g":180,"calories":198,"protein":37,"carbs":0,"fat":4,"confidence":0.9}],"total":{"calories":520,"protein":45,"carbs":38,"fat":12},"confidence_overall":0.85,"notes":"Soße schwer zu schätzen"}`,
+{"dish":"Name","referenceObject":"${referenceObject}","plateSize":"26cm","ingredients":[{"name":"Hähnchenbrust","weight_g":180,"calories":198,"protein":37,"carbs":0,"fat":4,"confidence":0.9}],"total":{"calories":520,"protein":45,"carbs":38,"fat":12},"confidence_overall":0.85,"notes":"Soße schwer zu schätzen"}`,
         },
       ],
     }],
