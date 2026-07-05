@@ -2,7 +2,7 @@ import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
 import type {
   UserProfile, FoodLog, ActivityLog, WeightEntry, WaterLog,
-  CustomRecipe, AIMessage, WhoopData, ApiKeys, Reminder,
+  CustomRecipe, AIMessage, WhoopData, WhoopDayHistory, ApiKeys, Reminder,
   CheatDay, BeforeAfterPhoto, WeeklyPlan, TabId, DailyStats, RunSession,
   UserPersonality,
 } from '../types'
@@ -78,6 +78,9 @@ interface AppState {
   // Whoop
   whoopData: WhoopData | null
   setWhoopData: (data: WhoopData) => void
+  whoopHistory: WhoopDayHistory[]
+  setWhoopHistory: (h: WhoopDayHistory[]) => void
+  whoopLastSyncAt: number   // unix ms of last successful sync
 
   // Reminders
   reminders: Reminder[]
@@ -210,6 +213,9 @@ export const useStore = create<AppState>()(
 
       whoopData: null,
       setWhoopData: (data) => set({ whoopData: data }),
+      whoopHistory: [],
+      setWhoopHistory: (h) => set({ whoopHistory: h }),
+      whoopLastSyncAt: 0,
 
       reminders: [
         { id: '1', time: '08:00', label: 'Frühstück eintragen', enabled: true },
@@ -342,9 +348,11 @@ export const useStore = create<AppState>()(
         // Whoop recovery adjustment: low recovery → rest, high → can push
         if (whoopData?.recovery) {
           const r = whoopData.recovery
-          if (r < 34) base = Math.max(1200, base - 200)   // rest day
-          else if (r > 66) base = base + 150               // high recovery
+          if (r < 34) base = Math.max(1200, base - 200)
+          else if (r > 66) base = base + 150
         }
+        // Strain bonus: heavy training day → more calories
+        if (whoopData?.strain && whoopData.strain > 14) base = base + 150
         return base
       },
     }),
@@ -381,6 +389,7 @@ export const useStore = create<AppState>()(
         customRecipes: state.customRecipes,
         aiMessages: state.aiMessages,
         whoopData: state.whoopData,
+        whoopHistory: state.whoopHistory,
         reminders: state.reminders,
         cheatDays: state.cheatDays,
         beforeAfterPhotos: state.beforeAfterPhotos,

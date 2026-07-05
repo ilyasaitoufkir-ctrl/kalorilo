@@ -1,7 +1,8 @@
 import { useMemo, useState, useRef, useCallback } from 'react'
-import { Settings, Droplets, Zap, Plus, ChevronRight, Footprints } from 'lucide-react'
+import { Settings, Droplets, Zap, Plus, ChevronRight, Footprints, RefreshCw } from 'lucide-react'
 import { useStore } from '../store/useStore'
 import { formatDate, getMacroTargets, getTodayQuote, waterGoal, getBMI } from '../utils/calculations'
+import type { WhoopData, WhoopDayHistory } from '../types'
 
 const today = formatDate()
 
@@ -64,6 +65,275 @@ function MacroCard({ label, value, max, color, unit = 'g' }: {
   )
 }
 
+// ── Whoop recovery helpers ────────────────────────────────────────────────
+function recoveryColor(r: number) {
+  if (r >= 67) return '#10b981'
+  if (r >= 34) return '#f59e0b'
+  return '#ef4444'
+}
+function recoveryLabel(r: number) {
+  if (r >= 67) return 'Vollgas! 💪'
+  if (r >= 34) return 'Moderat 🟡'
+  return 'Ruhetag 🔴'
+}
+function recoveryAdvice(d: WhoopData): string {
+  const r = d.recovery
+  const strain = d.strain ?? 0
+  const sleep  = d.sleepDuration ?? 0
+  if (r >= 67) {
+    if (strain > 15) return 'Hoher Strain gestern – heute lockerer Ausdauertag empfohlen'
+    return 'Hohe Recovery – perfekter Tag für intensives Krafttraining! 💪'
+  }
+  if (r >= 34) return 'Mittlere Recovery – leichtes Training oder Spaziergang empfohlen'
+  const sleepNote = sleep > 0 && sleep < 6 ? ' & Schlaf nachholen' : ''
+  return `Niedrige Recovery – Ruhetag empfohlen${sleepNote}. Iss viel Protein!`
+}
+function sleepAdvice(d: WhoopData): string {
+  const dur = d.sleepDuration ?? 0
+  const q   = d.sleepQuality ?? 0
+  if (dur === 0) return ''
+  if (dur < 5)   return `Nur ${dur}h Schlaf – heute mehr Protein & leichtes Training!`
+  if (dur < 6.5) return `${dur}h Schlaf – genug Eiweiß & Erholung einplanen`
+  if (q >= 80)   return 'Exzellenter Schlaf – perfekter Tag zum Trainieren! 🎯'
+  return 'Guter Schlaf – du bist bereit für den Tag!'
+}
+
+// ── Whoop recovery mini-ring ──────────────────────────────────────────────
+function RecoveryRing({ value, size = 72 }: { value: number; size?: number }) {
+  const stroke = 7
+  const r      = (size - stroke) / 2
+  const circ   = 2 * Math.PI * r
+  const dash   = circ * Math.min(1, value / 100)
+  const color  = recoveryColor(value)
+  return (
+    <svg width={size} height={size} style={{ flexShrink: 0 }}>
+      <circle cx={size/2} cy={size/2} r={r} fill="none"
+        stroke="rgba(255,255,255,0.06)" strokeWidth={stroke} />
+      <circle cx={size/2} cy={size/2} r={r} fill="none"
+        stroke={color} strokeWidth={stroke}
+        strokeDasharray={`${dash} ${circ}`} strokeLinecap="round"
+        transform={`rotate(-90 ${size/2} ${size/2})`}
+        style={{ transition: 'stroke-dasharray 0.8s cubic-bezier(0.16,1,0.3,1)', filter: `drop-shadow(0 0 6px ${color}66)` }}
+      />
+    </svg>
+  )
+}
+
+// ── 7-day sparkline ───────────────────────────────────────────────────────
+function Sparkline({ data, color = '#10b981' }: { data: number[]; color?: string }) {
+  if (data.length < 2) return null
+  const max  = Math.max(...data, 1)
+  const min  = Math.min(...data)
+  const w    = 100
+  const h    = 28
+  const pad  = 3
+  const pts  = data.map((v, i) => {
+    const x = pad + (i / (data.length - 1)) * (w - pad * 2)
+    const y = h - pad - ((v - min) / (max - min || 1)) * (h - pad * 2)
+    return `${x},${y}`
+  }).join(' ')
+  return (
+    <svg viewBox={`0 0 ${w} ${h}`} width="100%" height={h} style={{ overflow: 'visible' }}>
+      <polyline points={pts} fill="none" stroke={color} strokeWidth="2"
+        strokeLinecap="round" strokeLinejoin="round"
+        style={{ filter: `drop-shadow(0 0 3px ${color}88)` }} />
+      {data.map((v, i) => {
+        const x = pad + (i / (data.length - 1)) * (w - pad * 2)
+        const y = h - pad - ((v - min) / (max - min || 1)) * (h - pad * 2)
+        return <circle key={i} cx={x} cy={y} r="2.5" fill={color} />
+      })}
+    </svg>
+  )
+}
+
+// ── Full Whoop Widget ────────────────────────────────────────────────────
+function WhoopWidget({
+  whoopData, whoopHistory, lastSyncAt, onConnect,
+}: {
+  whoopData:    WhoopData | null
+  whoopHistory: WhoopDayHistory[]
+  lastSyncAt:   number
+  onConnect:    () => void
+}) {
+  const minAgo = lastSyncAt > 0
+    ? Math.round((Date.now() - lastSyncAt) / 60000)
+    : null
+
+  if (!whoopData) {
+    return (
+      <button onClick={onConnect}
+        className="glass glass-press p-4 w-full flex items-center gap-3 text-left">
+        <div className="w-11 h-11 rounded-2xl flex items-center justify-center text-xl flex-shrink-0"
+          style={{ background:'rgba(74,140,92,0.06)', border:'1px solid rgba(125,184,138,0.2)' }}>⌚</div>
+        <div className="flex-1" style={{ minWidth:0 }}>
+          <p className="text-sm font-black" style={{ color:'var(--text-1)' }}>Whoop verbinden</p>
+          <p className="text-xs" style={{ color:'var(--text-3)' }}>Recovery, Schlaf & Workouts automatisch</p>
+        </div>
+        <ChevronRight size={16} style={{ color:'var(--text-3)', flexShrink:0 }}/>
+      </button>
+    )
+  }
+
+  const rc     = recoveryColor(whoopData.recovery)
+  const sleep  = whoopData.sleepDuration  ?? 0
+  const deep   = whoopData.deepSleep      ?? 0
+  const rem    = whoopData.remSleep       ?? 0
+  const rrate  = whoopData.respiratoryRate ?? 0
+  const strain = whoopData.strain         ?? 0
+  const burned = whoopData.caloriesBurned ?? 0
+  const daily  = whoopData.dailyBurn      ?? 0
+
+  const recoveryHistory = whoopHistory.map((d) => d.recovery)
+  const sleepHistory    = whoopHistory.map((d) => d.sleepDuration)
+
+  return (
+    <div className="glass p-4" style={{ background: '#080808', border: '1px solid #1a1a1a' }}>
+
+      {/* ── Header ── */}
+      <div className="flex items-center gap-2 mb-4">
+        <span style={{ fontSize: 16 }}>⌚</span>
+        <p className="text-sm font-black tracking-wide" style={{ color: '#fff' }}>WHOOP</p>
+        <span className="text-[10px] px-2 py-0.5 rounded-full font-bold"
+          style={{ background:'rgba(16,185,129,0.15)', color:'#10b981' }}>● Live</span>
+        {minAgo !== null && (
+          <span className="ml-auto text-[10px] flex items-center gap-1" style={{ color: '#555' }}>
+            <RefreshCw size={9} />
+            {minAgo === 0 ? 'gerade' : `vor ${minAgo} Min.`}
+          </span>
+        )}
+      </div>
+
+      {/* ── Recovery + Vitals ── */}
+      <div className="flex items-center gap-4 mb-4">
+        <div className="relative flex items-center justify-center" style={{ width: 72, height: 72, flexShrink: 0 }}>
+          <RecoveryRing value={whoopData.recovery} />
+          <div className="absolute inset-0 flex flex-col items-center justify-center">
+            <span className="text-lg font-black leading-none" style={{ color: rc }}>{whoopData.recovery}%</span>
+          </div>
+        </div>
+        <div className="flex-1" style={{ minWidth: 0 }}>
+          <p className="text-base font-black mb-1.5" style={{ color: rc }}>{recoveryLabel(whoopData.recovery)}</p>
+          <div className="flex flex-col gap-0.5">
+            {whoopData.hrv > 0 && (
+              <p className="text-xs" style={{ color: '#888' }}>
+                HRV: <span className="font-bold" style={{ color: '#60a5fa' }}>{whoopData.hrv} ms</span>
+              </p>
+            )}
+            {whoopData.restingHR > 0 && (
+              <p className="text-xs" style={{ color: '#888' }}>
+                Ruhe: <span className="font-bold" style={{ color: '#f87171' }}>{whoopData.restingHR} bpm</span>
+              </p>
+            )}
+            {rrate > 0 && (
+              <p className="text-xs" style={{ color: '#888' }}>
+                Atem: <span className="font-bold" style={{ color: '#c084fc' }}>{rrate} /min</span>
+              </p>
+            )}
+          </div>
+        </div>
+      </div>
+
+      {/* ── Sleep ── */}
+      {sleep > 0 && (
+        <div className="rounded-2xl p-3 mb-3"
+          style={{ background: 'rgba(167,139,250,0.07)', border: '1px solid rgba(167,139,250,0.12)' }}>
+          <div className="flex items-center justify-between mb-2">
+            <p className="text-xs font-bold" style={{ color: '#a78bfa' }}>😴 Schlaf letzte Nacht</p>
+            {whoopData.sleepQuality > 0 && (
+              <p className="text-xs font-black" style={{ color: '#a78bfa' }}>{whoopData.sleepQuality}%</p>
+            )}
+          </div>
+          <p className="text-xl font-black mb-2" style={{ color: '#fff' }}>{sleep}h</p>
+          {/* Progress bar */}
+          <div className="h-1.5 rounded-full mb-2" style={{ background: 'rgba(167,139,250,0.15)' }}>
+            <div className="h-full rounded-full transition-all duration-700"
+              style={{ width: `${Math.min(100, (sleep / 8) * 100)}%`, background: 'linear-gradient(90deg,#a78bfa,#7c3aed)' }} />
+          </div>
+          <div className="flex gap-2 mb-2">
+            {deep > 0 && (
+              <span className="text-xs px-2 py-1 rounded-xl font-semibold"
+                style={{ background:'rgba(59,130,246,0.1)', color:'#60a5fa' }}>💤 {deep}h Tief</span>
+            )}
+            {rem > 0 && (
+              <span className="text-xs px-2 py-1 rounded-xl font-semibold"
+                style={{ background:'rgba(167,139,250,0.1)', color:'#a78bfa' }}>🌙 {rem}h REM</span>
+            )}
+          </div>
+          <p className="text-[10px]" style={{ color: '#666' }}>{sleepAdvice(whoopData)}</p>
+        </div>
+      )}
+
+      {/* ── Strain + Calories ── */}
+      <div className="grid grid-cols-2 gap-2 mb-3">
+        <div className="rounded-2xl p-2.5"
+          style={{ background: 'rgba(251,146,60,0.07)', border: '1px solid rgba(251,146,60,0.1)' }}>
+          <p className="text-[10px] mb-1" style={{ color: '#888' }}>Strain heute</p>
+          <p className="text-xl font-black mb-1.5" style={{ color: '#fb923c' }}>{strain.toFixed(1)}</p>
+          <div className="h-1 rounded-full" style={{ background: 'rgba(251,146,60,0.15)' }}>
+            <div className="h-full rounded-full transition-all duration-700"
+              style={{ width: `${(strain / 21) * 100}%`, background: '#fb923c' }} />
+          </div>
+          <p className="text-[10px] mt-1" style={{ color: '#555' }}>
+            {strain > 17 ? 'Extrem' : strain > 14 ? 'Hoch' : strain > 10 ? 'Mittel' : strain > 0 ? 'Leicht' : '–'}
+          </p>
+        </div>
+        <div className="rounded-2xl p-2.5"
+          style={{ background: 'rgba(239,68,68,0.07)', border: '1px solid rgba(239,68,68,0.1)' }}>
+          <p className="text-[10px] mb-1" style={{ color: '#888' }}>🔥 Verbrannt</p>
+          {burned > 0 ? (
+            <>
+              <p className="text-xl font-black mb-0.5" style={{ color: '#f87171' }}>{burned} kcal</p>
+              <p className="text-[10px]" style={{ color: '#555' }}>Workouts</p>
+            </>
+          ) : daily > 0 ? (
+            <>
+              <p className="text-xl font-black mb-0.5" style={{ color: '#f87171' }}>{daily} kcal</p>
+              <p className="text-[10px]" style={{ color: '#555' }}>gesamt heute</p>
+            </>
+          ) : (
+            <p className="text-sm font-bold mt-2" style={{ color: '#444' }}>–</p>
+          )}
+        </div>
+      </div>
+
+      {/* ── Recovery recommendation ── */}
+      <div className="rounded-2xl px-3 py-2.5 mb-3"
+        style={{
+          background: `${rc}11`,
+          border: `1px solid ${rc}22`,
+        }}>
+        <p className="text-xs font-bold" style={{ color: rc }}>
+          {recoveryAdvice(whoopData)}
+        </p>
+      </div>
+
+      {/* ── 7-day trends ── */}
+      {recoveryHistory.length > 1 && (
+        <div>
+          <div className="flex items-center justify-between mb-1">
+            <p className="text-[10px] font-semibold" style={{ color: '#444' }}>7 Tage Recovery</p>
+            <div className="flex gap-2">
+              {whoopHistory.slice(-3).map((d) => (
+                <span key={d.date} className="text-[9px] font-bold" style={{ color: recoveryColor(d.recovery) }}>
+                  {d.recovery}%
+                </span>
+              ))}
+            </div>
+          </div>
+          <Sparkline data={recoveryHistory} color={rc} />
+
+          {sleepHistory.some((v) => v > 0) && (
+            <>
+              <p className="text-[10px] font-semibold mt-2 mb-1" style={{ color: '#444' }}>7 Tage Schlaf</p>
+              <Sparkline data={sleepHistory} color="#a78bfa" />
+            </>
+          )}
+        </div>
+      )}
+    </div>
+  )
+}
+
 export default function Dashboard() {
   const profile        = useStore((s) => s.profile)
   const foodLogs       = useStore((s) => s.foodLogs)
@@ -72,6 +342,8 @@ export default function Dashboard() {
   const whoopData      = useStore((s) => s.whoopData)
   const whoopExtended  = useStore((s) => s.whoopExtended)
   const whoopTokens    = useStore((s) => s.whoopTokens)
+  const whoopHistory   = useStore((s) => s.whoopHistory)
+  const whoopLastSync  = useStore((s) => s.whoopLastSyncAt)
   const cheatDays      = useStore((s) => s.cheatDays)
   const stepsToday     = useStore((s) => s.stepsToday)
   const setStepsToday  = useStore((s) => s.setStepsToday)
@@ -123,13 +395,20 @@ export default function Dashboard() {
 
   const macroT   = useMemo(() => getMacroTargets(target), [target])
 
-  // Whoop calories burned today → add to calorie budget (earned extra calories)
+  // Whoop calories burned today → add to calorie budget
   const whoopBurnedToday = useMemo(() => {
+    // Prefer new extended data from whoopData
+    if (whoopData?.date === today) {
+      const burned = whoopData.caloriesBurned ?? 0
+      const daily  = whoopData.dailyBurn ?? 0
+      if (burned > 0) return burned
+      if (daily  > 0) return daily
+    }
+    // Fallback to whoopExtended
     if (!whoopExtended || !whoopExtended.caloriesBurned) return 0
-    // Only use if Whoop data is from today
     if (whoopExtended.date && whoopExtended.date !== today) return 0
     return Math.round(whoopExtended.caloriesBurned)
-  }, [whoopExtended])
+  }, [whoopData, whoopExtended])
 
   const adjustedTarget = target + whoopBurnedToday
   const net      = calories - burned
@@ -338,86 +617,12 @@ export default function Dashboard() {
         </div>
 
         {/* ── Whoop Widget ── */}
-        {(whoopData || whoopTokens) && (
-          <div className="glass p-4" style={{ background: '#0a0a0a', border: '1px solid #1e1e1e' }}>
-            <div className="flex items-center gap-2 mb-3">
-              <span className="text-base">⌚</span>
-              <p className="text-sm font-bold" style={{ color: 'var(--text-1)' }}>Whoop</p>
-              {whoopTokens && (
-                <span className="text-[10px] px-2 py-0.5 rounded-full font-bold ml-1"
-                  style={{ background:'rgba(16,185,129,0.15)', color:'#10b981' }}>Live</span>
-              )}
-              {whoopData && <span className="text-xs ml-auto" style={{ color: 'var(--text-3)' }}>{whoopData.date}</span>}
-            </div>
-
-            {whoopData ? (
-              <>
-                <div className="grid grid-cols-4 gap-2 mb-2">
-                  {[
-                    { l:'Recovery', v:`${whoopData.recovery}%`,  c: whoopData.recovery>66?'#10b981':whoopData.recovery>33?'#4a8c5c':'#ef4444' },
-                    { l:'HRV',      v:`${whoopData.hrv}ms`,      c:'#60a5fa' },
-                    { l:'Schlaf',   v:`${whoopData.sleepQuality}%`, c:'#a78bfa' },
-                    { l:'Strain',   v:`${Number(whoopData.strain).toFixed(1)}`, c:'#fb923c' },
-                  ].map((item) => (
-                    <div key={item.l} className="rounded-2xl p-2.5 text-center"
-                      style={{ background: '#ffffff', border: '1px solid rgba(125,184,138,0.2)' }}>
-                      <p className="text-[10px] mb-0.5" style={{ color: 'var(--text-3)' }}>{item.l}</p>
-                      <p className="text-sm font-black" style={{ color: item.c }}>{item.v}</p>
-                    </div>
-                  ))}
-                </div>
-
-                {/* Extended data row – sleep only (burned cals shown in ring banner) */}
-                {whoopExtended && whoopExtended.sleepDuration > 0 && (
-                  <div className="flex gap-2 text-xs mt-1">
-                    <span className="px-2 py-1 rounded-xl font-semibold"
-                      style={{ background:'rgba(167,139,250,0.1)', color:'#a78bfa' }}>
-                      😴 {whoopExtended.sleepDuration}h Schlaf
-                    </span>
-                  </div>
-                )}
-
-                {/* Recovery advice */}
-                {whoopData.recovery < 34 && (
-                  <div className="mt-2 rounded-2xl px-3 py-2"
-                    style={{ background:'rgba(239,68,68,0.08)', border:'1px solid rgba(239,68,68,0.15)' }}>
-                    <p className="text-xs font-bold" style={{ color:'#ef4444' }}>
-                      ⚠️ Niedrige Recovery – leichteres Training & -200 kcal Ziel empfohlen
-                    </p>
-                  </div>
-                )}
-                {whoopData.recovery > 66 && (
-                  <div className="mt-2 rounded-2xl px-3 py-2"
-                    style={{ background:'rgba(16,185,129,0.08)', border:'1px solid rgba(16,185,129,0.15)' }}>
-                    <p className="text-xs font-bold" style={{ color:'#10b981' }}>
-                      💪 Hohe Recovery – bereit für intensives Training & +150 kcal
-                    </p>
-                  </div>
-                )}
-              </>
-            ) : (
-              <button onClick={() => setActiveTab('profile')}
-                className="w-full py-3 rounded-2xl text-sm font-bold glass-press"
-                style={{ background:'rgba(74,140,92,0.08)', border:'1px solid rgba(74,140,92,0.15)', color:'var(--gold)' }}>
-                Whoop-Daten laden →
-              </button>
-            )}
-          </div>
-        )}
-
-        {/* Whoop connect prompt (not yet connected) */}
-        {!whoopData && !whoopTokens && (
-          <button onClick={() => setActiveTab('profile')}
-            className="glass glass-press p-4 w-full flex items-center gap-3 text-left">
-            <div className="w-11 h-11 rounded-2xl flex items-center justify-center text-xl flex-shrink-0"
-              style={{ background:'rgba(74,140,92,0.06)', border:'1px solid rgba(125,184,138,0.2)' }}>⌚</div>
-            <div className="flex-1" style={{ minWidth:0 }}>
-              <p className="text-sm font-black" style={{ color:'var(--text-1)' }}>Whoop verbinden</p>
-              <p className="text-xs" style={{ color:'var(--text-3)' }}>Recovery & Schlaf automatisch importieren</p>
-            </div>
-            <ChevronRight size={16} style={{ color:'var(--text-3)', flexShrink:0 }}/>
-          </button>
-        )}
+        <WhoopWidget
+          whoopData={whoopData}
+          whoopHistory={whoopHistory}
+          lastSyncAt={whoopLastSync}
+          onConnect={() => setActiveTab('profile')}
+        />
 
         {/* Stats row */}
         <div className="grid grid-cols-3 gap-3">

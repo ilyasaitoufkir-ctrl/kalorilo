@@ -9,14 +9,39 @@ export interface WhoopTokens {
 }
 
 export interface WhoopSyncData {
-  recovery:       number   // 0–100
-  hrv:            number   // ms
-  restingHR:      number
-  sleepQuality:   number   // 0–100 (sleep performance %)
-  sleepDuration:  number   // hours
-  strain:         number   // 0–21
-  caloriesBurned: number   // kcal from Whoop workouts
-  date:           string   // YYYY-MM-DD
+  recovery:        number   // 0–100
+  hrv:             number   // ms
+  restingHR:       number
+  respiratoryRate: number   // breaths/min
+  sleepQuality:    number   // 0–100
+  sleepDuration:   number   // hours
+  deepSleep:       number   // hours (slow-wave)
+  remSleep:        number   // hours
+  strain:          number   // 0–21
+  caloriesBurned:  number   // kcal from workouts only
+  dailyBurn:       number   // kcal total from cycle
+  date:            string   // YYYY-MM-DD
+}
+
+export interface WhoopDaySummary {
+  date:          string
+  recovery:      number
+  hrv:           number
+  sleepQuality:  number
+  sleepDuration: number
+  strain:        number
+  caloriesBurned: number
+}
+
+export interface WhoopWorkoutRecord {
+  id:             number
+  start:          string
+  end:            string
+  strain:         number
+  caloriesBurned: number   // kcal
+  avgHR:          number
+  maxHR:          number
+  sportId:        number
 }
 
 // ── Build OAuth2 Authorization URL ────────────────────────────────────────
@@ -25,7 +50,7 @@ export function buildAuthUrl(clientId: string, state: string): string {
     response_type: 'code',
     client_id:      clientId,
     redirect_uri:   REDIRECT_URI,
-    scope:          'read:recovery read:sleep read:workout read:body_measurement offline',
+    scope:          'read:recovery read:sleep read:workout read:cycle read:body_measurement offline',
     state,
   })
 }
@@ -98,10 +123,9 @@ async function whoopGet(path: string, accessToken: string) {
 
 // ── Sync all data for today ────────────────────────────────────────────────
 export async function syncWhoopData(accessToken: string): Promise<WhoopSyncData> {
-  const now  = new Date()
-  const end  = now.toISOString()
-  const start = new Date(now.getTime() - 48 * 3600 * 1000).toISOString()  // last 48h
-
+  const now   = new Date()
+  const end   = now.toISOString()
+  const start = new Date(now.getTime() - 48 * 3600 * 1000).toISOString()
   const today = now.toISOString().split('T')[0]
 
   // ── Recovery ──
@@ -119,8 +143,8 @@ export async function syncWhoopData(accessToken: string): Promise<WhoopSyncData>
     }
   } catch { /* non-critical */ }
 
-  // ── Sleep ──
-  let sleepQuality = 0, sleepDuration = 0
+  // ── Sleep (with deep + REM + respiratory rate) ──
+  let sleepQuality = 0, sleepDuration = 0, deepSleep = 0, remSleep = 0, respiratoryRate = 0
   try {
     const sleep = await whoopGet(
       `/activity/sleep?start=${start}&end=${end}&order=desc&limit=1`,
@@ -128,8 +152,11 @@ export async function syncWhoopData(accessToken: string): Promise<WhoopSyncData>
     )
     const s = sleep.records?.[0]
     if (s) {
-      sleepQuality  = Math.round(s.score?.sleep_performance_percentage ?? 0)
-      sleepDuration = Math.round((s.score?.stage_summary?.total_in_bed_time_milli ?? 0) / 3600000 * 10) / 10
+      sleepQuality    = Math.round(s.score?.sleep_performance_percentage ?? 0)
+      sleepDuration   = Math.round((s.score?.stage_summary?.total_in_bed_time_milli ?? 0) / 360000) / 10
+      deepSleep       = Math.round((s.score?.stage_summary?.total_slow_wave_sleep_time_milli ?? 0) / 360000) / 10
+      remSleep        = Math.round((s.score?.stage_summary?.total_rem_sleep_time_milli ?? 0) / 360000) / 10
+      respiratoryRate = Math.round((s.score?.respiratory_rate ?? 0) * 10) / 10
     }
   } catch { /* non-critical */ }
 
@@ -147,13 +174,107 @@ export async function syncWhoopData(accessToken: string): Promise<WhoopSyncData>
     strain = Math.round(strain * 10) / 10
   } catch { /* non-critical */ }
 
-  return { recovery, hrv, restingHR, sleepQuality, sleepDuration, strain, caloriesBurned, date: today }
+  // ── Cycle (total daily burn incl. NEAT) ──
+  let dailyBurn = 0
+  try {
+    const cycles = await whoopGet(
+      `/cycle?start=${start}&end=${end}&order=desc&limit=1`,
+      accessToken
+    )
+    const c = cycles.records?.[0]
+    if (c) {
+      dailyBurn = Math.round((c.score?.kilojoule ?? 0) / 4.184)
+    }
+  } catch { /* non-critical */ }
+
+  return {
+    recovery, hrv, restingHR, respiratoryRate,
+    sleepQuality, sleepDuration, deepSleep, remSleep,
+    strain, caloriesBurned, dailyBurn,
+    date: today,
+  }
+}
+
+// ── Fetch today's workouts for auto-import ────────────────────────────────
+export async function fetchTodayWorkouts(accessToken: string): Promise<WhoopWorkoutRecord[]> {
+  const now   = new Date()
+  const end   = now.toISOString()
+  const start = new Date(now.getTime() - 24 * 3600 * 1000).toISOString()
+
+  try {
+    const data = await whoopGet(
+      `/activity/workout?start=${start}&end=${end}&order=desc`,
+      accessToken
+    )
+    return (data.records ?? []).map((w: any): WhoopWorkoutRecord => ({
+      id:             w.id,
+      start:          w.start ?? '',
+      end:            w.end ?? '',
+      strain:         Math.round((w.score?.strain ?? 0) * 10) / 10,
+      caloriesBurned: Math.round((w.score?.kilojoule ?? 0) / 4.184),
+      avgHR:          Math.round(w.score?.average_heart_rate ?? 0),
+      maxHR:          Math.round(w.score?.max_heart_rate ?? 0),
+      sportId:        w.sport_id ?? 0,
+    }))
+  } catch {
+    return []
+  }
+}
+
+// ── Fetch 7-day history for trend charts ─────────────────────────────────
+export async function syncWhoopHistory(accessToken: string, days = 7): Promise<WhoopDaySummary[]> {
+  const now   = new Date()
+  const end   = now.toISOString()
+  const start = new Date(now.getTime() - (days + 1) * 24 * 3600 * 1000).toISOString()
+
+  try {
+    const [recData, sleepData, workoutData] = await Promise.all([
+      whoopGet(`/recovery?start=${start}&end=${end}&order=asc&limit=${days}`, accessToken),
+      whoopGet(`/activity/sleep?start=${start}&end=${end}&order=asc&limit=${days}`, accessToken),
+      whoopGet(`/activity/workout?start=${start}&end=${end}&order=asc`, accessToken),
+    ])
+
+    const summaries: WhoopDaySummary[] = []
+
+    for (const r of (recData.records ?? [])) {
+      const date = (r.created_at ?? r.updated_at ?? '').split('T')[0]
+      if (!date) continue
+
+      const sleepRec = (sleepData.records ?? []).find((s: any) =>
+        (s.start ?? '').startsWith(date) || (s.end ?? '').startsWith(date)
+      )
+
+      const dayWorkouts = (workoutData.records ?? []).filter((w: any) =>
+        (w.start ?? '').startsWith(date)
+      )
+      const kcal = dayWorkouts.reduce(
+        (sum: number, w: any) => sum + Math.round((w.score?.kilojoule ?? 0) / 4.184), 0
+      )
+      const dayStrain = dayWorkouts.reduce(
+        (max: number, w: any) => Math.max(max, w.score?.strain ?? 0), 0
+      )
+
+      summaries.push({
+        date,
+        recovery:      Math.round(r.score?.recovery_score ?? 0),
+        hrv:           Math.round(r.score?.hrv_rmssd_milli ?? 0),
+        sleepQuality:  Math.round(sleepRec?.score?.sleep_performance_percentage ?? 0),
+        sleepDuration: Math.round((sleepRec?.score?.stage_summary?.total_in_bed_time_milli ?? 0) / 360000) / 10,
+        strain:        Math.round(dayStrain * 10) / 10,
+        caloriesBurned: kcal,
+      })
+    }
+
+    return summaries
+  } catch {
+    return []
+  }
 }
 
 // ── Recovery-adjusted calorie modifier ────────────────────────────────────
 export function recoveryCalorieAdjustment(recovery: number): number {
   if (recovery === 0) return 0
-  if (recovery < 34)  return -200   // low recovery → rest day
-  if (recovery < 67)  return 0      // normal
-  return 150                         // high recovery → can push more
+  if (recovery < 34)  return -200
+  if (recovery < 67)  return 0
+  return 150
 }

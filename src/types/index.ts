@@ -113,6 +113,23 @@ export interface WhoopData {
   sleepQuality: number    // 0–100
   strain: number          // 0–21
   date: string
+  // Extended fields added in v2
+  sleepDuration?: number   // hours
+  deepSleep?: number       // hours (slow-wave sleep)
+  remSleep?: number        // hours
+  respiratoryRate?: number // breaths/min
+  caloriesBurned?: number  // kcal from workouts
+  dailyBurn?: number       // kcal total from cycle
+}
+
+export interface WhoopDayHistory {
+  date: string
+  recovery: number
+  hrv: number
+  sleepQuality: number
+  sleepDuration: number
+  strain: number
+  caloriesBurned: number
 }
 
 export interface ApiKeys {
