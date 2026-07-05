@@ -128,11 +128,74 @@ const SCHEDULE: Array<[number, number]> = [
   [14, 0], [16, 0], [19, 0], [21, 30], [22, 30],
 ]
 
+const PROTEIN_GOAL = 170
+
+const PROTEIN_SCHEDULE: Array<[number, number]> = [
+  [7, 30], [10, 0], [12, 0], [14, 0], [17, 0], [19, 0], [20, 30], [22, 0],
+]
+
+function buildProteinNotification(
+  hour: number,
+  minute: number,
+): { title: string; body: string; tag: string } | null {
+  const today   = new Date().toISOString().split('T')[0]
+  const protein = Math.round(
+    useStore.getState().foodLogs
+      .filter((l) => l.date === today)
+      .reduce((s, f) => s + (f.macros?.protein ?? 0), 0)
+  )
+  const remaining = Math.max(0, PROTEIN_GOAL - protein)
+  const key = `${hour}:${minute}`
+
+  switch (key) {
+    case '7:30':
+      if (protein < 10)
+        return { title: '🌅 Protein-Start!', body: `Heute Ziel: ${PROTEIN_GOAL}g Protein. Empfehlung: 4 Eier + 200g Skyr = 55g 💪`, tag: 'protein-730' }
+      return null
+    case '10:0':
+      if (protein < 30)
+        return { title: '⚡ Protein-Check 10h', body: `Erst ${protein}g! Noch ${remaining}g fehlen. Jetzt: 250g Magerquark = 28g`, tag: 'protein-10' }
+      return null
+    case '12:0':
+      if (protein < 50)
+        return { title: '🍗 Mittagszeit!', body: `Erst ${protein}g Protein. Noch ${remaining}g! Jetzt 250g Hähnchenbrust = 55g!`, tag: 'protein-12' }
+      return null
+    case '14:0':
+      if (protein < 85)
+        return { title: '⏰ Halbzeit Protein!', body: `Erst ${protein}g von ${PROTEIN_GOAL}g. Noch ${remaining}g – jetzt nachlegen!`, tag: 'protein-14' }
+      return null
+    case '17:0':
+      if (protein < 120)
+        return { title: '🚨 Protein-Alarm!', body: `Noch ${remaining}g bis 22 Uhr! Proteinshake oder 200g Thunfisch. Jetzt! 💪`, tag: 'protein-17' }
+      return null
+    case '19:0':
+      if (protein < 140)
+        return { title: '🍽️ Abendessen – Protein', body: `Noch ${remaining}g Protein. Empfehlung: 200g Lachs + 250g Magerquark!`, tag: 'protein-19' }
+      return null
+    case '20:30':
+      if (protein < 155)
+        return { title: '⚠️ Letzte Chance!', body: `Noch ${remaining}g Protein! Magerquark, Shake oder Hüttenkäse – jetzt!`, tag: 'protein-2030' }
+      return null
+    case '22:0':
+      return {
+        title: protein >= PROTEIN_GOAL ? '🏆 Protein-Ziel erreicht!' : '📊 Protein Tagesabschluss',
+        body:  protein >= PROTEIN_GOAL
+          ? `${protein}g Protein heute! Perfekt für Muskelaufbau! 🔥`
+          : `Heute ${protein}g von ${PROTEIN_GOAL}g. ${remaining}g gefehlt. Morgen früher starten!`,
+        tag: 'protein-22',
+      }
+    default:
+      return null
+  }
+}
+
 export function useNotifications() {
-  const whoopData = useStore((s) => s.whoopData)
-  const setupDone = useRef(false)
-  const timers    = useRef<ReturnType<typeof setTimeout>[]>([])
-  const prevWhoop = useRef<string | null>(null)
+  const whoopData   = useStore((s) => s.whoopData)
+  const foodLogsLen = useStore((s) => s.foodLogs.length)
+  const setupDone   = useRef(false)
+  const timers      = useRef<ReturnType<typeof setTimeout>[]>([])
+  const prevWhoop   = useRef<string | null>(null)
+  const prevFoodLen = useRef(-1)
 
   useEffect(() => {
     if (!('Notification' in window) || setupDone.current) return
@@ -155,6 +218,17 @@ export function useNotifications() {
 
       SCHEDULE.forEach(([h, m]) => schedule(h, m))
 
+      // Protein schedule (separate loop)
+      function scheduleProtein(hour: number, minute: number) {
+        const timer = setTimeout(() => {
+          const n = buildProteinNotification(hour, minute)
+          if (n) notify(n.title, n.body, n.tag)
+          scheduleProtein(hour, minute)
+        }, msUntilNext(hour, minute))
+        timers.current.push(timer)
+      }
+      PROTEIN_SCHEDULE.forEach(([h, m]) => scheduleProtein(h, m))
+
       // Immediate recovery alert on app open
       const r = useStore.getState().whoopData?.recovery
       const nm = useStore.getState().profile?.name?.split(' ')[0] ?? ''
@@ -174,6 +248,30 @@ export function useNotifications() {
       setupDone.current = false
     }
   }, [])
+
+  // After-meal protein notification
+  useEffect(() => {
+    if (prevFoodLen.current === -1) { prevFoodLen.current = foodLogsLen; return }
+    if (foodLogsLen <= prevFoodLen.current) { prevFoodLen.current = foodLogsLen; return }
+    prevFoodLen.current = foodLogsLen
+    if (Notification.permission !== 'granted') return
+    const today   = new Date().toISOString().split('T')[0]
+    const protein = Math.round(
+      useStore.getState().foodLogs
+        .filter((l) => l.date === today)
+        .reduce((s, f) => s + (f.macros?.protein ?? 0), 0)
+    )
+    if (protein === 0) return
+    const remaining = Math.max(0, PROTEIN_GOAL - protein)
+    if (remaining > 100)
+      notify('✅ Mahlzeit getrackt!', `Noch ${remaining}g Protein heute. Nächste Mahlzeit in 2–3h einplanen!`, 'after-meal')
+    else if (remaining > 50)
+      notify('💪 Gut gemacht!', `Noch ${remaining}g Protein. Du schaffst das!`, 'after-meal')
+    else if (remaining > 0)
+      notify('🎯 Fast am Ziel!', `Nur noch ${remaining}g Protein! Ein Shake reicht!`, 'after-meal')
+    else
+      notify('🏆 Protein-Ziel erreicht!', `${protein}g Protein heute! Ernährungs-Score: Ausgezeichnet! 🔥`, 'protein-goal')
+  }, [foodLogsLen])
 
   // Whoop sync notification
   useEffect(() => {

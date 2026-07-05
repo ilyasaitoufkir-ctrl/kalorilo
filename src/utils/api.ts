@@ -857,6 +857,37 @@ Maximal 4 observations. Bei Datenmangel: ehrlich mit "(geschätzt)" kennzeichnen
   try { return { ...fb, ...JSON.parse(json) } } catch { return fb }
 }
 
+// ── Protein Help – Was soll ich jetzt essen? ──────────────────────────────
+
+export async function getProteinHelp(
+  currentProtein: number,
+  proteinGoal: number,
+  currentTime: string,
+  profileName: string,
+  favoriteFoods: string[],
+  apiKey: string,
+): Promise<string> {
+  const remaining = Math.max(0, proteinGoal - currentProtein)
+  const res = await anthropicPost(apiKey, {
+    model: ANTHROPIC_MODEL,
+    max_tokens: 600,
+    messages: [{
+      role: 'user',
+      content: `${profileName} hat heute erst ${currentProtein}g von ${proteinGoal}g Protein gegessen. Es ist ${currentTime} Uhr. Noch ${remaining}g Protein nötig.
+${favoriteFoods.length ? `Lieblingsessen: ${favoriteFoods.join(', ')}` : ''}
+
+Erstelle einen konkreten Plan für heute:
+- Welche Mahlzeiten/Snacks noch heute bis 22 Uhr
+- Exakte Mengen mit Proteingehalt pro Mahlzeit
+- Einfach & schnell zuzubereiten
+- Realistisch erreichbar
+
+Antworte kurz, präzise, motivierend. Auf Deutsch.`,
+    }],
+  })
+  return (await res.json()).content?.[0]?.text?.trim() ?? 'Keine Empfehlung verfügbar.'
+}
+
 // ── Adaptive Coaching – Training & Nutrition Plan ─────────────────────────
 
 export async function generateTrainingPlan(

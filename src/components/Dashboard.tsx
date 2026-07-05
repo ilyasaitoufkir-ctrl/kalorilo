@@ -1,9 +1,9 @@
 import { useMemo, useState, useRef, useCallback, useEffect } from 'react'
-import { Settings, Droplets, Zap, Plus, ChevronRight, Footprints, RefreshCw, ChevronDown, ChevronUp } from 'lucide-react'
+import { Settings, Droplets, Zap, Plus, ChevronRight, Footprints, RefreshCw, ChevronDown, ChevronUp, Loader } from 'lucide-react'
 import { useStore } from '../store/useStore'
 import { formatDate, getMacroTargets, getTodayQuote, waterGoal, getBMI } from '../utils/calculations'
 import { generateEnergyPlan, getMuscleRecovery } from '../utils/insights'
-import { generateScoreComment } from '../utils/api'
+import { generateScoreComment, getProteinHelp } from '../utils/api'
 import type { WhoopData, WhoopDayHistory, ActivityLog } from '../types'
 
 const today = formatDate()
@@ -554,6 +554,268 @@ function MuscleTrackerCard({ activityLogs }: { activityLogs: ActivityLog[] }) {
   )
 }
 
+// ── Protein Tracker ───────────────────────────────────────────────────────
+const PGOAL = 170
+
+function pColor(g: number): string {
+  if (g >= PGOAL) return '#f59e0b'
+  if (g >= 141)   return '#10b981'
+  if (g >= 101)   return '#eab308'
+  if (g >= 51)    return '#f97316'
+  return '#ef4444'
+}
+
+function ProteinTrackerCard() {
+  const foodLogs    = useStore((s) => s.foodLogs)
+  const profile     = useStore((s) => s.profile)
+  const apiKeys     = useStore((s) => s.apiKeys)
+  const personality = useStore((s) => s.userPersonality)
+  const apiKey      = apiKeys.anthropic || apiKeys.openai
+  const todayStr    = formatDate()
+
+  const [helpText, setHelpText]       = useState('')
+  const [helpLoading, setHelpLoading] = useState(false)
+  const [showHelp, setShowHelp]       = useState(false)
+  const [showGraph, setShowGraph]     = useState(false)
+
+  const todayFoods = useMemo(() => foodLogs.filter((l) => l.date === todayStr), [foodLogs, todayStr])
+  const protein    = useMemo(() => Math.round(todayFoods.reduce((s, f) => s + (f.macros?.protein ?? 0), 0)), [todayFoods])
+  const remaining  = Math.max(0, PGOAL - protein)
+  const pct        = Math.min(100, Math.round((protein / PGOAL) * 100))
+  const color      = pColor(protein)
+
+  // Streak: consecutive days (including today if goal met)
+  const proteinStreak = useMemo(() => {
+    let count = protein >= PGOAL ? 1 : 0
+    for (let i = 1; i <= 60; i++) {
+      const d = new Date(); d.setDate(d.getDate() - i)
+      const ds = d.toISOString().split('T')[0]
+      const p  = foodLogs.filter((l) => l.date === ds).reduce((s, f) => s + (f.macros?.protein ?? 0), 0)
+      if (p >= PGOAL) count++
+      else break
+    }
+    return count
+  }, [protein, foodLogs])
+
+  // Weekly: days in last 7 where goal met
+  const weeklyDays = useMemo(() => {
+    let count = 0
+    for (let i = 0; i < 7; i++) {
+      const d = new Date(); d.setDate(d.getDate() - i)
+      const ds = d.toISOString().split('T')[0]
+      const p  = i === 0 ? protein : foodLogs.filter((l) => l.date === ds).reduce((s, f) => s + (f.macros?.protein ?? 0), 0)
+      if (p >= PGOAL) count++
+    }
+    return count
+  }, [protein, foodLogs])
+
+  // Hourly accumulation for graph
+  const hourlyData = useMemo(() => {
+    const byHour: Record<number, number> = {}
+    todayFoods.forEach((l) => {
+      const h = new Date(l.timestamp).getHours()
+      byHour[h] = (byHour[h] || 0) + (l.macros?.protein ?? 0)
+    })
+    let cum = 0
+    return Array.from({ length: 17 }, (_, i) => i + 6).map((h) => {
+      cum += byHour[h] || 0
+      return { h, actual: Math.round(cum), ideal: Math.round(Math.min(PGOAL, ((h - 6) / 16) * PGOAL)) }
+    })
+  }, [todayFoods])
+
+  const nowH        = new Date().getHours()
+  const idealNow    = Math.min(PGOAL, Math.max(0, ((nowH - 6) / 16) * PGOAL))
+  const behindIdeal = protein < idealNow - 15 && nowH >= 9
+
+  const LEGEND = [
+    { max: 50,   color: '#ef4444', label: '0–50g 🔴'    },
+    { max: 100,  color: '#f97316', label: '51–100g 🟠'   },
+    { max: 140,  color: '#eab308', label: '101–140g 🟡'  },
+    { max: 170,  color: '#10b981', label: '141–170g 🟢'  },
+    { max: 9999, color: '#f59e0b', label: '170g+ 🏆'     },
+  ]
+  const activeIdx = LEGEND.findIndex((l, i) => protein <= l.max || i === LEGEND.length - 1)
+
+  const getHelp = async () => {
+    if (!apiKey || protein >= PGOAL) return
+    setHelpLoading(true)
+    setShowHelp(true)
+    const now = new Date()
+    const timeStr = `${now.getHours()}:${now.getMinutes().toString().padStart(2, '0')}`
+    try {
+      const text = await getProteinHelp(
+        protein, PGOAL, timeStr,
+        profile?.name?.split(' ')[0] ?? 'Du',
+        personality.favoriteFoods,
+        apiKey,
+      )
+      setHelpText(text)
+    } catch { setHelpText('Keine Empfehlung verfügbar.') }
+    setHelpLoading(false)
+  }
+
+  // Ring SVG
+  const ringSize = 140, ringStroke = 14
+  const ringR    = (ringSize - ringStroke) / 2
+  const ringCirc = 2 * Math.PI * ringR
+  const ringDash = ringCirc * Math.min(1, protein / PGOAL)
+
+  return (
+    <div className="glass p-4" style={{ border: `1px solid ${color}22` }}>
+      {/* Header */}
+      <div className="flex items-center justify-between mb-4">
+        <p className="text-sm font-black" style={{ color: 'var(--text-1)' }}>🥩 Protein-Tracker</p>
+        <div className="flex items-center gap-2">
+          {proteinStreak >= 2 && (
+            <span className="text-xs px-2 py-0.5 rounded-full font-bold"
+              style={{ background: 'rgba(251,191,36,0.1)', color: '#fbbf24' }}>
+              🔥 {proteinStreak}d Streak
+            </span>
+          )}
+          <span className="text-[10px] px-2 py-0.5 rounded-full font-bold"
+            style={{ background: `${color}15`, color }}>
+            {weeklyDays}/7 Tage
+          </span>
+        </div>
+      </div>
+
+      {/* Ring + Stats row */}
+      <div className="flex items-center gap-4 mb-4">
+        {/* Protein Ring */}
+        <div className="relative flex items-center justify-center flex-shrink-0"
+          style={{ width: ringSize, height: ringSize }}>
+          <svg width={ringSize} height={ringSize} style={{ position: 'absolute' }}>
+            <circle cx={ringSize/2} cy={ringSize/2} r={ringR} fill="none"
+              stroke="rgba(255,255,255,0.06)" strokeWidth={ringStroke} />
+            <circle cx={ringSize/2} cy={ringSize/2} r={ringR} fill="none"
+              stroke={color} strokeWidth={ringStroke}
+              strokeDasharray={`${ringDash} ${ringCirc}`} strokeLinecap="round"
+              transform={`rotate(-90 ${ringSize/2} ${ringSize/2})`}
+              style={{ transition: 'stroke-dasharray 1.2s cubic-bezier(0.16,1,0.3,1)', filter: `drop-shadow(0 0 8px ${color}77)` }}
+            />
+          </svg>
+          <div className="absolute inset-0 flex flex-col items-center justify-center z-10">
+            <span className="font-black leading-none" style={{ fontSize: 34, color }}>{protein}</span>
+            <span className="text-xs font-semibold mt-0.5" style={{ color: 'rgba(255,255,255,0.35)' }}>/ {PGOAL}g</span>
+            <span className="text-[10px] font-bold mt-1" style={{ color: 'rgba(255,255,255,0.25)', letterSpacing: '0.08em' }}>PROTEIN</span>
+          </div>
+        </div>
+
+        {/* Right stats */}
+        <div className="flex-1 flex flex-col gap-2.5" style={{ minWidth: 0 }}>
+          {/* Progress bar */}
+          <div>
+            <div className="flex justify-between mb-1.5">
+              <span className="text-xs font-bold" style={{ color }}>{pct}% erreicht</span>
+              {protein < PGOAL && (
+                <span className="text-xs font-semibold" style={{ color: 'var(--text-3)' }}>Noch {remaining}g</span>
+              )}
+            </div>
+            <div className="h-2 rounded-full overflow-hidden" style={{ background: 'rgba(255,255,255,0.06)' }}>
+              <div className="h-full rounded-full transition-all duration-700"
+                style={{ width: `${pct}%`, background: color, boxShadow: `0 0 8px ${color}55` }} />
+            </div>
+          </div>
+
+          {/* Color legend */}
+          <div className="grid grid-cols-2 gap-1">
+            {LEGEND.map((l, i) => (
+              <div key={l.label} className="flex items-center gap-1">
+                <div className="w-1.5 h-1.5 rounded-full flex-shrink-0"
+                  style={{ background: l.color, opacity: i === activeIdx ? 1 : 0.3 }} />
+                <span className="text-[9px]"
+                  style={{ color: i === activeIdx ? l.color : 'rgba(255,255,255,0.22)', fontWeight: i === activeIdx ? 700 : 400 }}>
+                  {l.label}
+                </span>
+              </div>
+            ))}
+          </div>
+
+          {/* Status pill */}
+          <div className="rounded-xl px-2.5 py-1.5" style={{ background: `${color}12`, border: `1px solid ${color}22` }}>
+            <p className="text-[10px] font-bold leading-snug" style={{ color }}>
+              {protein >= PGOAL
+                ? `🏆 Ziel erreicht! +${protein - PGOAL}g Bonus`
+                : behindIdeal
+                ? `⚠️ Hinter Idealverlauf – nachlegen!`
+                : protein === 0
+                ? `💡 Starte mit einem proteinreichen Frühstück`
+                : `💪 Weiter so!`}
+            </p>
+          </div>
+        </div>
+      </div>
+
+      {/* Hourly graph (collapsible) */}
+      {todayFoods.length > 0 && (
+        <div className="mb-3">
+          <button onClick={() => setShowGraph((v) => !v)}
+            className="flex items-center gap-1.5 text-xs mb-2 w-full"
+            style={{ color: 'var(--text-3)' }}>
+            <span>📈 Protein-Verlauf</span>
+            <span style={{ fontSize: 9 }}>{showGraph ? '▲' : '▼'}</span>
+          </button>
+          {showGraph && (
+            <div>
+              <div className="flex items-end gap-px" style={{ height: 60 }}>
+                {hourlyData
+                  .filter((d) => d.h <= Math.max(nowH, 8))
+                  .map(({ h, actual, ideal }) => {
+                    const isNow   = h === nowH
+                    const barCol  = pColor(actual)
+                    const actualH = actual > 0 ? Math.max(4, (actual / PGOAL) * 52) : 0
+                    const idealH  = Math.max(2, (ideal  / PGOAL) * 52)
+                    return (
+                      <div key={h} className="flex-1 relative" style={{ height: 60 }}>
+                        {/* Ideal (ghost) */}
+                        <div className="absolute bottom-0 w-full rounded-t-sm"
+                          style={{ height: idealH, background: 'rgba(255,255,255,0.07)' }} />
+                        {/* Actual */}
+                        {actualH > 0 && (
+                          <div className="absolute bottom-0 w-3/4 left-[12.5%] rounded-t-sm transition-all duration-700"
+                            style={{ height: actualH, background: isNow ? barCol : `${barCol}99` }} />
+                        )}
+                      </div>
+                    )
+                  })}
+              </div>
+              <div className="flex justify-between mt-1">
+                <span className="text-[8px]" style={{ color: 'var(--text-3)' }}>6h</span>
+                <span className="text-[8px]" style={{ color: 'var(--text-3)' }}>
+                  <span style={{ opacity: 0.4 }}>■ Ideal</span>{'  '}
+                  <span style={{ color }}>{pct}% jetzt</span>
+                </span>
+                <span className="text-[8px]" style={{ color: 'var(--text-3)' }}>22h</span>
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* AI Help button */}
+      <button
+        onClick={getHelp}
+        disabled={helpLoading || !apiKey || protein >= PGOAL}
+        className="w-full py-3 rounded-2xl text-sm font-bold flex items-center justify-center gap-2 glass-press transition-all disabled:opacity-50"
+        style={{ background: `${color}10`, border: `1px solid ${color}25`, color }}>
+        {helpLoading
+          ? <><Loader size={14} className="animate-spin" />Kalo denkt nach…</>
+          : protein >= PGOAL
+          ? '🏆 Tagesziel erreicht! Perfekt!'
+          : '🍗 Was soll ich jetzt essen?'}
+      </button>
+
+      {showHelp && helpText && (
+        <div className="mt-3 rounded-2xl p-3.5"
+          style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.07)' }}>
+          <p className="text-xs font-black mb-1.5" style={{ color }}>🤖 Kalos Empfehlung</p>
+          <p className="text-sm leading-relaxed whitespace-pre-wrap" style={{ color: 'var(--text-1)' }}>{helpText}</p>
+        </div>
+      )}
+    </div>
+  )
+}
+
 // ── Main Dashboard ────────────────────────────────────────────────────────
 export default function Dashboard() {
   const profile        = useStore((s) => s.profile)
@@ -884,6 +1146,9 @@ export default function Dashboard() {
             <MacroCard label="Fett"          value={fat}     max={macroT.fat}     color="#ef4444" />
           </div>
         </div>
+
+        {/* ── Protein Tracker ── */}
+        <ProteinTrackerCard />
 
         {/* Quick actions */}
         <div className="grid grid-cols-2 gap-3">
