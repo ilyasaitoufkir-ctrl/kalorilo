@@ -8,6 +8,7 @@ import { useBroadcasts } from './hooks/useBroadcasts'
 import { useNotifications } from './hooks/useNotifications'
 import Navigation from './components/Navigation'
 import ErrorBoundary from './components/ErrorBoundary'
+import DailyBriefing from './components/DailyBriefing'
 import type { TabId } from './types'
 
 // ── Lazy-loaded route components ──────────────────────────────────────────────
@@ -48,15 +49,21 @@ function TabFallback() {
 const TAB_ORDER: TabId[] = ['home', 'food', 'sport', 'ai', 'profile']
 
 function MainApp() {
-  const profile      = useStore((s) => s.profile)
-  const activeTab    = useStore((s) => s.activeTab)
-  const setActiveTab = useStore((s) => s.setActiveTab)
+  const profile            = useStore((s) => s.profile)
+  const activeTab          = useStore((s) => s.activeTab)
+  const setActiveTab       = useStore((s) => s.setActiveTab)
+  const lastBriefingDate   = useStore((s) => s.lastBriefingDate)
+  const setLastBriefingDate = useStore((s) => s.setLastBriefingDate)
 
   useDarkMode()
   useWhoopSync()
   useFirestoreSync(null)
   useBroadcasts(null)
   useNotifications()
+
+  const today = new Date().toISOString().split('T')[0]
+  const hour  = new Date().getHours()
+  const showBriefing = !!profile && hour >= 6 && lastBriefingDate !== today
 
   const touchStartX = useRef(0)
   const touchStartY = useRef(0)
@@ -87,6 +94,10 @@ function MainApp() {
         <Onboarding />
       </Suspense>
     )
+  }
+
+  if (showBriefing) {
+    return <DailyBriefing onDismiss={() => setLastBriefingDate(today)} />
   }
 
   const tab = activeTab as string

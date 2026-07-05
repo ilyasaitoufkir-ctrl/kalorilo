@@ -1001,6 +1001,46 @@ Schreib einen kurzen persönlichen Kommentar (2 Sätze). Motivierend, ehrlich, m
   return (await res.json()).content?.[0]?.text?.trim() ?? ''
 }
 
+// ── Daily Briefing – Morgen-Text für alle drei Sektionen ─────────────────
+
+export async function generateDailyBriefingText(
+  profileName: string,
+  yesterdayScore: number,
+  yesterdayProtein: number,
+  yesterdayCalories: number,
+  yesterdayCalorieTarget: number,
+  yesterdaySleepH: number,
+  yesterdayHasTraining: boolean,
+  todayRecovery: number,
+  todayHrv: number,
+  todaySleepH: number,
+  todayStrain: number,
+  apiKey: string,
+): Promise<{ gestern: string; heute: string; morgen: string }> {
+  const res = await anthropicPost(apiKey, {
+    model: ANTHROPIC_MODEL,
+    max_tokens: 400,
+    messages: [{
+      role: 'user',
+      content: `Du bist Kalo, persönlicher Coach von ${profileName}. Es ist Morgen. Erstelle drei kurze Briefing-Texte.
+
+GESTERN: Score ${yesterdayScore}/100 · Protein ${yesterdayProtein}g · Kalorien ${yesterdayCalories}/${yesterdayCalorieTarget} kcal · Schlaf ${yesterdaySleepH > 0 ? yesterdaySleepH + 'h' : 'unbekannt'} · Training: ${yesterdayHasTraining ? 'ja' : 'nein'}
+HEUTE: Recovery ${todayRecovery}% · HRV ${todayHrv}ms · Schlaf letzte Nacht ${todaySleepH > 0 ? todaySleepH + 'h' : 'unbekannt'} · Strain ${todayStrain}
+
+Antworte NUR mit JSON (kein Markdown):
+{
+  "gestern": "Motivierende 1-2-Satz-Zusammenfassung von gestern mit konkreten Zahlen",
+  "heute": "Was bedeutet die heutige Recovery/HRV für den Tag – konkreter Tagesplan in 1-2 Sätzen",
+  "morgen": "Kurze Prognose/Empfehlung für morgen basierend auf heutigem Strain in 1 Satz"
+}`,
+    }],
+  })
+  const raw = (await res.json()).content?.[0]?.text ?? '{}'
+  const json = raw.match(/\{[\s\S]*\}/)?.[0] ?? '{}'
+  const fallback = { gestern: '–', heute: '–', morgen: '–' }
+  try { return { ...fallback, ...JSON.parse(json) } } catch { return fallback }
+}
+
 // ── Onboarding: KI-Personalisierungszusammenfassung ───────────────────────
 export async function generatePersonalizationSummary(
   profile: UserProfile,

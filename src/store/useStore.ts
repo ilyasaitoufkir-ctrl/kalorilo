@@ -134,6 +134,10 @@ interface AppState {
   scoreCommentDate: string
   setScoreComment: (comment: string, date: string) => void
 
+  // Daily briefing shown once per day
+  lastBriefingDate: string
+  setLastBriefingDate: (date: string) => void
+
   // Kalo AI personality
   userPersonality: UserPersonality
   updatePersonality: (updates: Partial<UserPersonality>) => void
@@ -297,6 +301,9 @@ export const useStore = create<AppState>()(
       scoreCommentDate: '',
       setScoreComment: (comment, date) => set({ scoreComment: comment, scoreCommentDate: date }),
 
+      lastBriefingDate: '',
+      setLastBriefingDate: (date) => set({ lastBriefingDate: date }),
+
       // Kalo personality
       userPersonality: DEFAULT_PERSONALITY,
       updatePersonality: (updates) => set((s) => ({
@@ -324,7 +331,7 @@ export const useStore = create<AppState>()(
         apiKeys: defaultApiKeys, activeTab: 'home',
         whoopTokens: null, groupIds: [],
         userPersonality: DEFAULT_PERSONALITY, portionHistory: {},
-        trainingPlan: null, nutritionPlan: null, scoreComment: '', scoreCommentDate: '',
+        trainingPlan: null, nutritionPlan: null, scoreComment: '', scoreCommentDate: '', lastBriefingDate: '',
       }),
 
       getFoodLogsForDate: (date) => get().foodLogs.filter((l) => l.date === date),
@@ -382,13 +389,21 @@ export const useStore = create<AppState>()(
         if (goal === 'lose') base = Math.max(1200, Math.round(tdee - weeklyDelta / 7))
         else if (goal === 'gain') base = Math.round(tdee + Math.abs(weeklyDelta) / 7)
         else base = Math.round(tdee)
-        // Whoop recovery adjustment: low recovery → rest, high → can push
+        // Adaptive TDEE: use Whoop dailyBurn when available (most accurate)
+        if (whoopData?.dailyBurn && whoopData.dailyBurn > 0) {
+          const strain   = whoopData.strain   ?? 8
+          const recovery = whoopData.recovery ?? 50
+          let deficit = -400
+          if (strain > 15)     deficit = -200
+          else if (recovery < 40) deficit = -150
+          return Math.max(1800, Math.round(whoopData.dailyBurn + deficit))
+        }
+        // Formula fallback: Whoop recovery adjustment
         if (whoopData?.recovery) {
           const r = whoopData.recovery
           if (r < 34) base = Math.max(1200, base - 200)
           else if (r > 66) base = base + 150
         }
-        // Strain bonus: heavy training day → more calories
         if (whoopData?.strain && whoopData.strain > 14) base = base + 150
         return base
       },
@@ -440,6 +455,7 @@ export const useStore = create<AppState>()(
         nutritionPlan: state.nutritionPlan,
         scoreComment: state.scoreComment,
         scoreCommentDate: state.scoreCommentDate,
+        lastBriefingDate: state.lastBriefingDate,
       }),
     }
   )

@@ -1,5 +1,5 @@
 import { useMemo, useState, useRef, useCallback, useEffect } from 'react'
-import { Settings, Droplets, Zap, Plus, ChevronRight, Footprints, RefreshCw, ChevronDown, ChevronUp, Loader } from 'lucide-react'
+import { Settings, Droplets, Zap, Plus, ChevronRight, Footprints, RefreshCw, ChevronDown, ChevronUp, Loader, Brain } from 'lucide-react'
 import { useStore } from '../store/useStore'
 import { formatDate, getMacroTargets, getTodayQuote, waterGoal, getBMI } from '../utils/calculations'
 import { generateEnergyPlan, getMuscleRecovery } from '../utils/insights'
@@ -816,6 +816,123 @@ function ProteinTrackerCard() {
   )
 }
 
+// ── Adaptive TDEE Card ────────────────────────────────────────────────────
+function AdaptiveTDEECard() {
+  const whoopData    = useStore((s) => s.whoopData)
+  const whoopHistory = useStore((s) => s.whoopHistory)
+  const profile      = useStore((s) => s.profile)
+  const [open, setOpen] = useState(false)
+
+  const dailyBurn = whoopData?.dailyBurn ?? 0
+  const strain    = whoopData?.strain    ?? 8
+  const recovery  = whoopData?.recovery  ?? 50
+
+  const hasWhoop = dailyBurn > 0
+
+  let deficit = -400
+  let deficitReason = 'Standarddefizit'
+  if (hasWhoop) {
+    if (strain > 15)       { deficit = -200; deficitReason = 'Hoher Strain → kleines Defizit' }
+    else if (recovery < 40){ deficit = -150; deficitReason = 'Niedrige Recovery → kleines Defizit' }
+    else if (strain < 8)   { deficitReason = 'Niedriger Strain → volles Defizit' }
+    else                   { deficitReason = 'Normaler Aktivitätstag' }
+  }
+
+  const adaptiveTarget = hasWhoop ? Math.max(1800, Math.round(dailyBurn + deficit)) : null
+
+  const daysOfData      = whoopHistory.length
+  const learningPct     = Math.min(100, Math.round((daysOfData / 30) * 100))
+  const learningStage   = daysOfData >= 30 ? { label: 'Maximum 🏆', color: '#10b981' }
+                        : daysOfData >= 15  ? { label: 'Präzise 🎯',   color: '#22c55e' }
+                        : daysOfData >= 8   ? { label: 'Erste Erkenntnisse 📈', color: '#f59e0b' }
+                        :                     { label: 'Daten sammeln 📊', color: '#60a5fa' }
+
+  // Formula-based target for comparison
+  const wt = Number(profile?.weight)||75, ht = Number(profile?.height)||175, ag = Number(profile?.age)||25
+  const bmr = profile?.gender === 'male' ? 10*wt+6.25*ht-5*ag+5 : 10*wt+6.25*ht-5*ag-161
+  const mlt: Record<string, number> = { sedentary:1.2, light:1.375, moderate:1.55, active:1.725, very_active:1.9 }
+  const formulaTarget = Math.round(bmr * (mlt[profile?.activityLevel ?? 'moderate'] ?? 1.55))
+
+  return (
+    <div className="glass overflow-hidden" style={{ border: '1px solid rgba(99,102,241,0.2)' }}>
+      <button className="w-full p-4 flex items-center gap-3 text-left" onClick={() => setOpen((v) => !v)}>
+        <div className="w-11 h-11 rounded-2xl flex items-center justify-center flex-shrink-0"
+          style={{ background: 'rgba(99,102,241,0.1)', border: '1px solid rgba(99,102,241,0.2)' }}>
+          <Brain size={18} style={{ color: '#818cf8' }} />
+        </div>
+        <div className="flex-1" style={{ minWidth: 0 }}>
+          <p className="text-sm font-black" style={{ color: 'var(--text-1)' }}>Adaptives TDEE</p>
+          <p className="text-xs font-semibold" style={{ color: hasWhoop ? '#818cf8' : 'var(--text-3)' }}>
+            {hasWhoop ? `${adaptiveTarget} kcal Ziel · Whoop-basiert` : 'Formel-basiert – kein Whoop-Verbrauch'}
+          </p>
+        </div>
+        <div className="flex items-center gap-2">
+          <div className="text-right flex-shrink-0">
+            <p className="text-xs font-black" style={{ color: learningStage.color }}>{daysOfData}/30d</p>
+          </div>
+          {open
+            ? <ChevronUp size={16} style={{ color: 'var(--text-3)', flexShrink: 0 }} />
+            : <ChevronDown size={16} style={{ color: 'var(--text-3)', flexShrink: 0 }} />}
+        </div>
+      </button>
+
+      {open && (
+        <div className="px-4 pb-4 space-y-3">
+          {/* Whoop data row */}
+          {hasWhoop ? (
+            <div className="rounded-2xl p-3" style={{ background: 'rgba(99,102,241,0.07)', border: '1px solid rgba(99,102,241,0.15)' }}>
+              <div className="grid grid-cols-3 gap-2">
+                <div className="text-center">
+                  <p className="text-base font-black" style={{ color: '#f87171' }}>{dailyBurn}</p>
+                  <p className="text-[10px]" style={{ color: 'var(--text-3)' }}>kcal Verbrauch</p>
+                </div>
+                <div className="text-center">
+                  <p className="text-base font-black" style={{ color: '#f97316' }}>{Math.abs(deficit)}</p>
+                  <p className="text-[10px]" style={{ color: 'var(--text-3)' }}>kcal Defizit</p>
+                </div>
+                <div className="text-center">
+                  <p className="text-base font-black" style={{ color: '#818cf8' }}>{adaptiveTarget}</p>
+                  <p className="text-[10px]" style={{ color: 'var(--text-3)' }}>kcal Ziel</p>
+                </div>
+              </div>
+              <p className="text-[10px] mt-2 text-center" style={{ color: 'var(--text-3)' }}>{deficitReason}</p>
+            </div>
+          ) : (
+            <div className="rounded-2xl p-3 text-center" style={{ background: 'rgba(99,102,241,0.07)', border: '1px solid rgba(99,102,241,0.15)' }}>
+              <p className="text-xs" style={{ color: 'var(--text-3)' }}>Formel-TDEE: <span className="font-bold" style={{ color: '#818cf8' }}>{formulaTarget} kcal</span></p>
+              <p className="text-[10px] mt-1" style={{ color: 'var(--text-3)' }}>Whoop verbinden für präzise Werte</p>
+            </div>
+          )}
+
+          {/* Learning progress */}
+          <div>
+            <div className="flex items-center justify-between mb-1.5">
+              <p className="text-xs font-bold" style={{ color: 'var(--text-2)' }}>Lernfortschritt</p>
+              <span className="text-[10px] font-bold" style={{ color: learningStage.color }}>{learningStage.label}</span>
+            </div>
+            <div className="h-1.5 rounded-full overflow-hidden" style={{ background: 'rgba(255,255,255,0.06)' }}>
+              <div className="h-full rounded-full transition-all duration-700"
+                style={{ width: `${learningPct}%`, background: learningStage.color }} />
+            </div>
+            <div className="flex justify-between mt-1">
+              <span className="text-[9px]" style={{ color: 'var(--text-3)' }}>1–7d sammeln</span>
+              <span className="text-[9px]" style={{ color: 'var(--text-3)' }}>8–14d Erkenntnisse</span>
+              <span className="text-[9px]" style={{ color: 'var(--text-3)' }}>15–30d präzise</span>
+              <span className="text-[9px]" style={{ color: learningPct >= 100 ? '#10b981' : 'var(--text-3)' }}>30d+ max</span>
+            </div>
+          </div>
+
+          {hasWhoop && (
+            <p className="text-[10px]" style={{ color: 'var(--text-3)' }}>
+              ⚙️ Defizit-Logik: Strain &gt; 15 → −200 kcal · Recovery &lt; 40% → −150 kcal · sonst −400 kcal · Min. 1800 kcal
+            </p>
+          )}
+        </div>
+      )}
+    </div>
+  )
+}
+
 // ── Main Dashboard ────────────────────────────────────────────────────────
 export default function Dashboard() {
   const profile        = useStore((s) => s.profile)
@@ -1149,6 +1266,9 @@ export default function Dashboard() {
 
         {/* ── Protein Tracker ── */}
         <ProteinTrackerCard />
+
+        {/* ── Adaptive TDEE ── */}
+        <AdaptiveTDEECard />
 
         {/* Quick actions */}
         <div className="grid grid-cols-2 gap-3">

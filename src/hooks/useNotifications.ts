@@ -116,6 +116,20 @@ function buildSmartNotification(
         return { title: '💧 Wasser fehlt noch!', body: `Noch ${wLeft}ml bis ${wGoal}ml – trink jetzt noch etwas!`, tag: 'water-eve' }
       return { title: '😴 Bald Schlafenszeit', body: `${name}, letzte Chance zur Mahlzeit – dann bald schlafen!`, tag: 'bedtime-soon' }
     }
+    case '22:0': {
+      const todayScore = s.scoreHistory?.[today] ?? 0
+      const scoreTag   = todayScore >= 85 ? '🔥 Ausgezeichnet' : todayScore >= 70 ? '💪 Sehr gut' : todayScore >= 55 ? '👍 Gut' : '📊'
+      const parts: string[] = []
+      if (todayScore > 0) parts.push(`Score: ${todayScore}/100`)
+      if (protein > 0)    parts.push(`${protein}g Protein`)
+      if (calories > 0)   parts.push(`${calories} kcal`)
+      if (hasTrainedToday) parts.push('Training ✅')
+      return {
+        title: `${scoreTag} · Tages-Rückblick`,
+        body: parts.length > 0 ? parts.join(' · ') : `${name}, wie war dein Tag?`,
+        tag: 'evening-summary',
+      }
+    }
     case '22:30':
       return { title: '🌙 Zeit zum Schlafen!', body: `${name}, für optimale Recovery jetzt schlafen gehen. Gute Nacht! 💤`, tag: 'sleep' }
     default:
@@ -125,7 +139,7 @@ function buildSmartNotification(
 
 const SCHEDULE: Array<[number, number]> = [
   [7, 0], [8, 0], [10, 0], [12, 30],
-  [14, 0], [16, 0], [19, 0], [21, 30], [22, 30],
+  [14, 0], [16, 0], [19, 0], [21, 30], [22, 0], [22, 30],
 ]
 
 const PROTEIN_GOAL = 170
