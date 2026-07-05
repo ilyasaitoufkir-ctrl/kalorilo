@@ -1,4 +1,4 @@
-import { useMemo, useState, useRef, useCallback } from 'react'
+import { useMemo, useState, useRef, useCallback, useEffect } from 'react'
 import { Settings, Droplets, Zap, Plus, ChevronRight, Footprints, RefreshCw } from 'lucide-react'
 import { useStore } from '../store/useStore'
 import { formatDate, getMacroTargets, getTodayQuote, waterGoal, getBMI } from '../utils/calculations'
@@ -13,17 +13,16 @@ function greeting() {
   return 'Guten Abend'
 }
 
-// ── Premium gradient ring ─────────────────────────────────────────────────
-function CalorieRing({ consumed, target, size = 220 }: { consumed: number; target: number; size?: number }) {
-  const pct = target > 0 ? Math.min(1, consumed / target) : 0
+// ── Calorie Ring (hero) ───────────────────────────────────────────────────
+function CalorieRing({ consumed, target, size = 180 }: { consumed: number; target: number; size?: number }) {
+  const pct  = target > 0 ? Math.min(1, consumed / target) : 0
   const stroke = 18
-  const r = (size - stroke) / 2
+  const r    = (size - stroke) / 2
   const circ = 2 * Math.PI * r
   const dash = circ * pct
-  const id = 'ringGrad'
-
+  const id   = 'ringGrad'
   return (
-    <svg width={size} height={size} className="ring-base" style={{ filter: 'drop-shadow(0 0 24px rgba(74,140,92,0.3))' }}>
+    <svg width={size} height={size} style={{ filter: 'drop-shadow(0 0 24px rgba(74,140,92,0.3))' }}>
       <defs>
         <linearGradient id={id} x1="0%" y1="0%" x2="100%" y2="0%">
           <stop offset="0%"   stopColor="#a8c5a0" />
@@ -31,14 +30,11 @@ function CalorieRing({ consumed, target, size = 220 }: { consumed: number; targe
           <stop offset="100%" stopColor="#4a8c5c" />
         </linearGradient>
       </defs>
-      {/* Track */}
       <circle cx={size/2} cy={size/2} r={r} fill="none"
         stroke="rgba(74,140,92,0.12)" strokeWidth={stroke} />
-      {/* Progress */}
       <circle cx={size/2} cy={size/2} r={r} fill="none"
         stroke={`url(#${id})`} strokeWidth={stroke}
-        strokeDasharray={`${dash} ${circ}`}
-        strokeLinecap="round"
+        strokeDasharray={`${dash} ${circ}`} strokeLinecap="round"
         style={{ transition: 'stroke-dasharray 0.8s cubic-bezier(0.16,1,0.3,1)' }}
       />
     </svg>
@@ -65,6 +61,112 @@ function MacroCard({ label, value, max, color, unit = 'g' }: {
   )
 }
 
+// ── Daily Score helpers ───────────────────────────────────────────────────
+function scoreColor(s: number) {
+  if (s >= 81) return '#10b981'
+  if (s >= 61) return '#f59e0b'
+  if (s >= 41) return '#f97316'
+  return '#ef4444'
+}
+function scoreLabel(s: number) {
+  if (s >= 81) return 'Sehr gut! 🟢'
+  if (s >= 61) return 'Gut! 🟡'
+  if (s >= 41) return 'Verbesserungspotenzial 🟠'
+  return 'Ruhetag empfohlen 🔴'
+}
+
+// ── Large animated score ring ─────────────────────────────────────────────
+function DailyScoreRing({ score, size = 180 }: { score: number; size?: number }) {
+  const stroke = 16
+  const r      = (size - stroke) / 2
+  const circ   = 2 * Math.PI * r
+  const dash   = circ * (Math.min(100, score) / 100)
+  const color  = scoreColor(score)
+  return (
+    <div className="relative flex items-center justify-center flex-shrink-0" style={{ width: size, height: size }}>
+      <svg width={size} height={size} style={{ position: 'absolute', top: 0, left: 0 }}>
+        <circle cx={size/2} cy={size/2} r={r} fill="none"
+          stroke="rgba(255,255,255,0.06)" strokeWidth={stroke} />
+        <circle cx={size/2} cy={size/2} r={r} fill="none"
+          stroke={color} strokeWidth={stroke}
+          strokeDasharray={`${dash} ${circ}`} strokeLinecap="round"
+          transform={`rotate(-90 ${size/2} ${size/2})`}
+          style={{
+            transition: 'stroke-dasharray 1.5s cubic-bezier(0.16,1,0.3,1)',
+            filter: `drop-shadow(0 0 12px ${color}99)`,
+          }}
+        />
+      </svg>
+      <div className="absolute inset-0 flex flex-col items-center justify-center z-10">
+        <span className="font-black leading-none" style={{ fontSize: 48, color }}>{score}</span>
+        <span className="text-[11px] font-bold mt-1" style={{ color: 'rgba(255,255,255,0.4)', letterSpacing: '0.1em' }}>SCORE</span>
+      </div>
+    </div>
+  )
+}
+
+// ── Small sub-ring ────────────────────────────────────────────────────────
+function MiniScoreRing({ value, label, icon, color, size = 56 }: {
+  value: number; label: string; icon: string; color: string; size?: number
+}) {
+  const stroke = 4.5
+  const r      = (size - stroke) / 2
+  const circ   = 2 * Math.PI * r
+  const dash   = circ * (Math.min(100, value) / 100)
+  return (
+    <div className="flex flex-col items-center gap-1.5">
+      <div className="relative" style={{ width: size, height: size }}>
+        <svg width={size} height={size} style={{ position: 'absolute' }}>
+          <circle cx={size/2} cy={size/2} r={r} fill="none"
+            stroke="rgba(255,255,255,0.07)" strokeWidth={stroke} />
+          <circle cx={size/2} cy={size/2} r={r} fill="none"
+            stroke={color} strokeWidth={stroke}
+            strokeDasharray={`${dash} ${circ}`} strokeLinecap="round"
+            transform={`rotate(-90 ${size/2} ${size/2})`}
+            style={{ transition: 'stroke-dasharray 1.2s cubic-bezier(0.16,1,0.3,1)' }} />
+        </svg>
+        <div className="absolute inset-0 flex items-center justify-center" style={{ fontSize: 18 }}>{icon}</div>
+      </div>
+      <p className="text-[10px] font-semibold" style={{ color: 'rgba(255,255,255,0.45)' }}>{label}</p>
+      <p className="text-xs font-black" style={{ color }}>{Math.round(value)}</p>
+    </div>
+  )
+}
+
+// ── 7-day score bar chart ─────────────────────────────────────────────────
+function ScoreBarChart({ scores }: { scores: { date: string; score: number }[] }) {
+  if (scores.length === 0) return null
+  const maxVal  = Math.max(...scores.map((s) => s.score), 1)
+  const dayNames = ['So', 'Mo', 'Di', 'Mi', 'Do', 'Fr', 'Sa']
+  const todayStr = new Date().toISOString().split('T')[0]
+  return (
+    <div className="flex items-end gap-1.5" style={{ height: 80 }}>
+      {scores.map((s) => {
+        const isToday = s.date === todayStr
+        const color   = s.score > 0 ? scoreColor(s.score) : 'rgba(255,255,255,0.08)'
+        const barH    = s.score > 0 ? Math.max(6, (s.score / maxVal) * 56) : 6
+        const dayName = dayNames[new Date(s.date).getDay()]
+        return (
+          <div key={s.date} className="flex-1 flex flex-col items-center gap-1">
+            <span className="text-[9px] font-black" style={{ color: isToday && s.score > 0 ? color : 'transparent' }}>
+              {s.score > 0 ? s.score : '–'}
+            </span>
+            <div className="w-full rounded-t-xl transition-all duration-700"
+              style={{
+                height: barH,
+                background: isToday ? color : `${color}55`,
+                boxShadow: isToday && s.score > 0 ? `0 -4px 14px ${color}55` : 'none',
+              }} />
+            <span className="text-[9px]" style={{ color: isToday ? 'rgba(255,255,255,0.8)' : 'rgba(255,255,255,0.3)' }}>
+              {dayName}
+            </span>
+          </div>
+        )
+      })}
+    </div>
+  )
+}
+
 // ── Whoop recovery helpers ────────────────────────────────────────────────
 function recoveryColor(r: number) {
   if (r >= 67) return '#10b981'
@@ -77,7 +179,7 @@ function recoveryLabel(r: number) {
   return 'Ruhetag 🔴'
 }
 function recoveryAdvice(d: WhoopData): string {
-  const r = d.recovery
+  const r      = d.recovery
   const strain = d.strain ?? 0
   const sleep  = d.sleepDuration ?? 0
   if (r >= 67) {
@@ -90,11 +192,11 @@ function recoveryAdvice(d: WhoopData): string {
 }
 function sleepAdvice(d: WhoopData): string {
   const dur = d.sleepDuration ?? 0
-  const q   = d.sleepQuality ?? 0
-  if (dur === 0) return ''
-  if (dur < 5)   return `Nur ${dur}h Schlaf – heute mehr Protein & leichtes Training!`
-  if (dur < 6.5) return `${dur}h Schlaf – genug Eiweiß & Erholung einplanen`
-  if (q >= 80)   return 'Exzellenter Schlaf – perfekter Tag zum Trainieren! 🎯'
+  const q   = d.sleepQuality  ?? 0
+  if (dur === 0)   return ''
+  if (dur < 5)     return `Nur ${dur}h Schlaf – heute mehr Protein & leichtes Training!`
+  if (dur < 6.5)   return `${dur}h Schlaf – genug Eiweiß & Erholung einplanen`
+  if (q >= 80)     return 'Exzellenter Schlaf – perfekter Tag zum Trainieren! 🎯'
   return 'Guter Schlaf – du bist bereit für den Tag!'
 }
 
@@ -146,7 +248,7 @@ function Sparkline({ data, color = '#10b981' }: { data: number[]; color?: string
   )
 }
 
-// ── Full Whoop Widget ────────────────────────────────────────────────────
+// ── Full Whoop Widget ─────────────────────────────────────────────────────
 function WhoopWidget({
   whoopData, whoopHistory, lastSyncAt, onConnect,
 }: {
@@ -175,21 +277,20 @@ function WhoopWidget({
   }
 
   const rc     = recoveryColor(whoopData.recovery)
-  const sleep  = whoopData.sleepDuration  ?? 0
-  const deep   = whoopData.deepSleep      ?? 0
-  const rem    = whoopData.remSleep       ?? 0
+  const sleep  = whoopData.sleepDuration   ?? 0
+  const deep   = whoopData.deepSleep       ?? 0
+  const rem    = whoopData.remSleep        ?? 0
   const rrate  = whoopData.respiratoryRate ?? 0
-  const strain = whoopData.strain         ?? 0
-  const burned = whoopData.caloriesBurned ?? 0
-  const daily  = whoopData.dailyBurn      ?? 0
+  const strain = whoopData.strain          ?? 0
+  const burned = whoopData.caloriesBurned  ?? 0
+  const daily  = whoopData.dailyBurn       ?? 0
 
   const recoveryHistory = whoopHistory.map((d) => d.recovery)
   const sleepHistory    = whoopHistory.map((d) => d.sleepDuration)
 
   return (
     <div className="glass p-4" style={{ background: '#080808', border: '1px solid #1a1a1a' }}>
-
-      {/* ── Header ── */}
+      {/* Header */}
       <div className="flex items-center gap-2 mb-4">
         <span style={{ fontSize: 16 }}>⌚</span>
         <p className="text-sm font-black tracking-wide" style={{ color: '#fff' }}>WHOOP</p>
@@ -203,7 +304,7 @@ function WhoopWidget({
         )}
       </div>
 
-      {/* ── Recovery + Vitals ── */}
+      {/* Recovery + Vitals */}
       <div className="flex items-center gap-4 mb-4">
         <div className="relative flex items-center justify-center" style={{ width: 72, height: 72, flexShrink: 0 }}>
           <RecoveryRing value={whoopData.recovery} />
@@ -233,7 +334,7 @@ function WhoopWidget({
         </div>
       </div>
 
-      {/* ── Sleep ── */}
+      {/* Sleep */}
       {sleep > 0 && (
         <div className="rounded-2xl p-3 mb-3"
           style={{ background: 'rgba(167,139,250,0.07)', border: '1px solid rgba(167,139,250,0.12)' }}>
@@ -244,7 +345,6 @@ function WhoopWidget({
             )}
           </div>
           <p className="text-xl font-black mb-2" style={{ color: '#fff' }}>{sleep}h</p>
-          {/* Progress bar */}
           <div className="h-1.5 rounded-full mb-2" style={{ background: 'rgba(167,139,250,0.15)' }}>
             <div className="h-full rounded-full transition-all duration-700"
               style={{ width: `${Math.min(100, (sleep / 8) * 100)}%`, background: 'linear-gradient(90deg,#a78bfa,#7c3aed)' }} />
@@ -263,7 +363,7 @@ function WhoopWidget({
         </div>
       )}
 
-      {/* ── Strain + Calories ── */}
+      {/* Strain + Calories */}
       <div className="grid grid-cols-2 gap-2 mb-3">
         <div className="rounded-2xl p-2.5"
           style={{ background: 'rgba(251,146,60,0.07)', border: '1px solid rgba(251,146,60,0.1)' }}>
@@ -296,18 +396,13 @@ function WhoopWidget({
         </div>
       </div>
 
-      {/* ── Recovery recommendation ── */}
+      {/* Recommendation */}
       <div className="rounded-2xl px-3 py-2.5 mb-3"
-        style={{
-          background: `${rc}11`,
-          border: `1px solid ${rc}22`,
-        }}>
-        <p className="text-xs font-bold" style={{ color: rc }}>
-          {recoveryAdvice(whoopData)}
-        </p>
+        style={{ background: `${rc}11`, border: `1px solid ${rc}22` }}>
+        <p className="text-xs font-bold" style={{ color: rc }}>{recoveryAdvice(whoopData)}</p>
       </div>
 
-      {/* ── 7-day trends ── */}
+      {/* 7-day trends */}
       {recoveryHistory.length > 1 && (
         <div>
           <div className="flex items-center justify-between mb-1">
@@ -321,7 +416,6 @@ function WhoopWidget({
             </div>
           </div>
           <Sparkline data={recoveryHistory} color={rc} />
-
           {sleepHistory.some((v) => v > 0) && (
             <>
               <p className="text-[10px] font-semibold mt-2 mb-1" style={{ color: '#444' }}>7 Tage Schlaf</p>
@@ -334,6 +428,7 @@ function WhoopWidget({
   )
 }
 
+// ── Main Dashboard ────────────────────────────────────────────────────────
 export default function Dashboard() {
   const profile        = useStore((s) => s.profile)
   const foodLogs       = useStore((s) => s.foodLogs)
@@ -341,7 +436,6 @@ export default function Dashboard() {
   const waterLogs      = useStore((s) => s.waterLogs)
   const whoopData      = useStore((s) => s.whoopData)
   const whoopExtended  = useStore((s) => s.whoopExtended)
-
   const whoopHistory   = useStore((s) => s.whoopHistory)
   const whoopLastSync  = useStore((s) => s.whoopLastSyncAt)
   const cheatDays      = useStore((s) => s.cheatDays)
@@ -351,9 +445,11 @@ export default function Dashboard() {
   const addCheatDay    = useStore((s) => s.addCheatDay)
   const removeCheatDay = useStore((s) => s.removeCheatDay)
   const setActiveTab   = useStore((s) => s.setActiveTab)
+  const setDailyScore  = useStore((s) => s.setDailyScore)
+  const scoreHistory   = useStore((s) => s.scoreHistory)
 
   // Pull-to-refresh
-  const [pullY, setPullY]       = useState(0)
+  const [pullY, setPullY]        = useState(0)
   const [refreshing, setRefresh] = useState(false)
   const scrollRef  = useRef<HTMLDivElement>(null)
   const touchY0    = useRef(0)
@@ -386,25 +482,22 @@ export default function Dashboard() {
     const bmr = profile.gender === 'male' ? 10*w+6.25*h-5*a+5 : 10*w+6.25*h-5*a-161
     const m: Record<string,number> = { sedentary:1.2, light:1.375, moderate:1.55, active:1.725, very_active:1.9 }
     const tdee = bmr * (m[profile.activityLevel]??1.55)
-    const wks = Number(profile.targetWeeks)||12
+    const wks  = Number(profile.targetWeeks)||12
     const delta = (w-(Number(profile.targetWeight)||w))*7700/wks
     if (profile.goal==='lose') return Math.max(1200, Math.round(tdee-delta/7))
     if (profile.goal==='gain') return Math.round(tdee+Math.abs(delta)/7)
     return Math.round(tdee)
   }, [profile])
 
-  const macroT   = useMemo(() => getMacroTargets(target), [target])
+  const macroT = useMemo(() => getMacroTargets(target), [target])
 
-  // Whoop calories burned today → add to calorie budget
   const whoopBurnedToday = useMemo(() => {
-    // Prefer new extended data from whoopData
     if (whoopData?.date === today) {
-      const burned = whoopData.caloriesBurned ?? 0
-      const daily  = whoopData.dailyBurn ?? 0
-      if (burned > 0) return burned
-      if (daily  > 0) return daily
+      const b = whoopData.caloriesBurned ?? 0
+      const d = whoopData.dailyBurn ?? 0
+      if (b > 0) return b
+      if (d > 0) return d
     }
-    // Fallback to whoopExtended
     if (!whoopExtended || !whoopExtended.caloriesBurned) return 0
     if (whoopExtended.date && whoopExtended.date !== today) return 0
     return Math.round(whoopExtended.caloriesBurned)
@@ -420,14 +513,81 @@ export default function Dashboard() {
     const d = new Date()
     for (let i = 0; i < 365; i++) {
       const ds = d.toISOString().split('T')[0]
-      const c = foodLogs.filter((l) => l.date===ds).reduce((s,f)=>s+(f.macros?.calories??0),0)
-      const b = activityLogs.filter((l) => l.date===ds).reduce((s,a)=>s+a.caloriesBurned,0)
+      const c  = foodLogs.filter((l) => l.date===ds).reduce((s,f)=>s+(f.macros?.calories??0),0)
+      const b  = activityLogs.filter((l) => l.date===ds).reduce((s,a)=>s+a.caloriesBurned,0)
       if (c>0 && Math.abs((c-b)-adjustedTarget)<=200) count++
       else if (i>0) break
       d.setDate(d.getDate()-1)
     }
     return count
   }, [foodLogs, activityLogs, target])
+
+  // ── Daily Score ──────────────────────────────────────────────────────────
+  const nutritionScore = useMemo(() => {
+    const calHit  = target > 0           ? Math.min(1, calories / target)             : 0
+    const protHit = macroT.protein > 0   ? Math.min(1, protein  / macroT.protein)     : 0
+    const watHit  = waterGoal() > 0      ? Math.min(1, water    / waterGoal())        : 0
+    return Math.round((calHit * 0.5 + protHit * 0.3 + watHit * 0.2) * 100)
+  }, [calories, target, protein, macroT, water])
+
+  const sportScore = useMemo(() => {
+    const strain   = whoopData?.strain ?? 0
+    const strainSc = Math.min(100, (strain / 21) * 100)
+    const stepsSc  = Math.min(100, (stepsToday / 10000) * 100)
+    const worked   = todayActs.length > 0 ? 30 : 0
+    return Math.min(100, Math.round(strainSc * 0.4 + stepsSc * 0.3 + worked))
+  }, [whoopData, stepsToday, todayActs])
+
+  const sleepScore = useMemo(() => {
+    const dur = whoopData?.sleepDuration ?? 0
+    const q   = whoopData?.sleepQuality  ?? 0
+    if (dur === 0 && q === 0) return 50
+    const durSc = Math.min(100, (dur / 8) * 100)
+    const qSc   = q > 0 ? q : 50
+    return Math.round(durSc * 0.6 + qSc * 0.4)
+  }, [whoopData])
+
+  const recScore   = whoopData?.recovery ?? 50
+  const dailyScore = useMemo(() => Math.round(
+    nutritionScore * 0.30 + sportScore * 0.25 + sleepScore * 0.25 + recScore * 0.20
+  ), [nutritionScore, sportScore, sleepScore, recScore])
+
+  // Save today's score + build 7-day history array
+  useEffect(() => {
+    if (dailyScore > 0) setDailyScore(today, dailyScore)
+  }, [dailyScore, setDailyScore])
+
+  const scoreHistoryArr = useMemo(() => {
+    const arr: { date: string; score: number }[] = []
+    const d = new Date()
+    for (let i = 6; i >= 0; i--) {
+      const dd = new Date(d)
+      dd.setDate(d.getDate() - i)
+      const ds = dd.toISOString().split('T')[0]
+      arr.push({ date: ds, score: scoreHistory[ds] ?? 0 })
+    }
+    return arr
+  }, [scoreHistory])
+
+  const yesterday = useMemo(() => {
+    const d = new Date(); d.setDate(d.getDate()-1)
+    return d.toISOString().split('T')[0]
+  }, [])
+  const yesterdayScore = scoreHistory[yesterday] ?? 0
+  const scoreDelta     = yesterdayScore > 0 ? dailyScore - yesterdayScore : null
+
+  // Score streak (days >= 70)
+  const scoreStreak = useMemo(() => {
+    let count = 0
+    const d = new Date()
+    for (let i = 0; i < 30; i++) {
+      const ds = d.toISOString().split('T')[0]
+      if ((scoreHistory[ds] ?? 0) >= 70) count++
+      else break
+      d.setDate(d.getDate()-1)
+    }
+    return count
+  }, [scoreHistory])
 
   const isCheatDay = cheatDays.some((c) => c.date === today)
   const bmi        = profile ? getBMI(Number(profile.weight)||0, Number(profile.height)||1) : null
@@ -448,15 +608,14 @@ export default function Dashboard() {
       <div className="relative overflow-hidden pt-safe px-5 pb-6"
         style={{ background: 'var(--grad-hero)' }}>
 
-        {/* Gold glow orb */}
-        <div className="absolute" style={{
+        {/* Glow orb */}
+        <div className="absolute pointer-events-none" style={{
           top: -60, right: -60, width: 280, height: 280,
           background: 'radial-gradient(circle, rgba(74,140,92,0.1) 0%, transparent 65%)',
-          pointerEvents: 'none',
         }} />
 
         {/* Top row */}
-        <div className="flex items-start justify-between mb-6 relative">
+        <div className="flex items-start justify-between mb-4 relative">
           <div>
             <p className="text-sm font-medium mb-1" style={{ color: 'var(--text-3)' }}>{dateStr}</p>
             <h1 className="text-2xl font-black tracking-tight" style={{ color: 'var(--text-1)' }}>
@@ -506,7 +665,7 @@ export default function Dashboard() {
           </div>
         </div>
 
-        {/* Whoop calorie bonus banner */}
+        {/* Whoop calorie bonus */}
         {whoopBurnedToday > 0 && (
           <div className="mt-3 px-4 py-2.5 rounded-2xl flex items-center gap-2"
             style={{ background: 'rgba(251,146,60,0.1)', border: '1px solid rgba(251,146,60,0.2)' }}>
@@ -526,13 +685,55 @@ export default function Dashboard() {
       {/* ── Content ──────────────────────────────────────────────── */}
       <div className="px-4 space-y-3" style={{ paddingBottom: 4 }}>
 
+        {/* ── Tages-Score Ring ── */}
+        <div className="glass p-5"
+          style={{ background: 'rgba(8,8,8,0.9)', border: `1px solid ${scoreColor(dailyScore)}22` }}>
+
+          {/* Header */}
+          <div className="flex items-center justify-between mb-4">
+            <p className="text-sm font-black tracking-wide" style={{ color: 'var(--text-1)' }}>🎯 Tages-Score</p>
+            {scoreStreak >= 3 && (
+              <span className="text-xs px-2.5 py-1 rounded-full font-bold"
+                style={{ background: 'rgba(251,191,36,0.1)', color: '#fbbf24' }}>
+                🔥 {scoreStreak} Tage über 70!
+              </span>
+            )}
+          </div>
+
+          {/* Ring + mini rings */}
+          <div className="flex flex-col items-center gap-4">
+            <DailyScoreRing score={dailyScore} size={180} />
+
+            {/* Label + comparison */}
+            <div className="text-center">
+              <p className="text-base font-black" style={{ color: scoreColor(dailyScore) }}>
+                {scoreLabel(dailyScore)}
+              </p>
+              {scoreDelta !== null && (
+                <p className="text-xs mt-1" style={{ color: scoreDelta >= 0 ? '#10b981' : '#f87171' }}>
+                  {scoreDelta >= 0 ? `+${scoreDelta}` : scoreDelta} Punkte vs. gestern
+                  {scoreDelta >= 5 ? ' 🔥' : scoreDelta <= -5 ? ' ⬇️' : ''}
+                </p>
+              )}
+            </div>
+
+            {/* 4 Mini Rings */}
+            <div className="flex justify-around w-full px-2">
+              <MiniScoreRing value={nutritionScore} label="Ernährung" icon="🍽️" color="#10b981" />
+              <MiniScoreRing value={sportScore}     label="Sport"     icon="💪" color="#f59e0b" />
+              <MiniScoreRing value={sleepScore}     label="Schlaf"    icon="😴" color="#a78bfa" />
+              <MiniScoreRing value={recScore}       label="Recovery"  icon="⌚" color="#60a5fa" />
+            </div>
+          </div>
+        </div>
+
         {/* Makros */}
         <div>
           <p className="label mb-2 px-1">Makros heute</p>
           <div className="flex gap-2">
-            <MacroCard label="Eiweiß"  value={protein} max={macroT.protein} color="#3b82f6" />
+            <MacroCard label="Eiweiß"        value={protein} max={macroT.protein} color="#3b82f6" />
             <MacroCard label="Kohlenhydrate" value={carbs}   max={macroT.carbs}   color="#f59e0b" />
-            <MacroCard label="Fett"    value={fat}     max={macroT.fat}     color="#ef4444" />
+            <MacroCard label="Fett"          value={fat}     max={macroT.fat}     color="#ef4444" />
           </div>
         </div>
 
@@ -573,7 +774,6 @@ export default function Dashboard() {
               {water} <span className="font-normal" style={{ color: 'var(--text-3)' }}>/ {waterGoal()} ml</span>
             </p>
           </div>
-          {/* Progress bar */}
           <div className="h-2 rounded-full mb-3 overflow-hidden" style={{ background: 'rgba(74,140,92,0.08)' }}>
             <div className="h-full rounded-full transition-all duration-700"
               style={{ width: `${waterPct * 100}%`, background: 'linear-gradient(90deg, #38bdf8, #0ea5e9)' }} />
@@ -582,11 +782,7 @@ export default function Dashboard() {
             {[150, 250, 500].map((ml) => (
               <button key={ml} onClick={() => addWater(today, ml)}
                 className="flex-1 py-2.5 rounded-2xl text-xs font-bold glass-press transition-all"
-                style={{
-                  background: 'rgba(56,189,248,0.08)',
-                  border: '1px solid rgba(56,189,248,0.15)',
-                  color: '#38bdf8',
-                }}>
+                style={{ background: 'rgba(56,189,248,0.08)', border: '1px solid rgba(56,189,248,0.15)', color: '#38bdf8' }}>
                 +{ml}ml
               </button>
             ))}
@@ -616,7 +812,7 @@ export default function Dashboard() {
           </div>
         </div>
 
-        {/* ── Whoop Widget ── */}
+        {/* Whoop Widget */}
         <WhoopWidget
           whoopData={whoopData}
           whoopHistory={whoopHistory}
@@ -624,19 +820,46 @@ export default function Dashboard() {
           onConnect={() => setActiveTab('profile')}
         />
 
-        {/* Stats row */}
+        {/* ── Score History 7 Tage ── */}
+        <div className="glass p-4">
+          <div className="flex items-center justify-between mb-4">
+            <p className="text-sm font-black" style={{ color: 'var(--text-1)' }}>📊 Score Verlauf</p>
+            <span className="text-xs" style={{ color: 'var(--text-3)' }}>7 Tage</span>
+          </div>
+          <ScoreBarChart scores={scoreHistoryArr} />
+
+          {/* Best day */}
+          {scoreHistoryArr.some((s) => s.score > 0) && (() => {
+            const best = scoreHistoryArr.reduce((a, b) => b.score > a.score ? b : a)
+            const bestDay = new Date(best.date).toLocaleDateString('de-DE', { weekday: 'long' })
+            const isToday = best.date === today
+            return best.score >= 70 ? (
+              <p className="text-xs mt-3 text-center" style={{ color: 'rgba(255,255,255,0.4)' }}>
+                🏆 Bester Tag: <span style={{ color: scoreColor(best.score), fontWeight: 700 }}>
+                  {isToday ? 'heute' : bestDay} ({best.score} Punkte)
+                </span>
+              </p>
+            ) : null
+          })()}
+        </div>
+
+        {/* ── Streak + Achievement ── */}
         <div className="grid grid-cols-3 gap-3">
-          {[
-            { label: 'Streak',  value: streak, unit: 'Tage', icon: '🔥', color: '#4a8c5c' },
-            { label: 'BMI',     value: bmi ?? '–', unit: '',     icon: '📊', color: '#60a5fa' },
-            { label: 'Verbrannt', value: Math.round(burned), unit: 'kcal', icon: '💪', color: '#10b981' },
-          ].map((s) => (
-            <div key={s.label} className="glass p-3 text-center">
-              <p className="text-xl mb-1">{s.icon}</p>
-              <p className="text-xl font-black" style={{ color: s.color }}>{s.value}</p>
-              <p className="text-[10px] mt-0.5" style={{ color: 'var(--text-3)' }}>{s.unit || s.label}</p>
-            </div>
-          ))}
+          <div className="glass p-3 text-center">
+            <p className="text-xl mb-1">🔥</p>
+            <p className="text-xl font-black" style={{ color: '#4a8c5c' }}>{streak}</p>
+            <p className="text-[10px] mt-0.5" style={{ color: 'var(--text-3)' }}>Kalorien-Streak</p>
+          </div>
+          <div className="glass p-3 text-center">
+            <p className="text-xl mb-1">⭐</p>
+            <p className="text-xl font-black" style={{ color: '#f59e0b' }}>{scoreStreak}</p>
+            <p className="text-[10px] mt-0.5" style={{ color: 'var(--text-3)' }}>Score ≥70 Streak</p>
+          </div>
+          <div className="glass p-3 text-center">
+            <p className="text-xl mb-1">📊</p>
+            <p className="text-xl font-black" style={{ color: '#60a5fa' }}>{bmi ?? '–'}</p>
+            <p className="text-[10px] mt-0.5" style={{ color: 'var(--text-3)' }}>BMI</p>
+          </div>
         </div>
 
         {/* Cheat Day */}

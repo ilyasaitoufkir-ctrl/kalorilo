@@ -5,6 +5,7 @@ import { useDarkMode } from './hooks/useDarkMode'
 import { useWhoopSync } from './hooks/useWhoopSync'
 import { useFirestoreSync } from './hooks/useFirestoreSync'
 import { useBroadcasts } from './hooks/useBroadcasts'
+import { useNotifications } from './hooks/useNotifications'
 import Navigation from './components/Navigation'
 import ErrorBoundary from './components/ErrorBoundary'
 import type { TabId } from './types'
@@ -55,6 +56,7 @@ function MainApp() {
   useWhoopSync()
   useFirestoreSync(null)
   useBroadcasts(null)
+  useNotifications()
 
   const touchStartX = useRef(0)
   const touchStartY = useRef(0)

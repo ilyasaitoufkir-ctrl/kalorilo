@@ -115,6 +115,10 @@ interface AppState {
   removeSupplement: (id: string) => void
   toggleSupplement: (id: string) => void
 
+  // Daily score history (date → 0-100)
+  scoreHistory: Record<string, number>
+  setDailyScore: (date: string, score: number) => void
+
   // Extended coaching profile (from onboarding)
   coachingProfile: CoachingProfile | null
   setCoachingProfile: (p: CoachingProfile) => void
@@ -265,6 +269,11 @@ export const useStore = create<AppState>()(
         return { supplementChecked: checked }
       }),
 
+      scoreHistory: {},
+      setDailyScore: (date, score) => set((s) => ({
+        scoreHistory: { ...s.scoreHistory, [date]: score },
+      })),
+
       coachingProfile: null,
       setCoachingProfile: (p) => set({ coachingProfile: p }),
 
@@ -405,6 +414,7 @@ export const useStore = create<AppState>()(
         supplements: state.supplements,
         supplementChecked: state.supplementChecked,
         coachingProfile: state.coachingProfile,
+        scoreHistory: state.scoreHistory,
       }),
     }
   )
