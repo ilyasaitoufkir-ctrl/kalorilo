@@ -1,8 +1,9 @@
 import { useMemo, useState, useRef, useCallback, useEffect } from 'react'
-import { Settings, Droplets, Zap, Plus, ChevronRight, Footprints, RefreshCw } from 'lucide-react'
+import { Settings, Droplets, Zap, Plus, ChevronRight, Footprints, RefreshCw, ChevronDown, ChevronUp } from 'lucide-react'
 import { useStore } from '../store/useStore'
 import { formatDate, getMacroTargets, getTodayQuote, waterGoal, getBMI } from '../utils/calculations'
-import type { WhoopData, WhoopDayHistory } from '../types'
+import { generateEnergyPlan, getMuscleRecovery } from '../utils/insights'
+import type { WhoopData, WhoopDayHistory, ActivityLog } from '../types'
 
 const today = formatDate()
 
@@ -428,6 +429,128 @@ function WhoopWidget({
   )
 }
 
+// ── Energie-Plan Card ─────────────────────────────────────────────────────
+function EnergyPlanCard({ whoopData }: { whoopData: WhoopData | null }) {
+  const [open, setOpen] = useState(false)
+  const plan = useMemo(() => generateEnergyPlan(whoopData), [whoopData])
+  const r = whoopData?.recovery ?? 50
+  const label = r >= 67 ? 'Hochleistung heute' : r < 34 ? 'Erholungstag heute' : 'Normaler Tag heute'
+  const labelColor = r >= 67 ? '#10b981' : r < 34 ? '#f59e0b' : '#60a5fa'
+
+  return (
+    <div className="glass overflow-hidden">
+      <button className="w-full p-4 flex items-center gap-3 text-left" onClick={() => setOpen((v) => !v)}>
+        <div className="w-11 h-11 rounded-2xl flex items-center justify-center text-xl flex-shrink-0"
+          style={{ background: 'rgba(99,102,241,0.1)', border: '1px solid rgba(99,102,241,0.2)' }}>⚡</div>
+        <div className="flex-1" style={{ minWidth: 0 }}>
+          <p className="text-sm font-black" style={{ color: 'var(--text-1)' }}>Dein Energie-Plan</p>
+          <p className="text-xs font-semibold" style={{ color: labelColor }}>{label}</p>
+        </div>
+        {open
+          ? <ChevronUp size={16} style={{ color: 'var(--text-3)', flexShrink: 0 }} />
+          : <ChevronDown size={16} style={{ color: 'var(--text-3)', flexShrink: 0 }} />}
+      </button>
+      {open && (
+        <div className="px-4 pb-4 space-y-2.5">
+          {plan.map((block) => {
+            const now = new Date()
+            const [startH] = block.time.split('–').map(Number)
+            const isCurrent = now.getHours() >= startH && now.getHours() < startH + 2
+            return (
+              <div key={block.time} className={`flex items-start gap-3 rounded-2xl px-3 py-2.5 transition-all ${isCurrent ? 'ring-1' : ''}`}
+                style={{
+                  background: isCurrent ? `${block.color}18` : 'rgba(255,255,255,0.02)',
+                  border: isCurrent ? `1px solid ${block.color}44` : '1px solid transparent',
+                }}>
+                <span className="text-lg flex-shrink-0 mt-0.5">{block.icon}</span>
+                <div className="flex-1" style={{ minWidth: 0 }}>
+                  <div className="flex items-center gap-2">
+                    <span className="text-[10px] font-bold tabular-nums" style={{ color: block.color }}>{block.time}</span>
+                    {isCurrent && <span className="text-[9px] px-1.5 py-0.5 rounded-full font-bold"
+                      style={{ background: `${block.color}22`, color: block.color }}>JETZT</span>}
+                  </div>
+                  <p className="text-xs font-semibold mt-0.5" style={{ color: isCurrent ? 'var(--text-1)' : 'var(--text-2)' }}>{block.label}</p>
+                  {block.tip && <p className="text-[10px] mt-0.5" style={{ color: 'var(--text-3)' }}>{block.tip}</p>}
+                </div>
+              </div>
+            )
+          })}
+        </div>
+      )}
+    </div>
+  )
+}
+
+// ── Muskel-Regenerations Card ─────────────────────────────────────────────
+function MuscleTrackerCard({ activityLogs }: { activityLogs: ActivityLog[] }) {
+  const muscles = useMemo(() => getMuscleRecovery(activityLogs), [activityLogs])
+  if (muscles.length === 0) return null
+
+  const ready    = muscles.filter((m) => m.ready)
+  const notReady = muscles.filter((m) => !m.ready)
+
+  return (
+    <div className="glass p-4">
+      <div className="flex items-center gap-2 mb-3">
+        <span style={{ fontSize: 18 }}>💪</span>
+        <p className="text-sm font-black" style={{ color: 'var(--text-1)' }}>Muskel-Regeneration</p>
+        {ready.length > 0 && (
+          <span className="ml-auto text-xs px-2 py-0.5 rounded-full font-bold"
+            style={{ background: 'rgba(16,185,129,0.12)', color: '#10b981' }}>
+            {ready.length} bereit
+          </span>
+        )}
+      </div>
+
+      {notReady.length > 0 && (
+        <div className="space-y-2 mb-3">
+          {notReady.map((m) => (
+            <div key={m.name}>
+              <div className="flex items-center justify-between mb-1">
+                <span className="text-xs font-semibold" style={{ color: 'var(--text-2)' }}>
+                  {m.emoji} {m.name}
+                </span>
+                <span className="text-xs font-bold" style={{ color: m.pctRecovered >= 75 ? '#f59e0b' : '#ef4444' }}>
+                  {m.pctRecovered}%
+                </span>
+              </div>
+              <div className="h-1.5 rounded-full overflow-hidden" style={{ background: 'rgba(255,255,255,0.06)' }}>
+                <div className="h-full rounded-full transition-all duration-700"
+                  style={{
+                    width: `${m.pctRecovered}%`,
+                    background: m.pctRecovered >= 75 ? '#f59e0b' : '#ef4444',
+                  }} />
+              </div>
+              {m.lastSport && (
+                <p className="text-[10px] mt-0.5" style={{ color: 'var(--text-3)' }}>
+                  Letzter Sport: {m.lastSport}
+                </p>
+              )}
+            </div>
+          ))}
+        </div>
+      )}
+
+      {ready.length > 0 && (
+        <div className="flex flex-wrap gap-1.5">
+          {ready.map((m) => (
+            <span key={m.name} className="text-xs px-2.5 py-1 rounded-full font-bold"
+              style={{ background: 'rgba(16,185,129,0.12)', color: '#10b981', border: '1px solid rgba(16,185,129,0.2)' }}>
+              {m.emoji} {m.name} ✓
+            </span>
+          ))}
+        </div>
+      )}
+
+      {notReady.length > 0 && (
+        <p className="text-[10px] mt-2" style={{ color: 'var(--text-3)' }}>
+          💡 Trainiere heute: {ready.map((m) => m.name).join(', ') || 'Ruhetag empfohlen'}
+        </p>
+      )}
+    </div>
+  )
+}
+
 // ── Main Dashboard ────────────────────────────────────────────────────────
 export default function Dashboard() {
   const profile        = useStore((s) => s.profile)
@@ -727,6 +850,9 @@ export default function Dashboard() {
           </div>
         </div>
 
+        {/* ── Energie Plan ── */}
+        <EnergyPlanCard whoopData={whoopData} />
+
         {/* Makros */}
         <div>
           <p className="label mb-2 px-1">Makros heute</p>
@@ -819,6 +945,9 @@ export default function Dashboard() {
           lastSyncAt={whoopLastSync}
           onConnect={() => setActiveTab('profile')}
         />
+
+        {/* ── Muskel-Regeneration ── */}
+        <MuscleTrackerCard activityLogs={activityLogs} />
 
         {/* ── Score History 7 Tage ── */}
         <div className="glass p-4">

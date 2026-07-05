@@ -792,6 +792,71 @@ Antworte NUR mit JSON: {"calories":100,"protein":5.0,"fat":2.0,"carbs":15.0}`,
   } catch { return null }
 }
 
+// ── Korrelations-Analyse & Körper-Fingerprint ─────────────────────────────
+
+export interface BodyFingerprint {
+  optimalSleep: string
+  bestTrainingDay: string
+  optimalCalories: number
+  topRecoveryFoods: string[]
+  worstRecoveryFoods: string[]
+  proteinNeeds: string
+  observations: string[]
+}
+
+export async function analyzeCorrelations(data: string, apiKey: string): Promise<string> {
+  const res = await anthropicPost(apiKey, {
+    model: ANTHROPIC_MODEL,
+    max_tokens: 1800,
+    messages: [{
+      role: 'user',
+      content: `Du bist ein Gesundheits-Datenanalyst. Analysiere diese Daten auf KONKRETE Muster und Korrelationen.
+
+${data}
+
+Erkenne und beschreibe:
+1. Lebensmittel-Recovery-Korrelationen (welche Mahlzeiten verbessern/verschlechtern die Whoop Recovery?)
+2. Koffein/Alkohol → Schlafqualität Zusammenhang
+3. Wochentag-Muster (an welchen Tagen beste/schlechteste Werte?)
+4. Training → Recovery/Schlaf Zusammenhänge
+5. Protein → HRV Korrelation
+
+Format: Jede Erkenntnis als prägnanter Satz auf Deutsch, beginnend mit „Wenn du...", „An...", „Nach..." oder „Dein...".
+Maximal 7 Erkenntnisse. Nur solche die wirklich aus den Daten ableitbar sind – sonst sage es.`,
+    }],
+  })
+  return (await res.json()).content?.[0]?.text ?? 'Nicht genug Daten für eine Analyse vorhanden.'
+}
+
+export async function generateBodyFingerprint(data: string, profileName: string, apiKey: string): Promise<BodyFingerprint> {
+  const res = await anthropicPost(apiKey, {
+    model: ANTHROPIC_MODEL,
+    max_tokens: 1000,
+    messages: [{
+      role: 'user',
+      content: `Du bist ein Experte für personalisierte Gesundheitsoptimierung. Erstelle den persönlichen Körper-Fingerprint von ${profileName}.
+
+${data}
+
+Antworte NUR mit validem JSON (kein Markdown):
+{
+  "optimalSleep": "7.5h (22:30–06:00)",
+  "bestTrainingDay": "Dienstag und Donnerstag",
+  "optimalCalories": 2400,
+  "topRecoveryFoods": ["Lachs", "Brokkoli", "Hafer"],
+  "worstRecoveryFoods": ["Alkohol", "Sehr spätes Essen"],
+  "proteinNeeds": "150–160g täglich für optimale Recovery",
+  "observations": ["Beobachtung 1 mit konkreten Zahlen", "Beobachtung 2"]
+}
+Maximal 4 observations. Bei Datenmangel: ehrlich mit "(geschätzt)" kennzeichnen.`,
+    }],
+  })
+  const raw  = (await res.json()).content?.[0]?.text ?? '{}'
+  const json = raw.match(/\{[\s\S]*\}/)?.[0] ?? '{}'
+  const fb: BodyFingerprint = { optimalSleep: '–', bestTrainingDay: '–', optimalCalories: 0, topRecoveryFoods: [], worstRecoveryFoods: [], proteinNeeds: '–', observations: [] }
+  try { return { ...fb, ...JSON.parse(json) } } catch { return fb }
+}
+
 // ── Onboarding: KI-Personalisierungszusammenfassung ───────────────────────
 export async function generatePersonalizationSummary(
   profile: UserProfile,
