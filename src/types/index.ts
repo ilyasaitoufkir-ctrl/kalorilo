@@ -189,31 +189,7 @@ export interface RunSession {
   activityLogId: string
 }
 
-export type TabId = 'home' | 'food' | 'sport' | 'stats' | 'ai' | 'profile' | 'friends' | 'training'
-
-// ── Training / Workout ─────────────────────────────────────────────────────
-export interface WorkoutSet {
-  reps: number
-  weight: number   // kg, 0 = body weight
-  completed: boolean
-}
-
-export interface WorkoutExercise {
-  id: string
-  name: string
-  imageUrl: string | null
-  muscles: string[]
-  sets: WorkoutSet[]
-}
-
-export interface WorkoutSession {
-  id: string
-  date: string
-  name: string
-  exercises: WorkoutExercise[]
-  durationSeconds: number
-  caloriesBurned: number
-}
+export type TabId = 'home' | 'food' | 'sport' | 'stats' | 'ai' | 'profile' | 'friends'
 
 export interface WeeklyPlan {
   id: string

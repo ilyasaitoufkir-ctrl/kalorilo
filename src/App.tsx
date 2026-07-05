@@ -16,7 +16,6 @@ import type { TabId } from './types'
 const Dashboard    = lazy(() => import('./components/Dashboard'))
 const FoodTracker  = lazy(() => import('./components/FoodTracker'))
 const SportTracker = lazy(() => import('./components/SportTracker'))
-const TrainingPage = lazy(() => import('./components/TrainingPage'))
 const AIAdvisor    = lazy(() => import('./components/AIAdvisor'))
 const Profile      = lazy(() => import('./components/Profile'))
 const Statistics   = lazy(() => import('./components/Statistics'))
@@ -48,7 +47,7 @@ function TabFallback() {
   )
 }
 
-const TAB_ORDER: TabId[] = ['home', 'food', 'sport', 'training', 'ai', 'profile']
+const TAB_ORDER: TabId[] = ['home', 'food', 'sport', 'ai', 'profile']
 
 function MainApp() {
   const profile      = useStore((s) => s.profile)
@@ -110,7 +109,6 @@ function MainApp() {
         {tab === 'home'     && <Dashboard />}
         {tab === 'food'     && <FoodTracker />}
         {tab === 'sport'    && <SportTracker />}
-        {tab === 'training' && <TrainingPage />}
         {tab === 'ai'       && <AIAdvisor />}
         {tab === 'profile'  && <Profile />}
         {tab === 'stats'    && <Statistics />}

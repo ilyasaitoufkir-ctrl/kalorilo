@@ -1,4 +1,4 @@
-import { Home, Utensils, Dumbbell, Bot, User, Flame } from 'lucide-react'
+import { Home, Utensils, Dumbbell, Bot, User } from 'lucide-react'
 import { useStore } from '../store/useStore'
 import type { TabId } from '../types'
 
@@ -6,7 +6,6 @@ const TABS: { id: TabId; icon: React.ElementType; label: string }[] = [
   { id: 'home',     icon: Home,     label: 'Start'    },
   { id: 'food',     icon: Utensils, label: 'Essen'    },
   { id: 'sport',    icon: Dumbbell, label: 'Sport'    },
-  { id: 'training', icon: Flame,    label: 'Training' },
   { id: 'ai',       icon: Bot,      label: 'Kalo'     },
   { id: 'profile',  icon: User,     label: 'Profil'   },
 ]
