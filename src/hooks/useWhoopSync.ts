@@ -58,7 +58,9 @@ export function useWhoopSync() {
       if (Date.now() - lastSync.current < THROTTLE_MS) return
       try {
         const tokens = await getValidTokens()
-        const data   = await syncWhoopData(tokens.accessToken)
+        console.log('[WhoopSync] start | token valid:', !!tokens.accessToken, '| expires in', Math.round((tokens.expiresAt - Date.now()) / 60000), 'min')
+        const data = await syncWhoopData(tokens.accessToken)
+        console.log('[WhoopSync] data received:', JSON.stringify(data))
 
         setWhoopData({
           recovery:        data.recovery,
@@ -75,7 +77,6 @@ export function useWhoopSync() {
           dailyBurn:       data.dailyBurn,
         })
 
-        // Keep whoopExtended in sync for backward compat
         useStore.setState({
           whoopExtended: {
             sleepDuration:  data.sleepDuration,
@@ -86,12 +87,12 @@ export function useWhoopSync() {
         })
 
         lastSync.current = Date.now()
+        console.log('[WhoopSync] store updated ✅')
 
-        // Auto-import today's workouts
         await importTodayWorkouts(tokens.accessToken)
 
       } catch (e) {
-        console.warn('[WhoopSync]', e)
+        console.error('[WhoopSync] FEHLER:', e)
       }
     }
 

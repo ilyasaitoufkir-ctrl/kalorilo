@@ -112,9 +112,12 @@ export async function refreshAccessToken(
   }
 }
 
-// ── Authenticated GET helper ───────────────────────────────────────────────
+// ── Authenticated GET helper (via Vercel proxy to avoid CORS) ─────────────
 async function whoopGet(path: string, accessToken: string) {
-  const res = await fetch(`${WHOOP_BASE}${path}`, {
+  // Split path and query string so the proxy can forward them separately
+  const [pathname, qs] = path.split('?')
+  const proxyUrl = `/api/whoop-data?path=${encodeURIComponent(pathname)}${qs ? '&' + qs : ''}`
+  const res = await fetch(proxyUrl, {
     headers: { Authorization: `Bearer ${accessToken}` },
   })
   if (!res.ok) throw new Error(`Whoop API ${path}: HTTP ${res.status}`)
