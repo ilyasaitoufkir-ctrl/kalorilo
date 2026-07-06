@@ -130,6 +130,7 @@ export interface WhoopDayHistory {
   sleepDuration: number
   strain: number
   caloriesBurned: number
+  dailyBurn?: number   // total cycle burn incl. NEAT (from /cycle endpoint)
 }
 
 export interface ApiKeys {

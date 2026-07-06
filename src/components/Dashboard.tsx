@@ -663,19 +663,30 @@ export default function Dashboard() {
 
   const macroT = useMemo(() => getMacroTargets(target), [target])
 
-  const whoopBurnedToday = useMemo(() => {
-    if (whoopData?.date === today) {
-      const b = whoopData.caloriesBurned ?? 0
-      const d = whoopData.dailyBurn ?? 0
-      if (b > 0) return b
-      if (d > 0) return d
-    }
-    if (!whoopExtended || !whoopExtended.caloriesBurned) return 0
-    if (whoopExtended.date && whoopExtended.date !== today) return 0
-    return Math.round(whoopExtended.caloriesBurned)
-  }, [whoopData, whoopExtended])
+  // Rolling average of WHOOP dailyBurn (≥3 days → use learned burn; else today's value as fallback)
+  const adjustedTarget = useMemo(() => {
+    const burnHistory = whoopHistory
+      .filter((h) => h.dailyBurn && h.dailyBurn > 500)
+      .map((h) => h.dailyBurn!)
+      .slice(-14)
 
-  const adjustedTarget = target + whoopBurnedToday
+    if (burnHistory.length >= 3) {
+      const avgBurn = Math.round(burnHistory.reduce((s, b) => s + b, 0) / burnHistory.length)
+      // Apply goal adjustment on top of learned burn
+      if (!profile) return avgBurn
+      const weeklyDelta = (Number(profile.weight) - (Number(profile.targetWeight) || Number(profile.weight))) * 7700 / (Number(profile.targetWeeks) || 12)
+      let goalAdjust = 0
+      if (profile.goal === 'lose') goalAdjust = -weeklyDelta / 7
+      else if (profile.goal === 'gain') goalAdjust = Math.abs(weeklyDelta) / 7
+      return Math.max(1500, Math.round(avgBurn + goalAdjust))
+    }
+
+    // Fallback: profile TDEE + today's WHOOP burn (wenn vorhanden)
+    const todayBurn = whoopData?.date === today
+      ? (whoopData.dailyBurn ?? whoopData.caloriesBurned ?? 0)
+      : (whoopExtended?.date === today ? (whoopExtended.caloriesBurned ?? 0) : 0)
+    return target + todayBurn
+  }, [whoopHistory, whoopData, whoopExtended, target, profile])
   const net    = calories - burned
   const remain = adjustedTarget - net
   const waterPct = Math.min(1, water / waterGoal())
@@ -848,13 +859,13 @@ export default function Dashboard() {
 
           {/* Kalorien */}
           <button onClick={() => setActiveTab('food')} className="glass-press" style={{ ...cardSm, textAlign: 'left', width: '100%' }}>
-            <p style={{ color: C.secondary, fontSize: 11, fontWeight: 500, letterSpacing: '0.04em', textTransform: 'uppercase' }}>Kalorien</p>
-            <p style={{ color: C.text, fontSize: 36, fontWeight: 600, lineHeight: 1, marginTop: 6, letterSpacing: '-1px' }}>{Math.round(calories)}</p>
-            <p style={{ color: remain >= 0 ? C.primary : C.secondary, fontSize: 12, marginTop: 2 }}>
-              {remain >= 0 ? `${Math.round(remain)} übrig` : `${Math.abs(Math.round(remain))} drüber`}
+            <p style={{ color: C.secondary, fontSize: 11, fontWeight: 500, letterSpacing: '0.04em', textTransform: 'uppercase' }}>Übrig</p>
+            <p style={{ color: remain >= 0 ? C.text : '#e07070', fontSize: 36, fontWeight: 600, lineHeight: 1, marginTop: 6, letterSpacing: '-1px' }}>
+              {remain >= 0 ? Math.round(remain) : `-${Math.abs(Math.round(remain))}`}
             </p>
+            <p style={{ color: C.tertiary, fontSize: 12, marginTop: 2 }}>{Math.round(calories)} gegessen</p>
             <div style={{ height: 4, background: C.light, borderRadius: 2, marginTop: 10, overflow: 'hidden' }}>
-              <div style={{ height: '100%', width: `${Math.min(100, adjustedTarget > 0 ? (calories/adjustedTarget)*100 : 0)}%`, background: remain >= 0 ? C.primary : C.secondary, borderRadius: 2, transition: 'width 0.8s ease' }} />
+              <div style={{ height: '100%', width: `${Math.min(100, adjustedTarget > 0 ? (calories/adjustedTarget)*100 : 0)}%`, background: remain >= 0 ? C.primary : '#e07070', borderRadius: 2, transition: 'width 0.8s ease' }} />
             </div>
           </button>
 

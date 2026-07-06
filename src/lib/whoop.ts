@@ -31,6 +31,7 @@ export interface WhoopDaySummary {
   sleepDuration: number
   strain:        number
   caloriesBurned: number
+  dailyBurn?:    number   // total cycle burn incl. NEAT
 }
 
 export interface WhoopWorkoutRecord {
@@ -244,17 +245,18 @@ export async function fetchTodayWorkouts(accessToken: string): Promise<WhoopWork
   }
 }
 
-// ── Fetch 7-day history for trend charts ─────────────────────────────────
+// ── Fetch 7-day history for trend charts (incl. daily cycle burn) ────────
 export async function syncWhoopHistory(accessToken: string, days = 7): Promise<WhoopDaySummary[]> {
   const now   = new Date()
   const end   = now.toISOString()
   const start = new Date(now.getTime() - (days + 1) * 24 * 3600 * 1000).toISOString()
 
   try {
-    const [recData, sleepData, workoutData] = await Promise.all([
+    const [recData, sleepData, workoutData, cycleData] = await Promise.all([
       whoopGet(`/recovery?start=${start}&end=${end}&order=asc&limit=${days}`, accessToken),
       whoopGet(`/activity/sleep?start=${start}&end=${end}&order=asc&limit=${days}`, accessToken),
       whoopGet(`/activity/workout?start=${start}&end=${end}&order=asc`, accessToken),
+      whoopGet(`/cycle?start=${start}&end=${end}&order=asc&limit=${days + 1}`, accessToken),
     ])
 
     const summaries: WhoopDaySummary[] = []
@@ -277,6 +279,14 @@ export async function syncWhoopHistory(accessToken: string, days = 7): Promise<W
         (max: number, w: any) => Math.max(max, w.score?.strain ?? 0), 0
       )
 
+      // Cycle = total daily energy expenditure incl. NEAT (most accurate calorie base)
+      const cycleRec = (cycleData.records ?? []).find((c: any) =>
+        (c.start ?? '').startsWith(date) || (c.end ?? '').startsWith(date)
+      )
+      const dailyBurn = cycleRec?.score_state === 'SCORED' && cycleRec?.score
+        ? Math.round((cycleRec.score.kilojoule ?? 0) / 4.184)
+        : undefined
+
       summaries.push({
         date,
         recovery:      Math.round(r.score?.recovery_score ?? 0),
@@ -285,6 +295,7 @@ export async function syncWhoopHistory(accessToken: string, days = 7): Promise<W
         sleepDuration: Math.round((sleepRec?.score?.stage_summary?.total_in_bed_time_milli ?? 0) / 360000) / 10,
         strain:        Math.round(dayStrain * 10) / 10,
         caloriesBurned: kcal,
+        dailyBurn,
       })
     }
 

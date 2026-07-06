@@ -375,37 +375,40 @@ export const useStore = create<AppState>()(
       },
 
       getDailyCalorieTarget: () => {
-        const { profile, whoopData } = get()
+        const { profile, whoopData, whoopHistory } = get()
         if (!profile) return 2000
         const { age, weight, height, gender, activityLevel, goal, targetWeight, targetWeeks } = profile
         // Mifflin-St Jeor BMR
         const bmr = gender === 'male'
           ? 10 * weight + 6.25 * height - 5 * age + 5
           : 10 * weight + 6.25 * height - 5 * age - 161
-        const activityMultipliers = { sedentary: 1.2, light: 1.375, moderate: 1.55, active: 1.725, very_active: 1.9 }
-        const tdee = bmr * activityMultipliers[activityLevel]
-        const weeklyDelta = (weight - targetWeight) * 7700 / (targetWeeks || 12)
-        let base = 0
-        if (goal === 'lose') base = Math.max(1200, Math.round(tdee - weeklyDelta / 7))
-        else if (goal === 'gain') base = Math.round(tdee + Math.abs(weeklyDelta) / 7)
-        else base = Math.round(tdee)
-        // Adaptive TDEE: use Whoop dailyBurn when available (most accurate)
-        if (whoopData?.dailyBurn && whoopData.dailyBurn > 0) {
-          const strain   = whoopData.strain   ?? 8
-          const recovery = whoopData.recovery ?? 50
-          let deficit = -400
-          if (strain > 15)     deficit = -200
-          else if (recovery < 40) deficit = -150
-          return Math.max(1800, Math.round(whoopData.dailyBurn + deficit))
+        const activityMultipliers: Record<string, number> = { sedentary: 1.2, light: 1.375, moderate: 1.55, active: 1.725, very_active: 1.9 }
+        const tdee = bmr * (activityMultipliers[activityLevel] ?? 1.55)
+        const weeklyDelta = (weight - (targetWeight || weight)) * 7700 / (targetWeeks || 12)
+        let goalAdjust = 0
+        if (goal === 'lose') goalAdjust = -weeklyDelta / 7
+        else if (goal === 'gain') goalAdjust = Math.abs(weeklyDelta) / 7
+        const profileBase = Math.max(1200, Math.round(tdee + goalAdjust))
+
+        // Rolling average of dailyBurn from WHOOP history (last 14 days with valid data)
+        // Requires ≥3 days of data to be reliable; otherwise fall back to profile TDEE
+        const burnHistory = whoopHistory
+          .filter((h) => h.dailyBurn && h.dailyBurn > 500)
+          .map((h) => h.dailyBurn!)
+          .slice(-14)
+
+        if (burnHistory.length >= 3) {
+          const avgBurn = Math.round(burnHistory.reduce((s, b) => s + b, 0) / burnHistory.length)
+          return Math.max(1500, Math.round(avgBurn + goalAdjust))
         }
-        // Formula fallback: Whoop recovery adjustment
+
+        // Not enough history yet → profile TDEE + soft WHOOP adjustment
         if (whoopData?.recovery) {
           const r = whoopData.recovery
-          if (r < 34) base = Math.max(1200, base - 200)
-          else if (r > 66) base = base + 150
+          if (r < 34) return Math.max(1200, profileBase - 150)
+          if (r > 66) return profileBase + 100
         }
-        if (whoopData?.strain && whoopData.strain > 14) base = base + 150
-        return base
+        return profileBase
       },
     }),
     {
