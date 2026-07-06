@@ -127,7 +127,7 @@ export default function PhotoFoodScanner({ onConfirm, onClose }: Props) {
 
   // ── REFERENCE OBJECT SELECTION ────────────────────────────────────────
   if (step === 'reference') return (
-    <div style={{ position: 'fixed', inset: 0, zIndex: 200, background: 'rgba(0,0,0,0.92)', backdropFilter: 'blur(8px)', display: 'flex', flexDirection: 'column' }}>
+    <div style={{ position: 'fixed', inset: 0, zIndex: 200, background: 'rgba(26,46,31,0.4)', backdropFilter: 'blur(8px)', display: 'flex', flexDirection: 'column' }}>
       <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 24, padding: 32 }}>
         <div style={{
           width: 84, height: 84, borderRadius: 24,
@@ -139,7 +139,7 @@ export default function PhotoFoodScanner({ onConfirm, onClose }: Props) {
         </div>
 
         <div style={{ textAlign: 'center' }}>
-          <h2 style={{ color: '#fff', fontSize: 20, fontWeight: 800, margin: '0 0 8px' }}>Referenzobjekt wählen</h2>
+          <h2 style={{ color: '#1a2e1f', fontSize: 20, fontWeight: 800, margin: '0 0 8px' }}>Referenzobjekt wählen</h2>
           <p style={{ color: 'rgba(255,255,255,0.5)', fontSize: 13, margin: 0, lineHeight: 1.5 }}>
             So schätzt Kalo die Portionsgröße<br />deutlich genauer ein
           </p>
@@ -174,7 +174,7 @@ export default function PhotoFoodScanner({ onConfirm, onClose }: Props) {
 
         {refObject !== 'none' && (
           <div style={{
-            background: 'rgba(74,140,92,0.1)', border: '1px solid rgba(74,140,92,0.25)',
+            background: '#e8f2ec', border: '1px solid rgba(74,140,92,0.25)',
             borderRadius: 14, padding: '12px 16px', maxWidth: 320, width: '100%',
           }}>
             <p style={{ color: 'rgba(255,255,255,0.7)', fontSize: 12, margin: 0, lineHeight: 1.6 }}>
@@ -199,7 +199,7 @@ export default function PhotoFoodScanner({ onConfirm, onClose }: Props) {
 
       <button onClick={onClose} style={{
         margin: '0 24px max(24px, env(safe-area-inset-bottom)) 24px',
-        padding: '14px', borderRadius: 16, border: '1px solid rgba(255,255,255,0.12)',
+        padding: '14px', borderRadius: 16, border: '1px solid #e8f0ea',
         background: 'rgba(255,255,255,0.04)', color: 'rgba(255,255,255,0.5)', fontWeight: 600, cursor: 'pointer',
       }}>
         Abbrechen
@@ -211,7 +211,7 @@ export default function PhotoFoodScanner({ onConfirm, onClose }: Props) {
   if (step === 'capture') return (
     <div style={{
       position: 'fixed', inset: 0, zIndex: 200,
-      background: 'rgba(0,0,0,0.85)', backdropFilter: 'blur(8px)',
+      background: 'rgba(26,46,31,0.4)', backdropFilter: 'blur(8px)',
       display: 'flex', flexDirection: 'column',
     }}>
       <div style={{
@@ -227,7 +227,7 @@ export default function PhotoFoodScanner({ onConfirm, onClose }: Props) {
           <Camera size={44} color="#fff" />
         </div>
         <div style={{ textAlign: 'center' }}>
-          <h2 style={{ color: '#fff', fontSize: 22, fontWeight: 800, margin: '0 0 8px' }}>
+          <h2 style={{ color: '#1a2e1f', fontSize: 22, fontWeight: 800, margin: '0 0 8px' }}>
             Foto analysieren
           </h2>
           <p style={{ color: 'rgba(255,255,255,0.6)', fontSize: 14, margin: 0, lineHeight: 1.5 }}>
@@ -260,7 +260,7 @@ export default function PhotoFoodScanner({ onConfirm, onClose }: Props) {
             style={{
               padding: '14px 24px', borderRadius: 18,
               border: '1.5px solid rgba(255,255,255,0.2)',
-              background: 'rgba(255,255,255,0.06)',
+              background: '#f8faf8',
               color: '#fff', fontWeight: 700, fontSize: 15, cursor: 'pointer',
             }}
           >
@@ -270,7 +270,7 @@ export default function PhotoFoodScanner({ onConfirm, onClose }: Props) {
 
         {refObject !== 'none' && (
           <div style={{
-            background: 'rgba(74,140,92,0.12)', border: '1px solid rgba(74,140,92,0.3)',
+            background: '#e8f2ec', border: '1px solid rgba(74,140,92,0.3)',
             borderRadius: 14, padding: '12px 16px', maxWidth: 320, width: '100%',
           }}>
             <p style={{ color: 'rgba(255,255,255,0.8)', fontSize: 13, margin: 0, lineHeight: 1.5, fontWeight: 600 }}>
@@ -288,8 +288,8 @@ export default function PhotoFoodScanner({ onConfirm, onClose }: Props) {
 
       <button onClick={onClose} style={{
         margin: '0 24px max(24px, env(safe-area-inset-bottom)) 24px',
-        padding: '14px', borderRadius: 16, border: '1px solid rgba(255,255,255,0.15)',
-        background: 'rgba(255,255,255,0.06)', color: '#fff', fontWeight: 700, cursor: 'pointer',
+        padding: '14px', borderRadius: 16, border: '1px solid #e8f0ea',
+        background: '#f8faf8', color: '#fff', fontWeight: 700, cursor: 'pointer',
       }}>
         Abbrechen
       </button>
@@ -300,7 +300,7 @@ export default function PhotoFoodScanner({ onConfirm, onClose }: Props) {
   if (step === 'analyzing') return (
     <div style={{
       position: 'fixed', inset: 0, zIndex: 200,
-      background: 'rgba(0,0,0,0.9)', backdropFilter: 'blur(8px)',
+      background: 'rgba(26,46,31,0.4)', backdropFilter: 'blur(8px)',
       display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 24,
     }}>
       {preview && (
@@ -310,7 +310,7 @@ export default function PhotoFoodScanner({ onConfirm, onClose }: Props) {
       )}
       <Loader size={40} color="#4a8c5c" style={{ animation: 'spin 1s linear infinite' }} />
       <div style={{ textAlign: 'center' }}>
-        <p style={{ color: '#fff', fontSize: 18, fontWeight: 800, margin: '0 0 6px' }}>
+        <p style={{ color: '#1a2e1f', fontSize: 18, fontWeight: 800, margin: '0 0 6px' }}>
           Kalo analysiert dein Essen…
         </p>
         <p style={{ color: 'rgba(255,255,255,0.5)', fontSize: 13, margin: 0 }}>
@@ -325,17 +325,17 @@ export default function PhotoFoodScanner({ onConfirm, onClose }: Props) {
   return (
     <div style={{
       position: 'fixed', inset: 0, zIndex: 200,
-      background: '#111', display: 'flex', flexDirection: 'column',
+      background: '#ffffff', display: 'flex', flexDirection: 'column',
     }}>
       {/* Header */}
       <div style={{
         padding: 'max(env(safe-area-inset-top),16px) 20px 16px',
         background: 'rgba(17,17,17,0.97)',
-        borderBottom: '1px solid rgba(255,255,255,0.08)',
+        borderBottom: '1px solid #e8f0ea',
         display: 'flex', alignItems: 'center', justifyContent: 'space-between',
       }}>
         <div>
-          <h2 style={{ color: '#fff', fontSize: 18, fontWeight: 800, margin: 0 }}>
+          <h2 style={{ color: '#1a2e1f', fontSize: 18, fontWeight: 800, margin: 0 }}>
             {analysis?.dish ?? 'Gericht'}
           </h2>
           <p style={{ color: 'rgba(255,255,255,0.4)', fontSize: 12, margin: '2px 0 0' }}>
@@ -343,7 +343,7 @@ export default function PhotoFoodScanner({ onConfirm, onClose }: Props) {
           </p>
         </div>
         <button onClick={() => { setStep('capture'); setPreview(null) }} style={{
-          background: 'rgba(255,255,255,0.08)', border: 'none', borderRadius: 12,
+          background: '#f0f4f1', border: 'none', borderRadius: 12,
           padding: '8px 12px', color: 'rgba(255,255,255,0.7)', cursor: 'pointer',
           display: 'flex', alignItems: 'center', gap: 5, fontSize: 13, fontWeight: 600,
         }}>
@@ -355,7 +355,7 @@ export default function PhotoFoodScanner({ onConfirm, onClose }: Props) {
       {analysis && (
         <div style={{
           margin: '12px 16px 0',
-          background: 'rgba(74,140,92,0.1)', border: '1px solid rgba(74,140,92,0.25)',
+          background: '#e8f2ec', border: '1px solid rgba(74,140,92,0.25)',
           borderRadius: 12, padding: '10px 14px',
           display: 'flex', alignItems: 'center', gap: 10,
         }}>
@@ -379,7 +379,7 @@ export default function PhotoFoodScanner({ onConfirm, onClose }: Props) {
       <div style={{ flex: 1, overflowY: 'auto', padding: '12px 16px', display: 'flex', flexDirection: 'column', gap: 10 }}>
         {ingredients.map((ing, idx) => (
           <div key={idx} style={{
-            background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.08)',
+            background: '#f8faf8', border: '1px solid #e8f0ea',
             borderRadius: 16, padding: '14px 16px',
           }}>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
@@ -427,8 +427,8 @@ export default function PhotoFoodScanner({ onConfirm, onClose }: Props) {
               value={addingName}
               onChange={(e) => setAddingName(e.target.value)}
               style={{
-                background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.12)',
-                borderRadius: 10, padding: '10px 14px', color: '#fff', fontSize: 14,
+                background: '#f8faf8', border: '1px solid #e8f0ea',
+                borderRadius: 10, padding: '10px 14px', color: '#1a2e1f', fontSize: 14,
                 outline: 'none',
               }}
             />
@@ -443,7 +443,7 @@ export default function PhotoFoodScanner({ onConfirm, onClose }: Props) {
             </div>
             <div style={{ display: 'flex', gap: 8 }}>
               <button onClick={() => setShowAddForm(false)} style={{
-                flex: 1, padding: '10px', borderRadius: 12, border: '1px solid rgba(255,255,255,0.12)',
+                flex: 1, padding: '10px', borderRadius: 12, border: '1px solid #e8f0ea',
                 background: 'transparent', color: 'rgba(255,255,255,0.6)', cursor: 'pointer', fontWeight: 600,
               }}>Abbrechen</button>
               <button onClick={addIngredient} style={{
@@ -469,7 +469,7 @@ export default function PhotoFoodScanner({ onConfirm, onClose }: Props) {
       <div style={{
         padding: '16px 16px max(env(safe-area-inset-bottom),24px)',
         background: 'rgba(17,17,17,0.97)',
-        borderTop: '1px solid rgba(255,255,255,0.08)',
+        borderTop: '1px solid #e8f0ea',
       }}>
         {/* Macro summary */}
         <div style={{
@@ -482,7 +482,7 @@ export default function PhotoFoodScanner({ onConfirm, onClose }: Props) {
             { label: 'Kohlenhydrate', value: total.carbs, unit: 'g', color: '#3b82f6' },
           ].map(({ label, value, unit, color }) => (
             <div key={label} style={{
-              background: 'rgba(255,255,255,0.05)', borderRadius: 12, padding: '10px 8px', textAlign: 'center',
+              background: '#f8faf8', borderRadius: 12, padding: '10px 8px', textAlign: 'center',
             }}>
               <div style={{ color, fontWeight: 800, fontSize: 16 }}>{value}</div>
               <div style={{ color: 'rgba(255,255,255,0.35)', fontSize: 9, fontWeight: 600 }}>{unit}</div>
@@ -494,7 +494,7 @@ export default function PhotoFoodScanner({ onConfirm, onClose }: Props) {
         <div style={{ display: 'flex', gap: 10 }}>
           <button onClick={onClose} style={{
             padding: '14px 18px', borderRadius: 16,
-            border: '1px solid rgba(255,255,255,0.12)', background: 'rgba(255,255,255,0.05)',
+            border: '1px solid #e8f0ea', background: '#f8faf8',
             color: 'rgba(255,255,255,0.6)', cursor: 'pointer',
             display: 'flex', alignItems: 'center', gap: 6, fontWeight: 600,
           }}>

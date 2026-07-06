@@ -2,29 +2,52 @@ import { useEffect, useState, useRef } from 'react'
 import { useStore } from '../store/useStore'
 import { generateDailyBriefingText } from '../utils/api'
 
+const C = {
+  primary:   '#5a8a6a',
+  light:     '#e8f2ec',
+  text:      '#1a2e1f',
+  secondary: '#6b8570',
+  tertiary:  '#9db3a2',
+  border:    '#e8f0ea',
+  bg:        '#f8faf8',
+  card:      '#ffffff',
+} as const
+
 function MiniScoreRing({ score }: { score: number }) {
-  const size   = 96
-  const stroke = 8
+  const size   = 88
+  const stroke = 7
   const r      = (size - stroke) / 2
   const circ   = 2 * Math.PI * r
   const dash   = circ * Math.min(1, score / 100)
-  const color  = score >= 85 ? '#10b981' : score >= 70 ? '#22c55e' : score >= 55 ? '#f59e0b' : score >= 40 ? '#f97316' : '#ef4444'
+  const color  = score >= 70 ? C.primary : score >= 50 ? '#8aaa6a' : C.secondary
   return (
     <div className="flex flex-col items-center">
       <div className="relative" style={{ width: size, height: size }}>
         <svg width={size} height={size} style={{ position: 'absolute' }}>
-          <circle cx={size/2} cy={size/2} r={r} fill="none" stroke="rgba(255,255,255,0.1)" strokeWidth={stroke} />
+          <circle cx={size/2} cy={size/2} r={r} fill="none" stroke={C.light} strokeWidth={stroke} />
           <circle cx={size/2} cy={size/2} r={r} fill="none" stroke={color} strokeWidth={stroke}
             strokeDasharray={`${dash} ${circ}`} strokeLinecap="round"
             transform={`rotate(-90 ${size/2} ${size/2})`}
-            style={{ transition: 'stroke-dasharray 1.2s cubic-bezier(0.16,1,0.3,1)', filter: `drop-shadow(0 0 8px ${color}88)` }}
+            style={{ transition: 'stroke-dasharray 1.2s cubic-bezier(0.16,1,0.3,1)' }}
           />
         </svg>
         <div className="absolute inset-0 flex flex-col items-center justify-center">
-          <span className="font-black" style={{ fontSize: 26, color }}>{score}</span>
+          <span style={{ fontSize: 24, fontWeight: 600, color, lineHeight: 1 }}>{score}</span>
         </div>
       </div>
-      <p className="text-xs font-semibold mt-1" style={{ color: 'rgba(255,255,255,0.4)' }}>Gestern Score</p>
+      <p style={{ fontSize: 11, color: C.tertiary, marginTop: 4 }}>Gestern Score</p>
+    </div>
+  )
+}
+
+function BriefCard({ icon, label, children }: { icon: string; label: string; children: React.ReactNode }) {
+  return (
+    <div style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: 20, padding: '16px', width: '100%', marginBottom: 10 }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12 }}>
+        <span style={{ fontSize: 16 }}>{icon}</span>
+        <span style={{ fontSize: 11, fontWeight: 500, letterSpacing: '0.06em', textTransform: 'uppercase', color: C.primary }}>{label}</span>
+      </div>
+      {children}
     </div>
   )
 }
@@ -51,14 +74,14 @@ export default function DailyBriefing({ onDismiss }: { onDismiss: () => void }) 
   const yesterdayWhoop       = whoopHistory.find((h) => h.date === yesterday)
   const yesterdaySleepH      = yesterdayWhoop?.sleepDuration ?? 0
 
-  const todayRecovery = whoopData?.recovery     ?? 0
-  const todayHrv      = whoopData?.hrv          ?? 0
+  const todayRecovery = whoopData?.recovery      ?? 0
+  const todayHrv      = whoopData?.hrv           ?? 0
   const todaySleepH   = whoopData?.sleepDuration ?? 0
   const todayStrain   = whoopData?.strain        ?? 0
 
-  const wt = Number(profile?.weight) || 75
-  const ht = Number(profile?.height) || 175
-  const ag = Number(profile?.age)    || 25
+  const wt  = Number(profile?.weight) || 75
+  const ht  = Number(profile?.height) || 175
+  const ag  = Number(profile?.age)    || 25
   const bmr = profile?.gender === 'male' ? 10*wt+6.25*ht-5*ag+5 : 10*wt+6.25*ht-5*ag-161
   const mlt: Record<string, number> = { sedentary:1.2, light:1.375, moderate:1.55, active:1.725, very_active:1.9 }
   const calTarget = Math.round(bmr * (mlt[profile?.activityLevel ?? 'moderate'] ?? 1.55))
@@ -84,130 +107,97 @@ export default function DailyBriefing({ onDismiss }: { onDismiss: () => void }) 
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
-  const recoveryColor = todayRecovery >= 67 ? '#10b981' : todayRecovery >= 34 ? '#f59e0b' : '#ef4444'
-  const recoveryLabel = todayRecovery >= 67 ? 'Top Recovery 🔥' : todayRecovery >= 34 ? 'Moderat 🟡' : 'Ruhetag 🔴'
+  const recoveryColor = todayRecovery >= 67 ? C.primary : todayRecovery >= 34 ? '#8aaa6a' : C.secondary
+  const recoveryLabel = todayRecovery >= 67 ? 'Hohe Recovery' : todayRecovery >= 34 ? 'Moderate Recovery' : 'Niedrige Recovery'
+
+  const statCell = (val: string, label: string) => (
+    <div style={{ flex: 1, textAlign: 'center', background: C.bg, borderRadius: 12, padding: '10px 4px' }}>
+      <p style={{ color: C.text, fontSize: 16, fontWeight: 600 }}>{val}</p>
+      <p style={{ color: C.tertiary, fontSize: 10, marginTop: 1 }}>{label}</p>
+    </div>
+  )
 
   return (
-    <div
-      className="fixed inset-0 z-50 flex flex-col items-center overflow-y-auto"
-      style={{ background: 'linear-gradient(160deg, #061a10 0%, #0a2e1a 40%, #071810 100%)' }}
-    >
-      <div className="w-full max-w-sm px-4 pt-safe pb-8 flex flex-col items-center">
+    <div className="fixed inset-0 z-50 overflow-y-auto" style={{ background: C.bg }}>
+      <div style={{ maxWidth: 430, margin: '0 auto', padding: '0 14px' }}>
 
         {/* Header */}
-        <div className="text-center mt-8 mb-6">
-          <div style={{ fontSize: 52 }}>🌅</div>
-          <h1 className="text-2xl font-black text-white mt-3">
-            Guten Morgen{name ? `, ${name}` : ''}!
+        <div style={{ paddingTop: 'max(env(safe-area-inset-top), 48px)', paddingBottom: 24, textAlign: 'center' }}>
+          <div style={{ fontSize: 48, marginBottom: 12 }}>🌅</div>
+          <h1 style={{ color: C.text, fontSize: 26, fontWeight: 600, letterSpacing: '-0.5px', margin: 0 }}>
+            Guten Morgen{name ? `, ${name}` : ''}
           </h1>
-          <p className="text-sm mt-1" style={{ color: 'rgba(125,184,138,0.6)' }}>Daily Briefing</p>
+          <p style={{ color: C.secondary, fontSize: 13, marginTop: 4 }}>Daily Briefing</p>
         </div>
 
-        {/* Mini score ring */}
-        <div className="mb-6">
+        {/* Score ring */}
+        <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 20 }}>
           <MiniScoreRing score={yesterdayScore} />
         </div>
 
         {/* GESTERN */}
-        <div className="w-full rounded-3xl p-4 mb-3"
-          style={{ background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(125,184,138,0.15)', backdropFilter: 'blur(16px)' }}>
-          <div className="flex items-center gap-2 mb-3">
-            <span style={{ fontSize: 16 }}>📊</span>
-            <span className="text-xs font-black tracking-widest" style={{ color: '#7db88a' }}>GESTERN</span>
-          </div>
-          <div className="grid grid-cols-3 gap-2 mb-3">
-            <div className="text-center rounded-2xl py-2" style={{ background: 'rgba(255,255,255,0.04)' }}>
-              <div className="text-base font-black text-white">{yesterdayProtein}g</div>
-              <div className="text-[10px]" style={{ color: 'rgba(255,255,255,0.4)' }}>Protein</div>
-            </div>
-            <div className="text-center rounded-2xl py-2" style={{ background: 'rgba(255,255,255,0.04)' }}>
-              <div className="text-base font-black text-white">{yesterdayCalories}</div>
-              <div className="text-[10px]" style={{ color: 'rgba(255,255,255,0.4)' }}>kcal</div>
-            </div>
-            <div className="text-center rounded-2xl py-2" style={{ background: 'rgba(255,255,255,0.04)' }}>
-              <div className="text-base font-black text-white">{yesterdayHasTraining ? '✅' : '—'}</div>
-              <div className="text-[10px]" style={{ color: 'rgba(255,255,255,0.4)' }}>Training</div>
-            </div>
+        <BriefCard icon="📊" label="Gestern">
+          <div style={{ display: 'flex', gap: 8, marginBottom: 12 }}>
+            {statCell(`${yesterdayProtein}g`, 'Protein')}
+            {statCell(`${yesterdayCalories}`, 'kcal')}
+            {statCell(yesterdayHasTraining ? '✅' : '—', 'Training')}
           </div>
           {yesterdaySleepH > 0 && (
-            <div className="flex items-center gap-1.5 mb-2">
-              <span style={{ fontSize: 13 }}>😴</span>
-              <span className="text-xs font-semibold" style={{ color: '#a78bfa' }}>{yesterdaySleepH}h Schlaf</span>
-            </div>
+            <p style={{ color: C.secondary, fontSize: 12, marginBottom: 8 }}>😴 {yesterdaySleepH}h Schlaf</p>
           )}
           {loading ? (
-            <p className="text-xs italic" style={{ color: 'rgba(255,255,255,0.3)' }}>Kalo analysiert…</p>
+            <p style={{ color: C.tertiary, fontSize: 12, fontStyle: 'italic' }}>Kalo analysiert…</p>
           ) : briefText ? (
-            <p className="text-sm leading-relaxed italic" style={{ color: 'rgba(255,255,255,0.75)' }}>{briefText.gestern}</p>
+            <p style={{ color: C.secondary, fontSize: 13, lineHeight: 1.6, fontStyle: 'italic' }}>{briefText.gestern}</p>
           ) : null}
-        </div>
+        </BriefCard>
 
         {/* HEUTE */}
-        <div className="w-full rounded-3xl p-4 mb-3"
-          style={{ background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(125,184,138,0.15)', backdropFilter: 'blur(16px)' }}>
-          <div className="flex items-center gap-2 mb-3">
-            <span style={{ fontSize: 16 }}>⚡</span>
-            <span className="text-xs font-black tracking-widest" style={{ color: '#7db88a' }}>HEUTE</span>
-          </div>
+        <BriefCard icon="⚡" label="Heute">
           {todayRecovery > 0 ? (
             <>
-              <div className="grid grid-cols-3 gap-2 mb-3">
-                <div className="text-center rounded-2xl py-2" style={{ background: 'rgba(255,255,255,0.04)' }}>
-                  <div className="text-base font-black" style={{ color: recoveryColor }}>{todayRecovery}%</div>
-                  <div className="text-[10px]" style={{ color: 'rgba(255,255,255,0.4)' }}>Recovery</div>
-                </div>
-                <div className="text-center rounded-2xl py-2" style={{ background: 'rgba(255,255,255,0.04)' }}>
-                  <div className="text-base font-black" style={{ color: '#60a5fa' }}>{todayHrv}ms</div>
-                  <div className="text-[10px]" style={{ color: 'rgba(255,255,255,0.4)' }}>HRV</div>
-                </div>
-                <div className="text-center rounded-2xl py-2" style={{ background: 'rgba(255,255,255,0.04)' }}>
-                  <div className="text-base font-black text-white">{todaySleepH > 0 ? `${todaySleepH}h` : '—'}</div>
-                  <div className="text-[10px]" style={{ color: 'rgba(255,255,255,0.4)' }}>Schlaf</div>
-                </div>
+              <div style={{ display: 'flex', gap: 8, marginBottom: 12 }}>
+                {statCell(`${todayRecovery}%`, 'Recovery')}
+                {statCell(todayHrv > 0 ? `${todayHrv}ms` : '—', 'HRV')}
+                {statCell(todaySleepH > 0 ? `${todaySleepH}h` : '—', 'Schlaf')}
               </div>
-              <div className="flex items-center gap-1.5 mb-2">
-                <span style={{ fontSize: 13 }}>⌚</span>
-                <span className="text-xs font-bold" style={{ color: recoveryColor }}>{recoveryLabel}</span>
-              </div>
+              <p style={{ color: recoveryColor, fontSize: 13, fontWeight: 500, marginBottom: 8 }}>⌚ {recoveryLabel}</p>
             </>
           ) : (
-            <p className="text-xs mb-2" style={{ color: 'rgba(255,255,255,0.3)' }}>Kein Whoop verbunden</p>
+            <p style={{ color: C.tertiary, fontSize: 12, marginBottom: 8 }}>Kein Whoop verbunden</p>
           )}
           {loading ? (
-            <p className="text-xs italic" style={{ color: 'rgba(255,255,255,0.3)' }}>…</p>
+            <p style={{ color: C.tertiary, fontSize: 12, fontStyle: 'italic' }}>…</p>
           ) : briefText ? (
-            <p className="text-sm leading-relaxed italic" style={{ color: 'rgba(255,255,255,0.75)' }}>{briefText.heute}</p>
+            <p style={{ color: C.secondary, fontSize: 13, lineHeight: 1.6, fontStyle: 'italic' }}>{briefText.heute}</p>
           ) : null}
-        </div>
+        </BriefCard>
 
         {/* PROGNOSE */}
-        <div className="w-full rounded-3xl p-4 mb-8"
-          style={{ background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(125,184,138,0.15)', backdropFilter: 'blur(16px)' }}>
-          <div className="flex items-center gap-2 mb-3">
-            <span style={{ fontSize: 16 }}>🔮</span>
-            <span className="text-xs font-black tracking-widest" style={{ color: '#7db88a' }}>PROGNOSE MORGEN</span>
-          </div>
+        <BriefCard icon="🔮" label="Prognose Morgen">
           {loading ? (
-            <p className="text-xs italic" style={{ color: 'rgba(255,255,255,0.3)' }}>…</p>
+            <p style={{ color: C.tertiary, fontSize: 12, fontStyle: 'italic' }}>…</p>
           ) : briefText ? (
-            <p className="text-sm leading-relaxed italic" style={{ color: 'rgba(255,255,255,0.75)' }}>{briefText.morgen}</p>
+            <p style={{ color: C.secondary, fontSize: 13, lineHeight: 1.6, fontStyle: 'italic' }}>{briefText.morgen}</p>
           ) : (
-            <p className="text-xs italic" style={{ color: 'rgba(255,255,255,0.3)' }}>Sammle Daten für Prognosen…</p>
+            <p style={{ color: C.tertiary, fontSize: 12, fontStyle: 'italic' }}>Sammle Daten für Prognosen…</p>
           )}
-        </div>
+        </BriefCard>
 
         {/* Dismiss */}
-        <button
-          onClick={onDismiss}
-          className="px-10 py-4 rounded-full font-black text-white text-lg"
-          style={{
-            background: 'linear-gradient(135deg, #4a8c5c 0%, #10b981 100%)',
-            boxShadow: '0 8px 32px rgba(16,185,129,0.4)',
-            letterSpacing: '0.02em',
-          }}
-        >
-          Los geht's! 🚀
-        </button>
+        <div style={{ paddingBottom: 'max(env(safe-area-inset-bottom), 32px)', paddingTop: 8 }}>
+          <button
+            onClick={onDismiss}
+            style={{
+              width: '100%', padding: '15px', borderRadius: 16, border: 'none',
+              background: C.primary, color: '#fff',
+              fontSize: 15, fontWeight: 500, cursor: 'pointer',
+              boxShadow: '0 2px 8px rgba(90,138,106,0.25)',
+            }}
+          >
+            Los geht's →
+          </button>
+        </div>
       </div>
     </div>
   )

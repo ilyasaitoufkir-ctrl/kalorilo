@@ -16,38 +16,37 @@ export default function Navigation() {
 
   return (
     <nav className="tab-bar">
-      <div className="flex items-center justify-around pt-2 px-3">
+      <div className="flex items-center justify-around pt-2 px-2">
         {TABS.map(({ id, icon: Icon, label }) => {
           const active = activeTab === id
           return (
             <button
               key={id}
-              onClick={() => { setActiveTab(id); navigator.vibrate?.(8) }}
-              className="flex flex-col items-center gap-0.5 transition-all duration-200 relative"
+              onClick={() => { setActiveTab(id); navigator.vibrate?.(6) }}
+              className="flex flex-col items-center gap-1 transition-all duration-200"
               style={{
-                padding: active ? '8px 14px' : '8px 10px',
-                borderRadius: 20,
-                background: active ? 'rgba(200,230,201,0.18)' : 'transparent',
-                border: active ? '1px solid rgba(200,230,201,0.25)' : '1px solid transparent',
+                padding: '6px 12px',
+                borderRadius: 12,
+                background: 'transparent',
+                border: 'none',
                 minWidth: 52,
               }}
             >
               <Icon
-                size={21}
-                strokeWidth={active ? 2.5 : 1.8}
+                size={22}
+                strokeWidth={active ? 2 : 1.5}
                 style={{
-                  color: active ? '#c8e6c9' : '#5a7a63',
+                  color: active ? '#5a8a6a' : '#9db3a2',
                   transition: 'color 0.2s ease',
-                  filter: active ? 'drop-shadow(0 0 6px rgba(200,230,201,0.5))' : 'none',
                 }}
               />
               <span
                 style={{
                   fontSize: 10,
-                  fontWeight: active ? 800 : 500,
-                  color: active ? '#c8e6c9' : '#5a7a63',
+                  fontWeight: active ? 600 : 400,
+                  color: active ? '#5a8a6a' : '#9db3a2',
                   transition: 'color 0.2s ease',
-                  letterSpacing: active ? '0.02em' : 0,
+                  letterSpacing: '0.01em',
                 }}
               >
                 {label}

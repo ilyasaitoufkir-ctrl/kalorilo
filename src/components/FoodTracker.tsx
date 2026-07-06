@@ -467,7 +467,7 @@ export default function FoodTracker() {
   return (
     <div className="h-dvh overflow-y-auto overflow-x-hidden pb-nav anim-fade" style={{ background:'var(--bg)' }}>
       {/* Header */}
-      <div className="pt-safe px-5 pb-5" style={{ background:'var(--bg)', borderBottom:'1px solid rgba(125,184,138,0.15)' }}>
+      <div className="pt-safe px-5 pb-5" style={{ background:'var(--bg)', borderBottom:'1px solid #e8f0ea' }}>
         <h1 className="text-2xl font-black mb-1" style={{ color:'var(--text-1)' }}>Essen tracken</h1>
         <p className="text-sm mb-4" style={{ color:'var(--text-3)' }}>Heute: {Math.round(totalCals)} kcal</p>
         <div className="flex gap-2 mb-3">

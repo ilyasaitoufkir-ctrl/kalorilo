@@ -401,7 +401,7 @@ export default function AIAdvisor() {
     <div className="flex flex-col overflow-x-hidden" style={{ height:'100dvh', background:'var(--bg)', paddingBottom:'calc(110px + max(env(safe-area-inset-bottom),20px))' }}>
 
       {/* Header */}
-      <div className="pt-safe px-5 pb-4 flex-shrink-0" style={{ background:'var(--bg)', borderBottom:'1px solid rgba(125,184,138,0.15)' }}>
+      <div className="pt-safe px-5 pb-4 flex-shrink-0" style={{ background:'var(--bg)', borderBottom:'1px solid #e8f0ea' }}>
         <h1 className="text-2xl font-black mb-3" style={{ color:'var(--text-1)' }}>
           {tab==='kalo'?'🤖 Kalo':tab==='coach'?'🧠 Coach':tab==='report'?'📊 Wochenbericht':tab==='fridge'?'🧊 Kühlschrank':'🧬 Körper-Insights'}
         </h1>
@@ -985,7 +985,7 @@ export default function AIAdvisor() {
                       <span className="text-xs font-semibold" style={{ color: 'var(--text-2)' }}>{m.emoji} {m.name}</span>
                       <span className="text-xs font-bold" style={{ color: m.pctRecovered >= 75 ? '#f59e0b' : '#ef4444' }}>{m.pctRecovered}%</span>
                     </div>
-                    <div className="h-1.5 rounded-full overflow-hidden" style={{ background: 'rgba(255,255,255,0.06)' }}>
+                    <div className="h-1.5 rounded-full overflow-hidden" style={{ background: '#f8faf8' }}>
                       <div className="h-full rounded-full transition-all duration-700"
                         style={{ width: `${m.pctRecovered}%`, background: m.pctRecovered >= 75 ? '#f59e0b' : '#ef4444' }} />
                     </div>

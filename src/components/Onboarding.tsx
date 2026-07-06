@@ -281,7 +281,7 @@ export default function Onboarding() {
           <p className="text-xs font-bold" style={{ color: 'var(--text-3)' }}>Schritt {step} / {TOTAL_STEPS}</p>
           <p className="text-xs font-black" style={{ color: '#4a8c5c' }}>{Math.round(pct)}%</p>
         </div>
-        <div className="h-1.5 rounded-full overflow-hidden" style={{ background: 'rgba(74,140,92,0.1)' }}>
+        <div className="h-1.5 rounded-full overflow-hidden" style={{ background: '#e8f2ec' }}>
           <div className="h-full rounded-full transition-all duration-500"
             style={{ width: `${pct}%`, background: 'linear-gradient(90deg,#7db88a,#4a8c5c)' }} />
         </div>

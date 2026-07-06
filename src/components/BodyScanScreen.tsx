@@ -15,7 +15,7 @@ type Step = 'instructions' | 'capture' | 'analyzing' | 'result' | 'timeline'
 function ScoreBar({ value, color }: { value: number; color: string }) {
   return (
     <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-      <div style={{ flex: 1, height: 8, background: 'rgba(255,255,255,0.08)', borderRadius: 4, overflow: 'hidden' }}>
+      <div style={{ flex: 1, height: 8, background: '#f0f4f1', borderRadius: 4, overflow: 'hidden' }}>
         <div style={{ width: `${(value / 10) * 100}%`, height: '100%', background: color, borderRadius: 4, transition: 'width 0.8s cubic-bezier(0.16,1,0.3,1)' }} />
       </div>
       <span style={{ fontSize: 13, fontWeight: 800, color, minWidth: 24 }}>{value}</span>
@@ -54,7 +54,7 @@ function ResultCard({ analysis, photo, weight, date }: { analysis: BodyAnalysis;
         )}
         <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 10 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
-            <span style={{ color: '#fff', fontSize: 20, fontWeight: 900 }}>{analysis.bodyFatRange}</span>
+            <span style={{ color: '#1a2e1f', fontSize: 20, fontWeight: 900 }}>{analysis.bodyFatRange}</span>
             <span style={{ color: 'rgba(255,255,255,0.4)', fontSize: 12 }}>Körperfett</span>
           </div>
           <div>
@@ -68,7 +68,7 @@ function ResultCard({ analysis, photo, weight, date }: { analysis: BodyAnalysis;
 
       {/* Strengths */}
       {analysis.strengths.length > 0 && (
-        <div style={{ background: 'rgba(74,140,92,0.1)', border: '1px solid rgba(74,140,92,0.25)', borderRadius: 14, padding: '12px 14px' }}>
+        <div style={{ background: '#e8f2ec', border: '1px solid rgba(74,140,92,0.25)', borderRadius: 14, padding: '12px 14px' }}>
           <div style={{ color: '#7db88a', fontSize: 11, fontWeight: 700, marginBottom: 6 }}>💪 STÄRKEN</div>
           {analysis.strengths.map((s, i) => (
             <div key={i} style={{ color: 'rgba(255,255,255,0.8)', fontSize: 13, display: 'flex', gap: 6, marginBottom: 3 }}>
@@ -162,10 +162,10 @@ export default function BodyScanScreen({ onClose }: Props) {
   if (step === 'instructions') return (
     <div style={{ position: 'fixed', inset: 0, zIndex: 300, background: 'linear-gradient(160deg, #0a1f0e, #1a2e1f)', display: 'flex', flexDirection: 'column' }}>
       <div style={{ padding: 'max(env(safe-area-inset-top),20px) 20px 16px', display: 'flex', alignItems: 'center', gap: 12 }}>
-        <button onClick={onClose} style={{ background: 'rgba(255,255,255,0.08)', border: 'none', borderRadius: 12, padding: 10, cursor: 'pointer' }}>
+        <button onClick={onClose} style={{ background: '#f0f4f1', border: 'none', borderRadius: 12, padding: 10, cursor: 'pointer' }}>
           <ChevronLeft size={20} color="#fff" />
         </button>
-        <h1 style={{ color: '#fff', fontSize: 20, fontWeight: 900, margin: 0 }}>Körper Scan 📸</h1>
+        <h1 style={{ color: '#1a2e1f', fontSize: 20, fontWeight: 900, margin: 0 }}>Körper Scan 📸</h1>
       </div>
 
       <div style={{ flex: 1, overflowY: 'auto', padding: '0 20px 20px', display: 'flex', flexDirection: 'column', gap: 20 }}>
@@ -185,7 +185,7 @@ export default function BodyScanScreen({ onClose }: Props) {
         </div>
 
         {/* Instructions */}
-        <div style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(125,184,138,0.15)', borderRadius: 20, padding: '18px 18px', display: 'flex', flexDirection: 'column', gap: 14 }}>
+        <div style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid #e8f0ea', borderRadius: 20, padding: '18px 18px', display: 'flex', flexDirection: 'column', gap: 14 }}>
           <div style={{ color: '#c8e6c9', fontSize: 13, fontWeight: 700, letterSpacing: '0.05em' }}>FÜR BESTE ERGEBNISSE</div>
           {[
             { icon: '📏', text: 'Stell dich ca. 2m vom Spiegel auf' },
@@ -227,7 +227,7 @@ export default function BodyScanScreen({ onClose }: Props) {
           <button
             onClick={() => setStep('timeline')}
             style={{
-              padding: '14px', borderRadius: 16, border: '1px solid rgba(125,184,138,0.2)',
+              padding: '14px', borderRadius: 16, border: '1px solid #d0e0d4',
               background: 'rgba(255,255,255,0.04)',
               color: '#7db88a', fontWeight: 700, fontSize: 14, cursor: 'pointer',
               display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
@@ -242,12 +242,12 @@ export default function BodyScanScreen({ onClose }: Props) {
 
   // ── CAPTURE ───────────────────────────────────────────────────────────────
   if (step === 'capture') return (
-    <div style={{ position: 'fixed', inset: 0, zIndex: 300, background: 'rgba(0,0,0,0.92)', backdropFilter: 'blur(8px)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 24, padding: 32 }}>
+    <div style={{ position: 'fixed', inset: 0, zIndex: 300, background: 'rgba(26,46,31,0.4)', backdropFilter: 'blur(8px)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 24, padding: 32 }}>
       <div style={{ width: 88, height: 88, borderRadius: 26, background: 'linear-gradient(135deg, #4a8c5c, #2d5c3a)', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 8px 32px rgba(74,140,92,0.4)' }}>
         <Camera size={40} color="#fff" />
       </div>
       <div style={{ textAlign: 'center' }}>
-        <h2 style={{ color: '#fff', fontSize: 22, fontWeight: 800, margin: '0 0 8px' }}>Foto aufnehmen</h2>
+        <h2 style={{ color: '#1a2e1f', fontSize: 22, fontWeight: 800, margin: '0 0 8px' }}>Foto aufnehmen</h2>
         <p style={{ color: 'rgba(255,255,255,0.5)', fontSize: 14, margin: 0 }}>Ganzkörper · Gutes Licht · 2m Abstand</p>
       </div>
 
@@ -267,13 +267,13 @@ export default function BodyScanScreen({ onClose }: Props) {
             inp.onchange = (e) => handlePhoto(e as any)
             inp.click()
           }}
-          style={{ padding: '14px 24px', borderRadius: 18, border: '1.5px solid rgba(255,255,255,0.2)', background: 'rgba(255,255,255,0.06)', color: '#fff', fontWeight: 700, fontSize: 15, cursor: 'pointer' }}
+          style={{ padding: '14px 24px', borderRadius: 18, border: '1.5px solid rgba(255,255,255,0.2)', background: '#f8faf8', color: '#fff', fontWeight: 700, fontSize: 15, cursor: 'pointer' }}
         >
           Aus Galerie wählen
         </button>
       </div>
 
-      <button onClick={() => setStep('instructions')} style={{ padding: '12px 28px', borderRadius: 14, border: '1px solid rgba(255,255,255,0.12)', background: 'transparent', color: 'rgba(255,255,255,0.5)', cursor: 'pointer', fontWeight: 600 }}>
+      <button onClick={() => setStep('instructions')} style={{ padding: '12px 28px', borderRadius: 14, border: '1px solid #e8f0ea', background: 'transparent', color: 'rgba(255,255,255,0.5)', cursor: 'pointer', fontWeight: 600 }}>
         Zurück
       </button>
     </div>
@@ -281,7 +281,7 @@ export default function BodyScanScreen({ onClose }: Props) {
 
   // ── ANALYZING ─────────────────────────────────────────────────────────────
   if (step === 'analyzing') return (
-    <div style={{ position: 'fixed', inset: 0, zIndex: 300, background: 'rgba(0,0,0,0.95)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 28 }}>
+    <div style={{ position: 'fixed', inset: 0, zIndex: 300, background: 'rgba(26,46,31,0.5)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 28 }}>
       {preview && (
         <div style={{ width: 160, height: 210, borderRadius: 20, overflow: 'hidden', opacity: 0.4 }}>
           <img src={`data:image/jpeg;base64,${preview}`} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
@@ -289,7 +289,7 @@ export default function BodyScanScreen({ onClose }: Props) {
       )}
       <Loader size={44} color="#4a8c5c" style={{ animation: 'spin 1s linear infinite' }} />
       <div style={{ textAlign: 'center' }}>
-        <p style={{ color: '#fff', fontSize: 18, fontWeight: 800, margin: '0 0 6px' }}>KI analysiert dein Foto…</p>
+        <p style={{ color: '#1a2e1f', fontSize: 18, fontWeight: 800, margin: '0 0 6px' }}>KI analysiert dein Foto…</p>
         <p style={{ color: 'rgba(255,255,255,0.45)', fontSize: 13, margin: 0 }}>Körperfett · Muskelverteilung · Body Type</p>
       </div>
       <style>{`@keyframes spin { to { transform: rotate(360deg) } }`}</style>
@@ -300,8 +300,8 @@ export default function BodyScanScreen({ onClose }: Props) {
   if (step === 'result' && analysis) return (
     <div style={{ position: 'fixed', inset: 0, zIndex: 300, background: 'linear-gradient(160deg, #0a1f0e, #1a2e1f)', display: 'flex', flexDirection: 'column' }}>
       <div style={{ padding: 'max(env(safe-area-inset-top),20px) 20px 16px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-        <h1 style={{ color: '#fff', fontSize: 20, fontWeight: 900, margin: 0 }}>Ergebnis 🎯</h1>
-        <button onClick={onClose} style={{ background: 'rgba(255,255,255,0.08)', border: 'none', borderRadius: 12, padding: 10, cursor: 'pointer' }}>
+        <h1 style={{ color: '#1a2e1f', fontSize: 20, fontWeight: 900, margin: 0 }}>Ergebnis 🎯</h1>
+        <button onClick={onClose} style={{ background: '#f0f4f1', border: 'none', borderRadius: 12, padding: 10, cursor: 'pointer' }}>
           <X size={18} color="rgba(255,255,255,0.6)" />
         </button>
       </div>
@@ -310,10 +310,10 @@ export default function BodyScanScreen({ onClose }: Props) {
         <ResultCard analysis={analysis} photo={dataUrl ?? undefined} weight={profile?.weight} date={new Date().toLocaleDateString('de-DE')} />
       </div>
 
-      <div style={{ padding: '14px 16px max(env(safe-area-inset-bottom),24px)', borderTop: '1px solid rgba(255,255,255,0.08)', background: 'rgba(10,31,14,0.95)', display: 'flex', gap: 10 }}>
+      <div style={{ padding: '14px 16px max(env(safe-area-inset-bottom),24px)', borderTop: '1px solid #e8f0ea', background: 'rgba(10,31,14,0.95)', display: 'flex', gap: 10 }}>
         <button
           onClick={() => { setStep('capture'); setPreview(null); setAnalysis(null) }}
-          style={{ padding: '14px 16px', borderRadius: 16, border: '1px solid rgba(255,255,255,0.12)', background: 'rgba(255,255,255,0.05)', color: 'rgba(255,255,255,0.6)', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6, fontWeight: 600 }}
+          style={{ padding: '14px 16px', borderRadius: 16, border: '1px solid #e8f0ea', background: '#f8faf8', color: 'rgba(255,255,255,0.6)', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6, fontWeight: 600 }}
         >
           <Camera size={16} /> Neu
         </button>
@@ -335,10 +335,10 @@ export default function BodyScanScreen({ onClose }: Props) {
   return (
     <div style={{ position: 'fixed', inset: 0, zIndex: 300, background: 'linear-gradient(160deg, #0a1f0e, #1a2e1f)', display: 'flex', flexDirection: 'column' }}>
       <div style={{ padding: 'max(env(safe-area-inset-top),20px) 20px 16px', display: 'flex', alignItems: 'center', gap: 12 }}>
-        <button onClick={onClose} style={{ background: 'rgba(255,255,255,0.08)', border: 'none', borderRadius: 12, padding: 10, cursor: 'pointer' }}>
+        <button onClick={onClose} style={{ background: '#f0f4f1', border: 'none', borderRadius: 12, padding: 10, cursor: 'pointer' }}>
           <X size={18} color="#fff" />
         </button>
-        <h1 style={{ color: '#fff', fontSize: 20, fontWeight: 900, margin: 0 }}>Verlauf 📅</h1>
+        <h1 style={{ color: '#1a2e1f', fontSize: 20, fontWeight: 900, margin: 0 }}>Verlauf 📅</h1>
         <button
           onClick={() => setStep('instructions')}
           style={{ marginLeft: 'auto', background: 'linear-gradient(135deg, #4a8c5c, #2d5c3a)', border: 'none', borderRadius: 12, padding: '8px 14px', color: '#fff', fontWeight: 700, fontSize: 13, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6 }}
@@ -359,7 +359,7 @@ export default function BodyScanScreen({ onClose }: Props) {
 
             {/* Before / After comparison */}
             {sorted.length >= 2 && (
-              <div style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(125,184,138,0.15)', borderRadius: 20, padding: 16 }}>
+              <div style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid #e8f0ea', borderRadius: 20, padding: 16 }}>
                 <div style={{ color: '#c8e6c9', fontSize: 12, fontWeight: 700, letterSpacing: '0.06em', marginBottom: 12 }}>VORHER / NACHHER</div>
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
                   {[first, last].map((p, i) => p && (
@@ -379,7 +379,7 @@ export default function BodyScanScreen({ onClose }: Props) {
                   ))}
                 </div>
                 {first?.analysis && last?.analysis && first.date !== last.date && (
-                  <div style={{ marginTop: 12, padding: '10px 12px', background: 'rgba(74,140,92,0.1)', borderRadius: 12, textAlign: 'center' }}>
+                  <div style={{ marginTop: 12, padding: '10px 12px', background: '#e8f2ec', borderRadius: 12, textAlign: 'center' }}>
                     <span style={{ color: '#7db88a', fontSize: 13, fontWeight: 700 }}>
                       📈 Fortschritt seit {new Date(first.date).toLocaleDateString('de-DE', { month: 'long', year: 'numeric' })}
                     </span>
@@ -391,7 +391,7 @@ export default function BodyScanScreen({ onClose }: Props) {
             {/* All scans */}
             <div style={{ color: 'rgba(255,255,255,0.4)', fontSize: 12, fontWeight: 700, letterSpacing: '0.06em' }}>ALLE SCANS ({sorted.length})</div>
             {sorted.slice().reverse().map((photo) => (
-              <div key={photo.id} style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(125,184,138,0.12)', borderRadius: 20, padding: 16 }}>
+              <div key={photo.id} style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid #e8f0ea', borderRadius: 20, padding: 16 }}>
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
                   <span style={{ color: '#fff', fontWeight: 700, fontSize: 14 }}>
                     {new Date(photo.date).toLocaleDateString('de-DE', { weekday: 'short', day: '2-digit', month: 'long', year: 'numeric' })}

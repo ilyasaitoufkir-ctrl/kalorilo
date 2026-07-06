@@ -346,7 +346,7 @@ export default function SportTracker() {
 
       {/* Header */}
       <div className="pt-safe px-5 pb-5 relative overflow-hidden"
-        style={{ background:'var(--bg)', borderBottom:'1px solid rgba(125,184,138,0.15)' }}>
+        style={{ background:'var(--bg)', borderBottom:'1px solid #e8f0ea' }}>
         <div className="absolute" style={{ top:-40,right:-40,width:200,height:200, background:'radial-gradient(circle,rgba(16,185,129,0.08),transparent 70%)', pointerEvents:'none' }}/>
         <h1 className="text-2xl font-black mb-1 relative" style={{ color:'var(--text-1)' }}>Sport & Aktivität</h1>
         <p className="text-sm relative" style={{ color:'var(--text-3)' }}>Heute verbrannt</p>

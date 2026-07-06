@@ -75,7 +75,7 @@ export default function Profile() {
   return (
     <div className="h-dvh overflow-y-auto overflow-x-hidden pb-nav anim-fade" style={{ background:'var(--bg)' }}>
       {/* Header */}
-      <div className="pt-safe px-5 pb-5 relative overflow-hidden" style={{ background:'var(--bg)', borderBottom:'1px solid rgba(125,184,138,0.15)' }}>
+      <div className="pt-safe px-5 pb-5 relative overflow-hidden" style={{ background:'var(--bg)', borderBottom:'1px solid #e8f0ea' }}>
         <div className="absolute" style={{ top:-40,right:-40,width:200,height:200,background:'radial-gradient(circle,rgba(74,140,92,0.05),transparent 70%)',pointerEvents:'none' }}/>
         <h1 className="text-2xl font-black relative" style={{ color:'var(--text-1)' }}>
           {storeProfile?.name ? `Hallo, ${storeProfile.name.split(' ')[0]}!` : 'Profil & Einstellungen'}
@@ -374,7 +374,7 @@ export default function Profile() {
                   />
                 </div>
               ))}
-              <div className="rounded-2xl p-3" style={{ background:'rgba(255,255,255,0.03)', border:'1px solid rgba(125,184,138,0.15)' }}>
+              <div className="rounded-2xl p-3" style={{ background:'rgba(255,255,255,0.03)', border:'1px solid #e8f0ea' }}>
                 <p className="text-xs" style={{ color:'var(--text-3)' }}>
                   Redirect URI für Whoop Developer Console:
                 </p>
@@ -399,7 +399,7 @@ export default function Profile() {
                     { l:'Schlaf',   v:`${whoopData.sleepQuality}%`, c:'#a78bfa' },
                     { l:'Strain',   v:`${Number(whoopData.strain).toFixed(1)}`, c:'#fb923c' },
                   ].map((item) => (
-                    <div key={item.l} className="rounded-2xl py-3 text-center" style={{ background:'#0a0a0a', border:'1px solid rgba(125,184,138,0.15)' }}>
+                    <div key={item.l} className="rounded-2xl py-3 text-center" style={{ background:'#f8faf8', border:'1px solid #e8f0ea' }}>
                       <p className="text-sm font-black" style={{ color:item.c }}>{item.v}</p>
                       <p className="text-[10px]" style={{ color:'var(--text-3)' }}>{item.l}</p>
                     </div>

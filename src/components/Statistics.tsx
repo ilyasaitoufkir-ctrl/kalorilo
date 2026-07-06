@@ -112,7 +112,7 @@ export default function Statistics() {
 
   return (
     <div className="h-dvh overflow-y-auto overflow-x-hidden pb-nav anim-fade" style={{ background:'var(--bg)' }}>
-      <div className="pt-safe px-5 pb-5 relative overflow-hidden" style={{ background:'var(--bg)', borderBottom:'1px solid rgba(125,184,138,0.15)' }}>
+      <div className="pt-safe px-5 pb-5 relative overflow-hidden" style={{ background:'var(--bg)', borderBottom:'1px solid #e8f0ea' }}>
         <div className="absolute" style={{ top:-40,right:-40,width:200,height:200,background:'radial-gradient(circle,rgba(74,140,92,0.05),transparent 70%)',pointerEvents:'none' }}/>
         <h1 className="text-2xl font-black mb-3 relative" style={{ color:'var(--text-1)' }}>Statistiken</h1>
         <div className="grid grid-cols-3 gap-2">
