@@ -50,7 +50,7 @@ export function buildAuthUrl(clientId: string, state: string): string {
     response_type: 'code',
     client_id:      clientId,
     redirect_uri:   REDIRECT_URI,
-    scope:          'read:recovery read:sleep read:workout read:cycle read:body_measurement offline',
+    scope:          'read:recovery read:sleep read:workout read:cycles read:body_measurement offline',
     state,
   })
 }
