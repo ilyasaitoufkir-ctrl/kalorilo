@@ -128,7 +128,8 @@ async function whoopGet(path: string, accessToken: string) {
 export async function syncWhoopData(accessToken: string): Promise<WhoopSyncData> {
   const now   = new Date()
   const end   = now.toISOString()
-  const start = new Date(now.getTime() - 48 * 3600 * 1000).toISOString()
+  // 7 days back — recovery/sleep are created at different times than workouts
+  const start = new Date(now.getTime() - 7 * 24 * 3600 * 1000).toISOString()
   const today = now.toISOString().split('T')[0]
 
   // ── Recovery ──
@@ -138,30 +139,40 @@ export async function syncWhoopData(accessToken: string): Promise<WhoopSyncData>
       `/recovery?start=${start}&end=${end}&order=desc&limit=1`,
       accessToken
     )
+    console.log('[WHOOP] /recovery raw:', JSON.stringify(rec))
     const r = rec.records?.[0]
-    if (r) {
-      recovery  = Math.round(r.score?.recovery_score ?? 0)
-      hrv       = Math.round(r.score?.hrv_rmssd_milli ?? 0)
-      restingHR = Math.round(r.score?.resting_heart_rate ?? 0)
+    if (r?.score_state === 'SCORED' && r.score) {
+      recovery  = Math.round(r.score.recovery_score ?? 0)
+      hrv       = Math.round(r.score.hrv_rmssd_milli ?? 0)
+      restingHR = Math.round(r.score.resting_heart_rate ?? 0)
+    } else if (r) {
+      console.log('[WHOOP] recovery score_state:', r.score_state, '→ kein Score verfügbar')
     }
-  } catch { /* non-critical */ }
+  } catch (e) {
+    console.error('[WHOOP] /recovery Fehler:', e)
+  }
 
-  // ── Sleep (with deep + REM + respiratory rate) ──
+  // ── Sleep ──
   let sleepQuality = 0, sleepDuration = 0, deepSleep = 0, remSleep = 0, respiratoryRate = 0
   try {
     const sleep = await whoopGet(
       `/activity/sleep?start=${start}&end=${end}&order=desc&limit=1`,
       accessToken
     )
+    console.log('[WHOOP] /activity/sleep raw:', JSON.stringify(sleep))
     const s = sleep.records?.[0]
-    if (s) {
-      sleepQuality    = Math.round(s.score?.sleep_performance_percentage ?? 0)
-      sleepDuration   = Math.round((s.score?.stage_summary?.total_in_bed_time_milli ?? 0) / 360000) / 10
-      deepSleep       = Math.round((s.score?.stage_summary?.total_slow_wave_sleep_time_milli ?? 0) / 360000) / 10
-      remSleep        = Math.round((s.score?.stage_summary?.total_rem_sleep_time_milli ?? 0) / 360000) / 10
-      respiratoryRate = Math.round((s.score?.respiratory_rate ?? 0) * 10) / 10
+    if (s?.score_state === 'SCORED' && s.score) {
+      sleepQuality    = Math.round(s.score.sleep_performance_percentage ?? 0)
+      sleepDuration   = Math.round((s.score.stage_summary?.total_in_bed_time_milli ?? 0) / 360000) / 10
+      deepSleep       = Math.round((s.score.stage_summary?.total_slow_wave_sleep_time_milli ?? 0) / 360000) / 10
+      remSleep        = Math.round((s.score.stage_summary?.total_rem_sleep_time_milli ?? 0) / 360000) / 10
+      respiratoryRate = Math.round((s.score.respiratory_rate ?? 0) * 10) / 10
+    } else if (s) {
+      console.log('[WHOOP] sleep score_state:', s.score_state, '→ kein Score verfügbar')
     }
-  } catch { /* non-critical */ }
+  } catch (e) {
+    console.error('[WHOOP] /activity/sleep Fehler:', e)
+  }
 
   // ── Workouts / Strain + Calories ──
   let strain = 0, caloriesBurned = 0
@@ -170,12 +181,17 @@ export async function syncWhoopData(accessToken: string): Promise<WhoopSyncData>
       `/activity/workout?start=${start}&end=${end}&order=desc`,
       accessToken
     )
+    console.log('[WHOOP] /activity/workout records:', workouts.records?.length ?? 0)
     for (const w of workouts.records ?? []) {
-      strain         = Math.max(strain, w.score?.strain ?? 0)
-      caloriesBurned += Math.round(w.score?.kilojoule ? w.score.kilojoule / 4.184 : 0)
+      if (w.score_state === 'SCORED' && w.score) {
+        strain         = Math.max(strain, w.score.strain ?? 0)
+        caloriesBurned += Math.round(w.score.kilojoule ? w.score.kilojoule / 4.184 : 0)
+      }
     }
     strain = Math.round(strain * 10) / 10
-  } catch { /* non-critical */ }
+  } catch (e) {
+    console.error('[WHOOP] /activity/workout Fehler:', e)
+  }
 
   // ── Cycle (total daily burn incl. NEAT) ──
   let dailyBurn = 0
@@ -184,12 +200,16 @@ export async function syncWhoopData(accessToken: string): Promise<WhoopSyncData>
       `/cycle?start=${start}&end=${end}&order=desc&limit=1`,
       accessToken
     )
+    console.log('[WHOOP] /cycle raw:', JSON.stringify(cycles))
     const c = cycles.records?.[0]
-    if (c) {
-      dailyBurn = Math.round((c.score?.kilojoule ?? 0) / 4.184)
+    if (c?.score_state === 'SCORED' && c.score) {
+      dailyBurn = Math.round((c.score.kilojoule ?? 0) / 4.184)
     }
-  } catch { /* non-critical */ }
+  } catch (e) {
+    console.error('[WHOOP] /cycle Fehler:', e)
+  }
 
+  console.log('[WHOOP] syncWhoopData result:', { recovery, hrv, restingHR, sleepQuality, sleepDuration, strain, caloriesBurned, dailyBurn })
   return {
     recovery, hrv, restingHR, respiratoryRate,
     sleepQuality, sleepDuration, deepSleep, remSleep,
