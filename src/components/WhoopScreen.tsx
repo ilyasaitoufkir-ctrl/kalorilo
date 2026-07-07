@@ -6,8 +6,8 @@ import { syncWhoopData, refreshAccessToken } from '../lib/whoop'
 const C = {
   primary:   '#5a8a6a',
   light:     '#e8f2ec',
-  warm:      '#c47f6a',
-  warmLight: '#f5ebe8',
+  warm:      '#8b7cb0',
+  warmLight: '#eeebf5',
   text:      '#1a2e1f',
   secondary: '#6b8570',
   tertiary:  '#9db3a2',

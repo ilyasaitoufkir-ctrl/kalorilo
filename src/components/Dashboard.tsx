@@ -15,8 +15,8 @@ const C = {
   primary:   '#5a8a6a',
   accent:    '#7ab08a',
   light:     '#e8f2ec',
-  warm:      '#c47f6a',    // Pastell-Pfirsich – für Warn/Negativ-Elemente
-  warmLight: '#f5ebe8',
+  warm:      '#8b7cb0',    // Pastell-Lavendel – für Warn/Negativ-Elemente
+  warmLight: '#eeebf5',
   text:      '#1a2e1f',
   secondary: '#6b8570',
   tertiary:  '#9db3a2',

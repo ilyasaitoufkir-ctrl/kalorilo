@@ -10,7 +10,11 @@ export default defineConfig({
     VitePWA({
       registerType: 'autoUpdate',
       workbox: {
-        // Cache all JS/CSS chunks aggressively — they're content-hashed
+        // Force new SW to take over immediately without waiting for tabs to close
+        skipWaiting: true,
+        clientsClaim: true,
+        cleanupOutdatedCaches: true,
+        // Cache all JS/CSS chunks — they're content-hashed so cache is safe
         globPatterns: ['**/*.{js,css,html,ico,png,svg,webp}'],
         // Runtime cache for API calls and external resources
         runtimeCaching: [
@@ -25,8 +29,8 @@ export default defineConfig({
         name: 'Kalorilo – Kalorienzähler',
         short_name: 'Kalorilo',
         description: 'Dein smarter KI-Ernährungsbegleiter',
-        theme_color: '#4a8c5c',
-        background_color: '#0a0a0a',
+        theme_color: '#5a8a6a',
+        background_color: '#f8faf8',
         display: 'standalone',
         orientation: 'portrait',
         start_url: '/',

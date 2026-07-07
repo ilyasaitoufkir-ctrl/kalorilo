@@ -20,10 +20,10 @@
   --accent:          #7ab08a;
   --accent-dim:      rgba(90,138,106,0.12);
 
-  /* Pastell-Pfirsich accent */
-  --warm:            #c47f6a;
-  --warm-light:      #f5ebe8;
-  --warm-dim:        rgba(196,127,106,0.12);
+  /* Pastell-Lavendel accent */
+  --warm:            #8b7cb0;
+  --warm-light:      #eeebf5;
+  --warm-dim:        rgba(139,124,176,0.12);
 
   /* Text */
   --text:            #1a2e1f;
