@@ -20,6 +20,11 @@
   --accent:          #7ab08a;
   --accent-dim:      rgba(90,138,106,0.12);
 
+  /* Pastell-Pfirsich accent */
+  --warm:            #c47f6a;
+  --warm-light:      #f5ebe8;
+  --warm-dim:        rgba(196,127,106,0.12);
+
   /* Text */
   --text:            #1a2e1f;
   --text-secondary:  #6b8570;

@@ -6,6 +6,8 @@ import { syncWhoopData, refreshAccessToken } from '../lib/whoop'
 const C = {
   primary:   '#5a8a6a',
   light:     '#e8f2ec',
+  warm:      '#c47f6a',
+  warmLight: '#f5ebe8',
   text:      '#1a2e1f',
   secondary: '#6b8570',
   tertiary:  '#9db3a2',
@@ -176,7 +178,7 @@ export default function WhoopScreen({ onClose }: { onClose: () => void }) {
                 </div>
                 {whoopData.strain > 0 && (
                   <div style={{ height: 6, background: C.light, borderRadius: 3, overflow: 'hidden' }}>
-                    <div style={{ height: '100%', width: `${(whoopData.strain / 21) * 100}%`, background: whoopData.strain > 14 ? '#c97a6a' : whoopData.strain > 8 ? '#d4a84b' : C.primary, borderRadius: 3, transition: 'width 1s ease' }} />
+                    <div style={{ height: '100%', width: `${(whoopData.strain / 21) * 100}%`, background: whoopData.strain > 14 ? C.warm : whoopData.strain > 8 ? '#c4a06a' : C.primary, borderRadius: 3, transition: 'width 1s ease' }} />
                   </div>
                 )}
                 <p style={{ color: C.secondary, fontSize: 12, marginTop: 6 }}>

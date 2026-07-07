@@ -15,6 +15,8 @@ const C = {
   primary:   '#5a8a6a',
   accent:    '#7ab08a',
   light:     '#e8f2ec',
+  warm:      '#c47f6a',    // Pastell-Pfirsich – für Warn/Negativ-Elemente
+  warmLight: '#f5ebe8',
   text:      '#1a2e1f',
   secondary: '#6b8570',
   tertiary:  '#9db3a2',
@@ -872,12 +874,12 @@ export default function Dashboard() {
           {/* Kalorien */}
           <button onClick={() => setActiveTab('food')} className="glass-press" style={{ ...cardSm, textAlign: 'left', width: '100%' }}>
             <p style={{ color: C.secondary, fontSize: 11, fontWeight: 500, letterSpacing: '0.04em', textTransform: 'uppercase' }}>Übrig</p>
-            <p style={{ color: remain >= 0 ? C.text : '#e07070', fontSize: 36, fontWeight: 600, lineHeight: 1, marginTop: 6, letterSpacing: '-1px' }}>
+            <p style={{ color: remain >= 0 ? C.text : C.warm, fontSize: 36, fontWeight: 600, lineHeight: 1, marginTop: 6, letterSpacing: '-1px' }}>
               {remain >= 0 ? Math.round(remain) : `-${Math.abs(Math.round(remain))}`}
             </p>
             <p style={{ color: C.tertiary, fontSize: 12, marginTop: 2 }}>{Math.round(calories)} gegessen</p>
-            <div style={{ height: 4, background: C.light, borderRadius: 2, marginTop: 10, overflow: 'hidden' }}>
-              <div style={{ height: '100%', width: `${Math.min(100, adjustedTarget > 0 ? (calories/adjustedTarget)*100 : 0)}%`, background: remain >= 0 ? C.primary : '#e07070', borderRadius: 2, transition: 'width 0.8s ease' }} />
+            <div style={{ height: 4, background: remain >= 0 ? C.light : C.warmLight, borderRadius: 2, marginTop: 10, overflow: 'hidden' }}>
+              <div style={{ height: '100%', width: `${Math.min(100, adjustedTarget > 0 ? (calories/adjustedTarget)*100 : 0)}%`, background: remain >= 0 ? C.primary : C.warm, borderRadius: 2, transition: 'width 0.8s ease' }} />
             </div>
           </button>
 
@@ -1024,13 +1026,13 @@ export default function Dashboard() {
         {/* ── Streak + BMI ── */}
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 8 }}>
           {[
-            { label: 'Kcal-Streak', value: streak,      unit: 'Tage' },
-            { label: 'Score ≥70',   value: scoreStreak, unit: 'Tage' },
-            { label: 'BMI',         value: bmi ?? '–',  unit: '' },
-          ].map(({ label, value, unit }) => (
-            <div key={label} style={{ ...cardSm, textAlign: 'center' }}>
-              <p style={{ color: C.text, fontSize: 22, fontWeight: 600 }}>{value}</p>
-              {unit && <p style={{ color: C.tertiary, fontSize: 10, marginTop: 1 }}>{unit}</p>}
+            { label: 'Kcal-Streak', value: streak,      unit: 'Tage', warm: streak >= 3 },
+            { label: 'Score ≥70',   value: scoreStreak, unit: 'Tage', warm: scoreStreak >= 3 },
+            { label: 'BMI',         value: bmi ?? '–',  unit: '',     warm: false },
+          ].map(({ label, value, unit, warm }) => (
+            <div key={label} style={{ ...cardSm, textAlign: 'center', background: warm ? C.warmLight : C.card, border: `1px solid ${warm ? C.warm + '44' : C.border}` }}>
+              <p style={{ color: warm ? C.warm : C.text, fontSize: 22, fontWeight: 600 }}>{value}</p>
+              {unit && <p style={{ color: warm ? C.warm : C.tertiary, fontSize: 10, marginTop: 1 }}>{unit}</p>}
               <p style={{ color: C.secondary, fontSize: 10, marginTop: 2 }}>{label}</p>
             </div>
           ))}
@@ -1094,7 +1096,7 @@ export default function Dashboard() {
           </div>
           <button onClick={() => isCheatDay ? removeCheatDay(today) : addCheatDay({ date: today })}
             className="glass-press"
-            style={{ padding: '8px 14px', borderRadius: 10, fontSize: 12, fontWeight: 500, background: isCheatDay ? C.light : C.bg, border: `1px solid ${isCheatDay ? C.primary + '44' : C.border}`, color: isCheatDay ? C.primary : C.secondary }}>
+            style={{ padding: '8px 14px', borderRadius: 10, fontSize: 12, fontWeight: 500, background: isCheatDay ? C.warmLight : C.bg, border: `1px solid ${isCheatDay ? C.warm + '55' : C.border}`, color: isCheatDay ? C.warm : C.secondary }}>
             {isCheatDay ? 'Deaktivieren' : 'Aktivieren'}
           </button>
         </div>
