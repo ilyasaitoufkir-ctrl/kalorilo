@@ -7,6 +7,7 @@ import { generateScoreComment, getProteinHelp } from '../utils/api'
 import type { WhoopData, WhoopDayHistory, ActivityLog } from '../types'
 
 const BodyScanScreen = lazy(() => import('./BodyScanScreen'))
+const WhoopScreen    = lazy(() => import('./WhoopScreen'))
 
 const today = formatDate()
 
@@ -148,12 +149,13 @@ function sleepAdvice(d: WhoopData): string {
 
 // ── Whoop Widget (light design) ────────────────────────────────────────────
 function WhoopWidget({
-  whoopData, whoopHistory, lastSyncAt, onConnect,
+  whoopData, whoopHistory, lastSyncAt, onConnect, onDetails,
 }: {
   whoopData: WhoopData | null
   whoopHistory: WhoopDayHistory[]
   lastSyncAt: number
   onConnect: () => void
+  onDetails: () => void
 }) {
   const minAgo = lastSyncAt > 0 ? Math.round((Date.now() - lastSyncAt) / 60000) : null
 
@@ -279,6 +281,12 @@ function WhoopWidget({
           })}
         </div>
       )}
+
+      {/* Details link */}
+      <button onClick={onDetails}
+        style={{ marginTop: 12, width: '100%', padding: '9px', borderRadius: 12, border: `1px solid ${C.border}`, background: C.bg, color: C.primary, fontSize: 13, fontWeight: 500, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 4 }}>
+        Alle WHOOP-Daten <ChevronRight size={14} strokeWidth={2} />
+      </button>
     </div>
   )
 }
@@ -604,7 +612,7 @@ export default function Dashboard() {
   const activityLogs   = useStore((s) => s.activityLogs)
   const waterLogs      = useStore((s) => s.waterLogs)
   const whoopData      = useStore((s) => s.whoopData)
-  const whoopExtended  = useStore((s) => s.whoopExtended)
+  // whoopExtended not used after calorie logic refactor
   const whoopHistory   = useStore((s) => s.whoopHistory)
   const whoopLastSync  = useStore((s) => s.whoopLastSyncAt)
   const cheatDays      = useStore((s) => s.cheatDays)
@@ -622,6 +630,7 @@ export default function Dashboard() {
   const setScoreComment    = useStore((s) => s.setScoreComment)
 
   const [showBodyScan, setShowBodyScan] = useState(false)
+  const [showWhoopScreen, setShowWhoopScreen] = useState(false)
   const [pullY, setPullY]        = useState(0)
   const [refreshing, setRefresh] = useState(false)
   const scrollRef  = useRef<HTMLDivElement>(null)
@@ -663,30 +672,33 @@ export default function Dashboard() {
 
   const macroT = useMemo(() => getMacroTargets(target), [target])
 
-  // Rolling average of WHOOP dailyBurn (≥3 days → use learned burn; else today's value as fallback)
   const adjustedTarget = useMemo(() => {
-    const burnHistory = whoopHistory
-      .filter((h) => h.dailyBurn && h.dailyBurn > 500)
-      .map((h) => h.dailyBurn!)
-      .slice(-14)
+    const goalAdjust = (() => {
+      if (!profile) return 0
+      const weeklyDelta = (Number(profile.weight) - (Number(profile.targetWeight) || Number(profile.weight))) * 7700 / (Number(profile.targetWeeks) || 12)
+      if (profile.goal === 'lose') return -weeklyDelta / 7
+      if (profile.goal === 'gain') return Math.abs(weeklyDelta) / 7
+      return 0
+    })()
 
+    // Priority 1: yesterday's WHOOP dailyBurn
+    const yesterday = new Date(); yesterday.setDate(yesterday.getDate() - 1)
+    const yesterdayStr = yesterday.toISOString().split('T')[0]
+    const yesterdayEntry = whoopHistory.find((h) => h.date === yesterdayStr)
+    if (yesterdayEntry?.dailyBurn && yesterdayEntry.dailyBurn > 500) {
+      return Math.max(1500, Math.round(yesterdayEntry.dailyBurn + goalAdjust))
+    }
+
+    // Priority 2: rolling average (≥3 days)
+    const burnHistory = whoopHistory.filter((h) => h.dailyBurn && h.dailyBurn > 500).map((h) => h.dailyBurn!).slice(-14)
     if (burnHistory.length >= 3) {
       const avgBurn = Math.round(burnHistory.reduce((s, b) => s + b, 0) / burnHistory.length)
-      // Apply goal adjustment on top of learned burn
-      if (!profile) return avgBurn
-      const weeklyDelta = (Number(profile.weight) - (Number(profile.targetWeight) || Number(profile.weight))) * 7700 / (Number(profile.targetWeeks) || 12)
-      let goalAdjust = 0
-      if (profile.goal === 'lose') goalAdjust = -weeklyDelta / 7
-      else if (profile.goal === 'gain') goalAdjust = Math.abs(weeklyDelta) / 7
       return Math.max(1500, Math.round(avgBurn + goalAdjust))
     }
 
-    // Fallback: profile TDEE + today's WHOOP burn (wenn vorhanden)
-    const todayBurn = whoopData?.date === today
-      ? (whoopData.dailyBurn ?? whoopData.caloriesBurned ?? 0)
-      : (whoopExtended?.date === today ? (whoopExtended.caloriesBurned ?? 0) : 0)
-    return target + todayBurn
-  }, [whoopHistory, whoopData, whoopExtended, target, profile])
+    // Priority 3: profile TDEE (fallback, erste Woche nach Connect)
+    return target
+  }, [whoopHistory, target, profile])
   const net    = calories - burned
   const remain = adjustedTarget - net
   const waterPct = Math.min(1, water / waterGoal())
@@ -967,6 +979,7 @@ export default function Dashboard() {
           whoopHistory={whoopHistory}
           lastSyncAt={whoopLastSync}
           onConnect={() => setActiveTab('profile')}
+          onDetails={() => setShowWhoopScreen(true)}
         />
 
         {/* ── Energie-Plan ── */}
@@ -1092,6 +1105,11 @@ export default function Dashboard() {
       {showBodyScan && (
         <Suspense fallback={null}>
           <BodyScanScreen onClose={() => setShowBodyScan(false)} />
+        </Suspense>
+      )}
+      {showWhoopScreen && (
+        <Suspense fallback={null}>
+          <WhoopScreen onClose={() => setShowWhoopScreen(false)} />
         </Suspense>
       )}
     </div>

@@ -21,7 +21,6 @@ export function useFirestoreSync(uid: string | null) {
             activityLogs:  s.activityLogs.slice(-200),
             weightHistory: s.weightHistory.slice(-365),
             waterLogs:     s.waterLogs.slice(-90),
-            runSessions:   s.runSessions.slice(-50),
             cheatDays:     s.cheatDays,
             reminders:     s.reminders,
             updatedAt:     Date.now(),
@@ -40,7 +39,6 @@ export function useFirestoreSync(uid: string | null) {
         state.activityLogs   !== prev.activityLogs   ||
         state.weightHistory  !== prev.weightHistory  ||
         state.waterLogs      !== prev.waterLogs      ||
-        state.runSessions    !== prev.runSessions    ||
         state.apiKeys        !== prev.apiKeys        ||
         state.cheatDays      !== prev.cheatDays      ||
         state.reminders      !== prev.reminders

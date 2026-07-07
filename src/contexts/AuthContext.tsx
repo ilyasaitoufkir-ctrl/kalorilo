@@ -47,7 +47,6 @@ async function loadUserData(uid: string) {
     if (d.activityLogs)   useStore.setState({ activityLogs: d.activityLogs })
     if (d.weightHistory)  useStore.setState({ weightHistory: d.weightHistory })
     if (d.waterLogs)      useStore.setState({ waterLogs: d.waterLogs })
-    if (d.runSessions)    useStore.setState({ runSessions: d.runSessions })
     if (d.cheatDays)      useStore.setState({ cheatDays: d.cheatDays })
     if (d.reminders)      useStore.setState({ reminders: d.reminders })
   } catch (e) {

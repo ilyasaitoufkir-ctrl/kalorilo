@@ -142,12 +142,11 @@ export async function syncWhoopData(accessToken: string): Promise<WhoopSyncData>
     )
     console.log('[WHOOP] /recovery raw:', JSON.stringify(rec))
     const r = rec.records?.[0]
-    if (r?.score_state === 'SCORED' && r.score) {
-      recovery  = Math.round(r.score.recovery_score ?? 0)
-      hrv       = Math.round(r.score.hrv_rmssd_milli ?? 0)
-      restingHR = Math.round(r.score.resting_heart_rate ?? 0)
-    } else if (r) {
-      console.log('[WHOOP] recovery score_state:', r.score_state, '→ kein Score verfügbar')
+    if (r) {
+      recovery  = Math.round(r.score?.recovery_score ?? 0)
+      hrv       = Math.round(r.score?.hrv_rmssd_milli ?? 0)
+      restingHR = Math.round(r.score?.resting_heart_rate ?? 0)
+      console.log('[WHOOP] recovery score_state:', r.score_state, '| recovery:', recovery)
     }
   } catch (e) {
     console.error('[WHOOP] /recovery Fehler:', e)
@@ -162,14 +161,13 @@ export async function syncWhoopData(accessToken: string): Promise<WhoopSyncData>
     )
     console.log('[WHOOP] /activity/sleep raw:', JSON.stringify(sleep))
     const s = sleep.records?.[0]
-    if (s?.score_state === 'SCORED' && s.score) {
-      sleepQuality    = Math.round(s.score.sleep_performance_percentage ?? 0)
-      sleepDuration   = Math.round((s.score.stage_summary?.total_in_bed_time_milli ?? 0) / 360000) / 10
-      deepSleep       = Math.round((s.score.stage_summary?.total_slow_wave_sleep_time_milli ?? 0) / 360000) / 10
-      remSleep        = Math.round((s.score.stage_summary?.total_rem_sleep_time_milli ?? 0) / 360000) / 10
-      respiratoryRate = Math.round((s.score.respiratory_rate ?? 0) * 10) / 10
-    } else if (s) {
-      console.log('[WHOOP] sleep score_state:', s.score_state, '→ kein Score verfügbar')
+    if (s) {
+      sleepQuality    = Math.round(s.score?.sleep_performance_percentage ?? 0)
+      sleepDuration   = Math.round((s.score?.stage_summary?.total_in_bed_time_milli ?? 0) / 360000) / 10
+      deepSleep       = Math.round((s.score?.stage_summary?.total_slow_wave_sleep_time_milli ?? 0) / 360000) / 10
+      remSleep        = Math.round((s.score?.stage_summary?.total_rem_sleep_time_milli ?? 0) / 360000) / 10
+      respiratoryRate = Math.round((s.score?.respiratory_rate ?? 0) * 10) / 10
+      console.log('[WHOOP] sleep score_state:', s.score_state, '| duration:', sleepDuration, 'h')
     }
   } catch (e) {
     console.error('[WHOOP] /activity/sleep Fehler:', e)
@@ -184,10 +182,8 @@ export async function syncWhoopData(accessToken: string): Promise<WhoopSyncData>
     )
     console.log('[WHOOP] /activity/workout records:', workouts.records?.length ?? 0)
     for (const w of workouts.records ?? []) {
-      if (w.score_state === 'SCORED' && w.score) {
-        strain         = Math.max(strain, w.score.strain ?? 0)
-        caloriesBurned += Math.round(w.score.kilojoule ? w.score.kilojoule / 4.184 : 0)
-      }
+      strain         = Math.max(strain, w.score?.strain ?? 0)
+      caloriesBurned += Math.round(w.score?.kilojoule ? w.score.kilojoule / 4.184 : 0)
     }
     strain = Math.round(strain * 10) / 10
   } catch (e) {
@@ -203,8 +199,8 @@ export async function syncWhoopData(accessToken: string): Promise<WhoopSyncData>
     )
     console.log('[WHOOP] /cycle raw:', JSON.stringify(cycles))
     const c = cycles.records?.[0]
-    if (c?.score_state === 'SCORED' && c.score) {
-      dailyBurn = Math.round((c.score.kilojoule ?? 0) / 4.184)
+    if (c) {
+      dailyBurn = Math.round((c.score?.kilojoule ?? 0) / 4.184)
     }
   } catch (e) {
     console.error('[WHOOP] /cycle Fehler:', e)

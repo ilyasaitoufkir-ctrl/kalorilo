@@ -177,41 +177,6 @@ export interface BeforeAfterPhoto {
   analysis?: BodyAnalysis
 }
 
-export interface GeoPoint {
-  lat: number
-  lng: number
-  altitude?: number
-  accuracy?: number
-  timestamp: number
-}
-
-export interface KmSplit {
-  km: number
-  pace: number   // seconds per km for this split
-  time: number   // cumulative elapsed seconds at this marker
-}
-
-export interface KmMarker {
-  km: number
-  point: GeoPoint
-}
-
-export interface RunSession {
-  id: string
-  date: string
-  startTime: number
-  endTime: number
-  duration: number       // active seconds (pauses excluded)
-  distance: number       // km
-  route: GeoPoint[]
-  splits: KmSplit[]
-  kmMarkers: KmMarker[]
-  avgPace: number        // seconds/km
-  bestPace: number       // seconds/km (fastest split)
-  elevationGain: number  // meters
-  caloriesBurned: number
-  activityLogId: string
-}
 
 export type TabId = 'home' | 'food' | 'sport' | 'stats' | 'ai' | 'profile' | 'friends'
 

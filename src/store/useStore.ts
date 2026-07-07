@@ -3,7 +3,7 @@ import { persist } from 'zustand/middleware'
 import type {
   UserProfile, FoodLog, ActivityLog, WeightEntry, WaterLog,
   CustomRecipe, AIMessage, WhoopData, WhoopDayHistory, ApiKeys, Reminder,
-  CheatDay, BeforeAfterPhoto, WeeklyPlan, TabId, DailyStats, RunSession,
+  CheatDay, BeforeAfterPhoto, WeeklyPlan, TabId, DailyStats,
   UserPersonality, CoachingProfile,
 } from '../types'
 import { DEFAULT_PERSONALITY } from '../types'
@@ -102,11 +102,6 @@ interface AppState {
 
   // Clear all user data (called on logout)
   clearUserData: () => void
-
-  // Run sessions
-  runSessions: RunSession[]
-  addRunSession: (session: RunSession) => void
-  removeRunSession: (id: string) => void
 
   // Supplements
   supplements: { id: string; name: string }[]
@@ -258,10 +253,6 @@ export const useStore = create<AppState>()(
       weeklyPlans: [],
       addWeeklyPlan: (plan) => set((s) => ({ weeklyPlans: [plan, ...s.weeklyPlans.slice(0, 4)] })),
 
-      runSessions: [],
-      addRunSession: (session) => set((s) => ({ runSessions: [session, ...s.runSessions] })),
-      removeRunSession: (id) => set((s) => ({ runSessions: s.runSessions.filter((r) => r.id !== id) })),
-
       supplements: [
         { id: 'sup-1', name: 'Vitamin D3' },
         { id: 'sup-2', name: 'Omega-3' },
@@ -327,7 +318,7 @@ export const useStore = create<AppState>()(
         profile: null,
         foodLogs: [], activityLogs: [], weightHistory: [], waterLogs: [],
         customRecipes: [], aiMessages: [], kaloMessages: [], whoopData: null,
-        cheatDays: [], beforeAfterPhotos: [], weeklyPlans: [], runSessions: [],
+        cheatDays: [], beforeAfterPhotos: [], weeklyPlans: [],
         apiKeys: defaultApiKeys, activeTab: 'home',
         whoopTokens: null, groupIds: [],
         userPersonality: DEFAULT_PERSONALITY, portionHistory: {},
@@ -390,19 +381,26 @@ export const useStore = create<AppState>()(
         else if (goal === 'gain') goalAdjust = Math.abs(weeklyDelta) / 7
         const profileBase = Math.max(1200, Math.round(tdee + goalAdjust))
 
-        // Rolling average of dailyBurn from WHOOP history (last 14 days with valid data)
-        // Requires ≥3 days of data to be reliable; otherwise fall back to profile TDEE
+        // Priority 1: yesterday's WHOOP dailyBurn as today's target
+        const yesterday = new Date()
+        yesterday.setDate(yesterday.getDate() - 1)
+        const yesterdayStr = yesterday.toISOString().split('T')[0]
+        const yesterdayEntry = whoopHistory.find((h) => h.date === yesterdayStr)
+        if (yesterdayEntry?.dailyBurn && yesterdayEntry.dailyBurn > 500) {
+          return Math.max(1500, Math.round(yesterdayEntry.dailyBurn + goalAdjust))
+        }
+
+        // Priority 2: rolling average (≥3 days) as fallback
         const burnHistory = whoopHistory
           .filter((h) => h.dailyBurn && h.dailyBurn > 500)
           .map((h) => h.dailyBurn!)
           .slice(-14)
-
         if (burnHistory.length >= 3) {
           const avgBurn = Math.round(burnHistory.reduce((s, b) => s + b, 0) / burnHistory.length)
           return Math.max(1500, Math.round(avgBurn + goalAdjust))
         }
 
-        // Not enough history yet → profile TDEE + soft WHOOP adjustment
+        // Priority 3: profile TDEE + soft WHOOP adjustment (first week after connect)
         if (whoopData?.recovery) {
           const r = whoopData.recovery
           if (r < 34) return Math.max(1200, profileBase - 150)
@@ -449,7 +447,6 @@ export const useStore = create<AppState>()(
         cheatDays: state.cheatDays,
         beforeAfterPhotos: state.beforeAfterPhotos,
         weeklyPlans: state.weeklyPlans,
-        runSessions: state.runSessions,
         supplements: state.supplements,
         supplementChecked: state.supplementChecked,
         coachingProfile: state.coachingProfile,
